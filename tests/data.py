@@ -4,8 +4,4 @@
 #
 # License: BSD 3 clause
 
-from .__about__ import (
-    __version__,
-)
-
-__all__ = ["data",]
+from investment import data

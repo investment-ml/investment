@@ -4,8 +4,6 @@
 #
 # License: BSD 3 clause
 
-from .__about__ import (
-    __version__,
-)
+from ._data import pull_data
 
-__all__ = ["data",]
+__all__ = ["pull_data",]
