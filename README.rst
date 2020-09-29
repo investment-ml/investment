@@ -5,9 +5,9 @@
 .. |BuildTest| image:: https://travis-ci.com/investment-ml/investment.svg?branch=master
 .. _BuildTest: https://travis-ci.com/investment-ml/investment
 
-================================================
-A Machine Learning Python Library for Investment
-================================================
+===============================
+A Python Library for Investment
+===============================
 
 Install
 -------
