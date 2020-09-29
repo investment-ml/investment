@@ -4,4 +4,9 @@
 #
 # License: BSD 3 clause
 
-from investment import data
+from investment.data import pull_data
+data = pull_data()
+
+import matplotlib.pyplot as plt
+data.Close.plot()
+plt.show()

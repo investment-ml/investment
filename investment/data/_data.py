@@ -4,7 +4,11 @@
 #
 # License: BSD 3 clause
 
-def pull_data(*args, **kwargs):
+import yfinance as yf
+
+# https://www.quora.com/Using-Python-whats-the-best-way-to-get-stock-data
+def pull_data(ticker = 'AAPL', start_date = '2020-01-01', end_date = '2020-09-28'):
     """
     """
-    pass
+    data = yf.download(ticker, start_date, end_date)
+    return data
