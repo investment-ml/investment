@@ -20,13 +20,13 @@ setuptools.setup(
     version=investment.__version__,
     author="Investment Prediction Enthusiast",
     author_email="investment.ml.prediction@gmail.com",
-    description="Python Library for Investment",
+    description="A Python Library for Investment",
     license="BSD 3-Clause",
     long_description=long_description,
     long_description_content_type="text/x-rst",
     url="https://github.com/investment-ml/investment",
     packages=setuptools.find_packages(),
-    classifiers=[  # https://pypi.org/classifiers/
+    classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
