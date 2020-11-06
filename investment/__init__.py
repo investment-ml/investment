@@ -8,4 +8,4 @@ from .__about__ import (
     __version__,
 )
 
-__all__ = ["data",]
+__all__ = ["data", "analysis",]

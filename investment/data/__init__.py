@@ -4,6 +4,6 @@
 #
 # License: BSD 3 clause
 
-from ._data import pull_data
+from ._data import pull_data, demo_data, demo
 
-__all__ = ["pull_data",]
+__all__ = ["pull_data","demo_data","demo",]
