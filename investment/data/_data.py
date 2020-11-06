@@ -23,7 +23,7 @@ def pull_data(tickers='AAPL', start_date=None , end_date=None):
     return df
 
 def demo_data():
-    df = pd.read_csv(io.BytesIO(pkgutil.get_data(__name__, "downloaded_data/ticker=AAPL__from=19801212__to=20201105.csv")), header=0, encoding='utf8', sep=",")
+    df = pd.read_csv(io.BytesIO(pkgutil.get_data(__name__, "data/yfinance/ticker=AAPL__from=19801212__to=20201105.csv")), header=0, encoding='utf8', sep=",")
     return df
 
 def demo():
