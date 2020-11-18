@@ -2,7 +2,7 @@
 
 # Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
 #
-# License: BSD 3 clause
+# License: GNU General Public License v3 (GPLv3)
 
 
 import setuptools
@@ -21,7 +21,7 @@ setuptools.setup(
     author="Investment Prediction Enthusiast",
     author_email="investment.ml.prediction@gmail.com",
     description="A Python Library for Investment",
-    license="BSD 3-Clause",
+    license="GPL v3",
     long_description=long_description,
     long_description_content_type="text/x-rst",
     url="https://github.com/investment-ml/investment",
@@ -31,7 +31,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
-        "License :: OSI Approved :: BSD License",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
     install_requires=required,
