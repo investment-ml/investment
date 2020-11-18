@@ -2,7 +2,7 @@
 
 # Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
 #
-# License: BSD 3 clause
+# License: GNU General Public License v3 (GPLv3)
 
  
 __version__ = "0.0.dev6"

@@ -2,7 +2,7 @@
 
 # Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
 #
-# License: BSD 3 clause
+# License: GNU General Public License v3 (GPLv3)
 
 import yfinance as yf
 import pandas as pd
