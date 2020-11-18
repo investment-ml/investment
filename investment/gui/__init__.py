@@ -4,6 +4,6 @@
 #
 # License: BSD 3 clause
 
-from investment import analysis
+from ._gui import demo
 
-analysis.demo()
+__all__ = ["demo",]
