@@ -14,7 +14,6 @@ from PyQt5.QtGui import QFontDatabase
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 import matplotlib.pyplot as plt
 
-
 from ..data import get_ticker_data_dict
 
 sector_tickers_dict = {'All': [],
