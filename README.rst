@@ -27,3 +27,12 @@ Install
 .. code-block:: bash
 
    pip install investment
+
+
+Example
+-------
+
+.. code-block:: bash
+
+   from investment import gui
+   gui.demo()

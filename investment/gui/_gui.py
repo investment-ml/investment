@@ -37,7 +37,7 @@ sector_tickers_dict['All'] = sorted([item for sublist in sector_tickers_dict.val
 
 
 class ticker_canvas(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width=4, height=4, dpi=72):
+    def __init__(self, parent=None, width=4, height=3, dpi=72):
         self.figure = plt.figure(figsize=(width, height), dpi=dpi)
         self.axes = self.figure.add_subplot(111)
         self.axes.tick_params(axis='both', which='major', labelsize=10)
@@ -67,13 +67,14 @@ class ticker_textinfo(QTextEdit):
         self.setCurrentFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
 
 
-class ticker_info_UI(QWidget):
+class ticker_app_UI(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.layout = QVBoxLayout()
         self.sector_selection = sector_selection()
         self.ticker_selection = ticker_selection()
         self.ticker_textinfo = ticker_textinfo()
+        self.ticker_textinfo.setFixedHeight(300)
         self.ticker_canvas = ticker_canvas(parent=self)
         self.layout.addWidget(self.sector_selection)
         self.layout.addWidget(self.ticker_selection)
@@ -84,7 +85,7 @@ class ticker_info_UI(QWidget):
         self.resize(800, 800)
 
 
-class ticker_info_control(object):
+class ticker_app_control(object):
     def __init__(self, UI):
         super().__init__()
         self._UI = UI
@@ -115,15 +116,15 @@ class ticker_info_control(object):
             canvas = self._UI.ticker_canvas
             canvas.axes.cla()
             canvas.axes.plot(ticker_data_dict['history'][['Close']], 'tab:blue')
-            canvas.axes.set_ylabel('Close Price', fontsize=8)
+            canvas.axes.set_ylabel('Close Price', fontsize=6)
             canvas.figure.tight_layout()
             canvas.draw()
         
 
 def demo():
     app = QApplication(sys.argv)
-    UI = ticker_info_UI()
+    UI = ticker_app_UI()
     UI.show()
-    UI_control = ticker_info_control(UI = UI)
+    UI_control = ticker_app_control(UI = UI)
     sys.exit(app.exec_())
 
