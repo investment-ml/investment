@@ -5,4 +5,4 @@
 # License: GNU General Public License v3 (GPLv3)
 
  
-__version__ = "0.0.dev6"
+__version__ = "0.0.dev8"
