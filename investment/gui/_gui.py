@@ -260,7 +260,7 @@ class preferences_dialog(QDialog):
     def __init__(self, parent=None, force_redownload_yfinance_data = None, download_today_data = None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("Preference Settings")
-        self.checkbox_force_redownload_yfinance_data = QCheckBox("When viewing an individual ticker's history data, do not use existing cache but download latest data from the Internet and update cache ?", parent=self)
+        self.checkbox_force_redownload_yfinance_data = QCheckBox("When viewing an individual ticker's history data, do not use any existing cache but download latest data from the Internet ?", parent=self)
         self.checkbox_download_today_data = QCheckBox("When downloading latest data from the Internet, include today's data (which may be incomplete if market still opens) ?", parent=self)
         self.force_redownload_yfinance_data = force_redownload_yfinance_data
         self.download_today_data = download_today_data
@@ -307,7 +307,7 @@ class download_all_data_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.n_tickers = len(ticker_group_dict['All'])
-        self.setWindowTitle("Download the data of all tickers")
+        self.setWindowTitle("Download all data and store as cache")
         self.label = QLabel(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be 450M+ and the process will take about ~50 minutes.", parent=self)
         self.download_progressbar = QProgressBar(parent=self, objectName="ProgressBar")
         self.download_button = QPushButton(parent=self)
@@ -377,7 +377,7 @@ class app_menu(object):
         prefAct.setStatusTip('Preference settings')
         prefAct.triggered.connect(self.preferences_dialog.exec)
         # download data
-        download_all_Act = QAction('&Download all data and store as cache', parent=self.app_window)
+        download_all_Act = QAction('&Download all data', parent=self.app_window)
         download_all_Act.setShortcut('Ctrl+D')
         download_all_Act.setStatusTip('Download the latest data of all the 600+ tickers included in this App to cache')
         download_all_Act.triggered.connect(self.download_all_data_dialog.exec)        
