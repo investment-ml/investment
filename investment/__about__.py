@@ -6,3 +6,5 @@
 
  
 __version__ = "0.0.dev8"
+
+__license__ = "GPL v3"

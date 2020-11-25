@@ -21,11 +21,12 @@ setuptools.setup(
     author="Investment Prediction Enthusiast",
     author_email="investment.ml.prediction@gmail.com",
     description="A Python Library for Investment",
-    license="GPL v3",
+    license=investment.__license__,
     long_description=long_description,
     long_description_content_type="text/x-rst",
     url="https://github.com/investment-ml/investment",
     packages=setuptools.find_packages(),
+    # https://pypi.org/classifiers/
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",

@@ -6,6 +6,7 @@
 
 from .__about__ import (
     __version__,
+    __license__,
 )
 
 __all__ = ["data", "gui"]
