@@ -38,6 +38,8 @@ Example
    gui.demo()
 
 
+Sample Screenshot
+-----------------
 |image_App_UI|
 
 
