@@ -86,7 +86,7 @@ def get_ticker_data_dict(ticker: str = 'AAPL', verbose: bool = True, force_redow
     if not os.path.exists(data_folder):
         try:
             os.makedirs(data_folder)
-            os.makedirs(data_folder + "backup"
+            os.makedirs(data_folder + "backup")
         except:
             raise IOError(f"cannot create folder: {data_folder}")
 
