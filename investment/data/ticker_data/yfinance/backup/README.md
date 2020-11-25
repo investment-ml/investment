@@ -1,1 +1,0 @@
-this folder is to store backup cached data of tickers from yfinance

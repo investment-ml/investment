@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 
 from datetime import datetime, date, timedelta
 import os
+from os.path import join
+import pathlib
 import pickle
 import shutil
 
@@ -19,12 +21,9 @@ import warnings
 # references:
 # https://www.quora.com/Using-Python-whats-the-best-way-to-get-stock-data
 
-def download_ticker_history_df(ticker: str = 'AAPL', verbose: bool = True, download_today_data: bool = False):
-    """
-    e.g., 
-    start_date = '2020-01-01'
-    end_date = '2020-09-28'
-    """
+def download_ticker_history_df(ticker: str = None, verbose: bool = True, download_today_data: bool = False):
+    if ticker is None:
+        raise ValueError("Error: ticker cannot be None")
 
     ticker = ticker.upper()
 
@@ -32,20 +31,27 @@ def download_ticker_history_df(ticker: str = 'AAPL', verbose: bool = True, downl
         end_datetime = datetime.now() #- timedelta(days=0)
     else:
         end_datetime = datetime.now() - timedelta(days=1)
-        
+    
+    ####################################################################################################
     if verbose:
         print(f"<--- Try to download [{ticker}] from yfinance, end_datetime: [{end_datetime}]")
+
     df = yf.download(tickers=ticker, start=None, end=end_datetime, auto_adjust=True, actions=True)
 
     if verbose:
         print('Download completed --->')
+    ####################################################################################################
+
     df.reset_index(level=0, inplace=True) # convert Date from index to a column
     df['Date'] = df['Date'].astype(str)
 
     return df
 
 
-def download_ticker_info_dict(ticker: str = 'AAPL'):
+def download_ticker_info_dict(ticker: str = None):
+
+    if ticker is None:
+        raise ValueError("Error: ticker cannot be None")
 
     ticker = ticker.upper()
 
@@ -77,27 +83,36 @@ def download_ticker_info_dict(ticker: str = 'AAPL'):
     return info_dict
 
 
-def get_ticker_data_dict(ticker: str = 'AAPL', verbose: bool = True, force_redownload: bool = False, download_today_data: bool = False):
+def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownload: bool = False, download_today_data: bool = False, data_root_dir: str = None):
+
+    if ticker is None:
+        raise ValueError("Error: ticker cannot be None")
 
     ticker = ticker.upper()
 
-    data_folder = os.path.dirname(__file__) + "/ticker_data/yfinance/"
-    data_backup_folder = data_folder + "backup/"
+    if data_root_dir is None:
+        data_root_dir = join(str(pathlib.Path.home()), ".investment")
+        #data_root_dir = os.path.dirname(__file__)
+    
+    data_dir = join(data_root_dir, "ticker_data/yfinance")
+    data_backup_dir = join(data_dir, "backup")
 
-    if not os.path.exists(data_folder):
+    if not os.path.exists(data_dir):
         try:
-            os.makedirs(data_folder)
+            pathlib.Path(data_dir).mkdir(parents=True, exist_ok=True)
+            #os.makedirs(data_dir)
         except:
-            raise IOError(f"cannot create folder: {data_folder}")
+            raise IOError(f"cannot create data dir: {data_dir}")
 
-    if not os.path.exists(data_backup_folder):
+    if not os.path.exists(data_backup_dir):
         try:
-            os.makedirs(data_backup_folder)
+            pathlib.Path(data_backup_dir).mkdir(parents=True, exist_ok=True)
+            #os.makedirs(data_backup_dir)
         except:
-            raise IOError(f"cannot create folder: {data_backup_folder}")
+            raise IOError(f"cannot create data backup dir: {data_backup_dir}")
 
-    ticker_history_df_file = data_folder + ticker + "_history.csv"
-    ticker_info_dict_file = data_folder + ticker + "_info_dict.pkl"
+    ticker_history_df_file = join(data_dir, f"{ticker}_history.csv")
+    ticker_info_dict_file = join(data_dir, f"{ticker}_info_dict.pkl")
 
     if not os.path.isfile(ticker_history_df_file):
 
@@ -150,8 +165,8 @@ def get_ticker_data_dict(ticker: str = 'AAPL', verbose: bool = True, force_redow
                 ticker_info_dict = download_ticker_info_dict(ticker)
             except:
                 raise SystemError("cannot download ticker info dict")
-            shutil.copy2( ticker_history_df_file, data_backup_folder )
-            shutil.copy2( ticker_info_dict_file,  data_backup_folder )
+            shutil.copy2( ticker_history_df_file, data_backup_dir )
+            shutil.copy2( ticker_info_dict_file,  data_backup_dir )
             new_df.to_csv(ticker_history_df_file, index=False)
             pickle.dump(ticker_info_dict, open(ticker_info_dict_file, "wb"))
 

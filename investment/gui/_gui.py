@@ -22,6 +22,9 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
 import copy
 
+import pathlib
+from os.path import join
+
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 import matplotlib.pyplot as plt
 
@@ -241,7 +244,7 @@ class about_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle(f"About {App_name}")
-        self.aboutText = QLabel(parent)
+        self.aboutText = QLabel(parent=self)
         self.aboutText.setTextFormat(Qt.RichText)
         self.aboutText.setText(f"This App provides an UI to help with investment.<br/><br/>Version: {__version__}<br/>License: {__license__}<br/>PyPI: <a href=\"https://pypi.org/project/investment/\">https://pypi.org/project/investment/</a>")
         self.aboutText.setOpenExternalLinks(True)
@@ -257,11 +260,14 @@ class about_dialog(QDialog):
 
 
 class preferences_dialog(QDialog):
-    def __init__(self, parent=None, force_redownload_yfinance_data = None, download_today_data = None, *args, **kwargs):
+    def __init__(self, parent=None, force_redownload_yfinance_data = None, download_today_data = None, data_root_dir = None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("Preference Settings")
         self.checkbox_force_redownload_yfinance_data = QCheckBox("When viewing an individual ticker's history data, do not use any existing cache but download latest data from the Internet ?", parent=self)
         self.checkbox_download_today_data = QCheckBox("When downloading latest data from the Internet, include today's data (which may be incomplete if market still opens) ?", parent=self)
+        self.label_data_root_dir = QLabel(parent=self)
+        self.data_root_dir = data_root_dir
+        self.label_data_root_dir.setText(f"Directory to store cache data: {data_root_dir}")
         self.force_redownload_yfinance_data = force_redownload_yfinance_data
         self.download_today_data = download_today_data
         self.checkbox_force_redownload_yfinance_data.setChecked(self.force_redownload_yfinance_data)            
@@ -272,7 +278,8 @@ class preferences_dialog(QDialog):
         self.layout = QGridLayout()
         self.layout.addWidget(self.checkbox_force_redownload_yfinance_data, 0, 0)
         self.layout.addWidget(self.checkbox_download_today_data, 1, 0)
-        self.layout.addWidget(self.close_button, 2, 0)
+        self.layout.addWidget(self.label_data_root_dir, 2, 0)
+        self.layout.addWidget(self.close_button, 3, 0)
         self.setLayout(self.layout)
         self.close_button.clicked.connect(self._close_button_clicked)
 
@@ -296,7 +303,7 @@ class ticker_thread(QThread):
         for idx, ticker in enumerate(ticker_group_dict['All']):
             try:
                 #time.sleep(0.001)
-                get_ticker_data_dict(ticker = ticker, force_redownload = True, download_today_data = self.app_window.app_menu.preferences_dialog.download_today_data)
+                get_ticker_data_dict(ticker = ticker, force_redownload = True, download_today_data = self.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir = self.app_window.app_menu.preferences_dialog.data_root_dir)
             except:
                 print(f"ticker = {ticker}")
                 warnings.warn("*** Unable to download this ticker")
@@ -308,7 +315,8 @@ class download_all_data_dialog(QDialog):
         super().__init__(parent=parent, *args, **kwargs)
         self.n_tickers = len(ticker_group_dict['All'])
         self.setWindowTitle("Download all data and store as cache")
-        self.label = QLabel(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be 450M+ and the process will take about ~50 minutes.", parent=self)
+        self.label = QLabel(parent=self)
+        self.label.setText(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be 450M+ and the process will take about ~50 minutes.")
         self.download_progressbar = QProgressBar(parent=self, objectName="ProgressBar")
         self.download_button = QPushButton(parent=self)
         self.close_button = QPushButton(parent=self)
@@ -328,7 +336,7 @@ class download_all_data_dialog(QDialog):
         self.download_progressbar.setMaximum(self.n_tickers)
         self.download_progressbar.setValue(0)
         self.download_button.setText('Yes, please download')
-        self.close_button.setText('No, skip this optional process')
+        self.close_button.setText('No, please skip this optional process')
         self.download_button.setEnabled(True)
         self.close_button.setEnabled(True)
         self.download_button.setDefault(True)
@@ -364,7 +372,7 @@ class app_menu(object):
         self.app_window = app_window
         self._default_preference_settings()
         self.about_dialog = about_dialog(parent=self.app_window)
-        self.preferences_dialog = preferences_dialog(parent=self.app_window, force_redownload_yfinance_data=self.force_redownload_yfinance_data, download_today_data=self.download_today_data)
+        self.preferences_dialog = preferences_dialog(parent=self.app_window, force_redownload_yfinance_data=self.force_redownload_yfinance_data, download_today_data=self.download_today_data, data_root_dir=self.data_root_dir)
         self.download_all_data_dialog = download_all_data_dialog(parent=self.app_window)
         # about
         aboutAct = QAction('&About', parent=self.app_window)
@@ -396,10 +404,10 @@ class app_menu(object):
         self.app_window.AppMenu.addAction(download_all_Act)
         self.app_window.AppMenu.addAction(exitAct)
 
-
     def _default_preference_settings(self):
         self.force_redownload_yfinance_data = False
         self.download_today_data = False
+        self.data_root_dir = join(str(pathlib.Path.home()), ".investment")
 
 
 class app_window(QMainWindow):
@@ -524,7 +532,7 @@ class UI_control(object):
         if index > 0:
             self.selected_ticker = self._UI.ticker_selection.itemText(index)
 
-            self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, force_redownload = self._UI.app_window.app_menu.preferences_dialog.force_redownload_yfinance_data, download_today_data = self._UI.app_window.app_menu.preferences_dialog.download_today_data)
+            self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, force_redownload = self._UI.app_window.app_menu.preferences_dialog.force_redownload_yfinance_data, download_today_data = self._UI.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir)
             self.ticker_data_dict_in_effect = copy.deepcopy(self.ticker_data_dict_original)
             self._calc_index()
 
@@ -668,7 +676,7 @@ class UI_control(object):
 
     def _ticker_download_latest_data_from_yfinance(self):
         if self._ticker_selected:
-            self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, force_redownload = True, download_today_data=self._UI.app_window.app_menu.preferences_dialog.download_today_data)
+            self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, force_redownload = True, download_today_data=self._UI.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir)
             self._ticker_lastdate_dialog_use_last_available_date_button_clicked()
             self._UI.repaint()
 
