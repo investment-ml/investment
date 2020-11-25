@@ -84,8 +84,11 @@ def get_ticker_data_dict(ticker: str = 'AAPL', verbose: bool = True, force_redow
     data_folder = os.path.dirname(__file__) + "/ticker_data/yfinance/"
 
     if not os.path.exists(data_folder):
-        os.makedirs(data_folder)
-        os.makedirs(data_folder + "backup"
+        try:
+            os.makedirs(data_folder)
+            os.makedirs(data_folder + "backup"
+        except:
+            raise IOError("cannot create folder")
 
     ticker_history_df_file = data_folder + ticker + "_history.csv"
     ticker_info_dict_file = data_folder + ticker + "_info_dict.pkl"
