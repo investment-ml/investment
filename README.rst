@@ -42,3 +42,4 @@ Example
 
 
 .. |image_App_UI| image:: https://github.com/investment-ml/investment/raw/master/examples/gui/images/App_UI.png
+   :width: 1827px
