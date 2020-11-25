@@ -153,7 +153,7 @@ def get_ticker_data_dict(ticker: str = 'AAPL', verbose: bool = True, force_redow
 
 def demo_data():
     data_dict = {}
-    tickers = list(set(['AAPL', 'AMZN', 'BRK-B', 'C', 'FB', 'GOOGL', 'MSFT', 'NFLX', 'OILU', 'TSLA', 'UDOW', 'SDOW', 'SQQQ']))
+    tickers = list(set(['AAPL', 'AMZN', 'FB', 'GOOGL', 'MSFT', 'NFLX', 'TSLA']))
     for ticker in tickers:
         data_dict[ticker] = get_ticker_data_dict(ticker)
     return data_dict
