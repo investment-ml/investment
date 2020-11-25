@@ -307,8 +307,8 @@ class download_all_data_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.n_tickers = len(ticker_group_dict['All'])
-        self.setWindowTitle("Download all data")
-        self.label = QLabel(f"Ready to acquire the latest data of all {len(ticker_group_dict['All'])} tickers included in this App from the Internet?\nNote: the data is 450M+ and the process will take about ~50 minutes.", parent=self)
+        self.setWindowTitle("Download the data of all tickers")
+        self.label = QLabel(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be 450M+ and the process will take about ~50 minutes.", parent=self)
         self.download_progressbar = QProgressBar(parent=self, objectName="ProgressBar")
         self.download_button = QPushButton(parent=self)
         self.close_button = QPushButton(parent=self)
@@ -328,7 +328,7 @@ class download_all_data_dialog(QDialog):
         self.download_progressbar.setMaximum(self.n_tickers)
         self.download_progressbar.setValue(0)
         self.download_button.setText('Yes, please download')
-        self.close_button.setText('No, skip this process')
+        self.close_button.setText('No, skip this optional process')
         self.download_button.setEnabled(True)
         self.close_button.setEnabled(True)
         self.download_button.setDefault(True)
@@ -377,9 +377,9 @@ class app_menu(object):
         prefAct.setStatusTip('Preference settings')
         prefAct.triggered.connect(self.preferences_dialog.exec)
         # download data
-        download_all_Act = QAction('&Download all data', parent=self.app_window)
+        download_all_Act = QAction('&Download all data and store as cache', parent=self.app_window)
         download_all_Act.setShortcut('Ctrl+D')
-        download_all_Act.setStatusTip('Download all the data for the 600+ tickers included in this App')
+        download_all_Act.setStatusTip('Download the latest data of all the 600+ tickers included in this App to cache')
         download_all_Act.triggered.connect(self.download_all_data_dialog.exec)        
         # exit
         exitAct = QAction('&Exit', parent=self.app_window)
