@@ -1,0 +1,1 @@
+this folder is to store cached data of tickers
