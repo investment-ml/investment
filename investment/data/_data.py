@@ -82,13 +82,19 @@ def get_ticker_data_dict(ticker: str = 'AAPL', verbose: bool = True, force_redow
     ticker = ticker.upper()
 
     data_folder = os.path.dirname(__file__) + "/ticker_data/yfinance/"
+    data_backup_folder = data_folder + "backup/"
 
     if not os.path.exists(data_folder):
         try:
             os.makedirs(data_folder)
-            os.makedirs(data_folder + "backup")
         except:
             raise IOError(f"cannot create folder: {data_folder}")
+
+    if not os.path.exists(data_backup_folder):
+        try:
+            os.makedirs(data_backup_folder)
+        except:
+            raise IOError(f"cannot create folder: {data_backup_folder}")
 
     ticker_history_df_file = data_folder + ticker + "_history.csv"
     ticker_info_dict_file = data_folder + ticker + "_info_dict.pkl"
@@ -144,8 +150,8 @@ def get_ticker_data_dict(ticker: str = 'AAPL', verbose: bool = True, force_redow
                 ticker_info_dict = download_ticker_info_dict(ticker)
             except:
                 raise SystemError("cannot download ticker info dict")
-            shutil.copy2( ticker_history_df_file, data_folder + "backup" )
-            shutil.copy2( ticker_info_dict_file,  data_folder + "backup" )
+            shutil.copy2( ticker_history_df_file, data_backup_folder )
+            shutil.copy2( ticker_info_dict_file,  data_backup_folder )
             new_df.to_csv(ticker_history_df_file, index=False)
             pickle.dump(ticker_info_dict, open(ticker_info_dict_file, "wb"))
 
