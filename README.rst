@@ -35,7 +35,7 @@ Example
 .. code-block:: bash
 
    from investment import gui
-   gui.demo()
+   gui.main()
 
 
 Sample Screenshot
