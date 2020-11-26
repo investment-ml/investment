@@ -267,7 +267,8 @@ class preferences_dialog(QDialog):
         self.checkbox_download_today_data = QCheckBox("When downloading latest data from the Internet, include today's data (which may be incomplete if market still opens) ?", parent=self)
         self.label_data_root_dir = QLabel(parent=self)
         self.data_root_dir = data_root_dir
-        self.label_data_root_dir.setText(f"Directory to store cache data: {data_root_dir}")
+        self.label_data_root_dir.setText(f"Directory to store cache data: <span style=\"color:blue\">{data_root_dir}</span>")
+        self.label_data_root_dir.setTextFormat(Qt.RichText)
         self.force_redownload_yfinance_data = force_redownload_yfinance_data
         self.download_today_data = download_today_data
         self.checkbox_force_redownload_yfinance_data.setChecked(self.force_redownload_yfinance_data)            
@@ -506,9 +507,11 @@ class UI_control(object):
     def _group_selection_change(self, index: int = None):
         if index > 0:
             group_selected = self._UI.group_selection.itemText(index)
+            # ticker selection
             self._UI.ticker_selection.reset()
             for ticker in sorted(ticker_group_dict[group_selected]):
                 self._UI.ticker_selection.addItem(ticker)
+            # ticker texinfo
             self._UI.ticker_textinfo.setText(group_desc_dict[group_selected])
             # ticker frame selection
             self._UI.ticker_timeframe_selection.reset()
@@ -520,7 +523,9 @@ class UI_control(object):
             self._UI.index_canvas.axes.clear()
             self._UI.index_canvas.draw()
             self._UI.index_canvas_coord_label.clear()
-            # canvas textinfo
+            # index selection
+            self._UI.index_selection.reset()
+            # index textinfo
             self._UI.index_textinfo.clear()
             # ticker lastdate and redownload pushbuttons
             self._UI.ticker_lastdate_pushbutton.reset()
@@ -603,7 +608,10 @@ class UI_control(object):
             self._UI.index_canvas_coord_label.clear()
             self._draw_ticker_canvas()
             self._draw_index_canvas()
-            self._populate_index_textinfo()
+
+            self._UI.index_selection.addItem("PVI and NVI")
+            self._UI.index_selection.setCurrentIndex(1)
+            self._UI.index_textinfo.setText(f"PVI (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd is optimistic (or turning pessimistic).\n\nNVI (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money') may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).")
 
             self._UI.ticker_lastdate_pushbutton.setEnabled(True)
             self._UI.ticker_download_latest_data_from_yfinance_pushbutton.setEnabled(True)
@@ -637,9 +645,6 @@ class UI_control(object):
         canvas.mpl_connect('motion_notify_event', self.index_canvas_cursor.onmove)
         #################################################
         canvas.draw()
-
-    def _populate_index_textinfo(self):
-        self._UI.index_textinfo.setText(f"PVI reflects high-volume days and thus the crowd's feelings:\nWhen PVI_EMA9 is above (or below) PVI_EMA255, the crowd is optimistic (or turning pessimistic).\n\nNVI reflects low-volume days and thus what the non-crowd (e.g., 'smart money') may be doing:\nWhen NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).")
 
     def _ticker_timeframe_selection_change(self, index: int = None):
         if index > 0:
