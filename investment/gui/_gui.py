@@ -316,7 +316,7 @@ class download_all_data_dialog(QDialog):
         self.n_tickers = len(ticker_group_dict['All'])
         self.setWindowTitle("Download all data and store as cache")
         self.label = QLabel(parent=self)
-        self.label.setText(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be 450M+ and the process will take about ~50 minutes.")
+        self.label.setText(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be 400M+ and the process will take about ~50 minutes.")
         self.download_progressbar = QProgressBar(parent=self, objectName="ProgressBar")
         self.download_button = QPushButton(parent=self)
         self.close_button = QPushButton(parent=self)
