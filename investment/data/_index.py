@@ -24,8 +24,14 @@ class Volume_Index(object):
         NVI = np.empty(shape=n_periods, dtype=float)
         PVI[0] = 1.0
         NVI[0] = 1.0
+        EMA_short_period_volume = Moving_Average(periods=self.short_periods).Exponential(volume)
+        use_EMA_short_period_volume = True # the reason to use EMA_short_periods not daily volume is to get a more even-keeled reference volume
+        if use_EMA_short_period_volume:
+            reference_volume = EMA_short_period_volume
+        else:
+            reference_volume = volume.copy()
         for today_idx in range(1, n_periods):
-            if volume[today_idx] > volume[today_idx-1]:
+            if volume[today_idx] > reference_volume[today_idx-1]:
                 PVI[today_idx] = PVI[today_idx-1] + ((close_price[today_idx] - close_price[today_idx-1]) / close_price[today_idx-1] * PVI[today_idx-1])
                 NVI[today_idx] = NVI[today_idx-1]
             else:

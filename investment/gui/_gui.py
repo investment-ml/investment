@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 
 from datetime import date, datetime, timedelta, timezone
 
-from ..data import get_ticker_data_dict, Volume_Index, Moving_Average
+from ..data import get_ticker_data_dict, get_formatted_ticker_data, Volume_Index, Moving_Average
 
 import numpy as np
 import pandas as pd
@@ -549,68 +549,9 @@ class UI_control(object):
             self.ticker_data_dict_in_effect = copy.deepcopy(self.ticker_data_dict_original)
             self._calc_index()
 
-            ticker_info = self.ticker_data_dict_in_effect['info']
-            ticker_info_keys = ticker_info.keys()
-
-            # long name
-            ticker_long_name = self.ticker_data_dict_in_effect['info']['longName']
-
-            # institutions
-            if 'heldPercentInstitutions' in ticker_info_keys:
-                percent_held_by_institutions = ticker_info['heldPercentInstitutions'] * 100
-                institutional_holders_df = self.ticker_data_dict_in_effect['institutional_holders']
-                if institutional_holders_df is None:
-                    institutions_holding_info = f"\n\nShares held by institutions: {percent_held_by_institutions:.2f}%"
-                else:
-                    institutional_holders_df.drop('Value', axis=1, inplace=True) # axis: 0=row, 1=col
-                    institutions_holding_info = f"\n\nShares held by institutions: {percent_held_by_institutions:.2f}%\n\nInstitutional Holders:\n{institutional_holders_df}"
-            else:
-                institutions_holding_info = f"\n\nInstitution holding info unavailable"   
-
-            # dividends
-            dividends_df = self.ticker_data_dict_in_effect['dividends'].reset_index(level=0)
-            if len(dividends_df) == 0:
-                dividends_info = "\n\nDividends info never reported"
-            else:
-                dividends_info = f"\n\nMost recent 10 reported dividends:\nDate\tDividends\tDividend Yield %"
-                date_close_df = self.ticker_data_dict_in_effect['history'][['Date','Close']]
-                for idx, row in dividends_df.tail(10).iterrows():
-                    try:
-                        close_price_on_this_date = float(date_close_df[date_close_df.Date == row['Date']].Close)
-                        dividends_yield_percent = f"{100*row['Dividends']/close_price_on_this_date:.2f}%"
-                    except:
-                        dividends_yield_percent = "NA"
-                    dividends_info = f"{dividends_info}\n{row['Date'].date()}\t{row['Dividends']}\t{dividends_yield_percent}"
-
-            # earnings
-            earnings_info = f"\n\nEarnings info not available"
-            if 'trailingEps' in ticker_info_keys:
-                trailingEps = ticker_info['trailingEps']
-                if trailingEps is not None:
-                    earnings_info = f"\n\nEarnings per share (EPS) from the last four quarters: ${trailingEps:.2f}"
-
-            # measures
-            risk_info = f"\n\nBeta measure not available"
-            # beta: covariance of stock with market
-            if 'beta' in ticker_info_keys:
-                beta = ticker_info['beta']
-                if beta is not None:
-                    risk_info = f"\n\nBeta: {beta:.2f}"
-                    if beta > 1.00:
-                        risk_info = f"{risk_info} (more volatile than the overall market)"
-                    if beta <= 1.00:
-                        risk_info = f"{risk_info} (less volatile than the overall market)"
-
-            # summary
-            if 'longBusinessSummary' in ticker_info_keys:
-                long_business_summary = f"\n\n{ticker_info['longBusinessSummary']}"
-            else:
-                long_business_summary = ""
-
-            self._UI.ticker_textinfo.setText(f"{ticker_long_name}{institutions_holding_info}{dividends_info}{earnings_info}{risk_info}{long_business_summary}")
+            self._UI.ticker_textinfo.setText(get_formatted_ticker_data(self.ticker_data_dict_in_effect))
 
             self._UI.ticker_timeframe_selection.reset()
-            
             for timeframe in self.timeframe_dict.keys():
                 self._UI.ticker_timeframe_selection.addItem(timeframe)
 
@@ -659,11 +600,11 @@ class UI_control(object):
         canvas = self._UI.index_canvas
         canvas.axes.clear()
         index_plotline_PVI_EMA9, = canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'], self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='tab:green',                      linewidth=1)
-        canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                   self.ticker_data_dict_in_effect['history']['PVI_EMA255'], color='tab:green',  linestyle="dashed", linewidth=1)
-        index_plotline_NVI_EMA9, = canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                   self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='tab:orange',                     linewidth=1)
-        canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                   self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='tab:orange', linestyle="dashed", linewidth=1)
+        canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                            self.ticker_data_dict_in_effect['history']['PVI_EMA255'], color='tab:green',  linestyle="dashed", linewidth=1)
+        index_plotline_NVI_EMA9, = canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'], self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='tab:orange',                     linewidth=1)
+        canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                            self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='tab:orange', linestyle="dashed", linewidth=1)
         canvas.axes.set_xlabel('Date', fontsize=10.0)
-        canvas.axes.set_ylabel('PVI (green) and NVI (orange)', fontsize=10.0)
+        canvas.axes.set_ylabel('PVI (green) and NVI (orange) (EMA9, 255)', fontsize=10.0)
         #################################################
         if self.index_options_selection_index == 1:
             index_plotline = index_plotline_PVI_EMA9
@@ -742,10 +683,16 @@ class UI_control(object):
         self._UI.message_dialog.hide()
 
 
-def demo():
+def main():
     app = QApplication(sys.argv)
     app.setStyleSheet(StyleSheet)
     window = app_window(app=app)
     window.show()
     sys.exit(app.exec())
 
+
+def test():
+    for ticker in ticker_group_dict['All']:
+        print('\n<-------------------------------------------------------------------------------------------')
+        print(get_formatted_ticker_data(get_ticker_data_dict(ticker=ticker, force_redownload=False, download_today_data=True)))
+        print('------------------------------------------------------------------------------------------->\n')

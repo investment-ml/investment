@@ -199,7 +199,89 @@ def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownl
     return info_dict
 
 
-def demo_data():
+def get_formatted_ticker_data(ticker_data_dict):
+
+    ticker_info = ticker_data_dict['info']
+    ticker_info_keys = ticker_info.keys()
+
+    # long name
+    ticker_long_name = ticker_info['longName']
+
+    # sector info
+    if 'sector' in ticker_info_keys:
+        sector_info = f"\n\nSector: {ticker_info['sector']}"
+        if 'industry' in ticker_info_keys:
+            sector_info += f", Industry: {ticker_info['industry']}"
+    else:
+        sector_info = f"\n\nSector info unavailable"
+
+    # earnings
+    earnings_info = f"\n\nEarnings info unavailable"
+    if 'trailingEps' in ticker_info_keys:
+        trailingEps = ticker_info['trailingEps']
+        if trailingEps is not None:
+            earnings_info = f"\n\nEarnings per share (EPS) from the last four quarters: ${trailingEps:.2f}"
+    if 'forwardEps' in ticker_info_keys:
+        forwardEps = ticker_info['forwardEps']
+        if forwardEps is not None:
+            EPS_change_pct = 100*(forwardEps - trailingEps)/abs(trailingEps)
+            earnings_info += f"\nEPS estimated for the next four quarters: ${forwardEps:.2f} ({round(EPS_change_pct,2):+.2f}%)"
+
+    # institutions
+    institutions_holding_info = f"\n\nInstitution holding info unavailable"   
+    if 'heldPercentInstitutions' in ticker_info_keys:
+        percent_held_by_institutions = ticker_info['heldPercentInstitutions']
+        if percent_held_by_institutions is not None:
+            institutions_holding_info = f"\n\nShares held by institutions: {100*percent_held_by_institutions:.2f}%"
+            institutional_holders_df = ticker_data_dict['institutional_holders']
+            if institutional_holders_df is not None:
+                institutional_holders_df.drop(['% Out','Value'], axis=1, inplace=True) # axis: 0=row, 1=col
+                if 'sharesOutstanding' in ticker_info_keys:
+                    sharesOutstanding = ticker_info['sharesOutstanding']
+                    if sharesOutstanding is not None:
+                        institutional_holders_df['% Out'] = round(institutional_holders_df['Shares'] / sharesOutstanding * 100, 2)
+                institutions_holding_info += f"\n\nInstitutional Holders:\n{institutional_holders_df}"
+
+    # dividends
+    dividends_info = f"\n\nDividends info unavailable"
+    if ticker_data_dict['dividends'] is not None:
+        dividends_df = ticker_data_dict['dividends'].reset_index(level=0)
+        if len(dividends_df) == 0:
+            dividends_info = "\n\nDividends info never reported"
+        else:
+            dividends_info = f"\n\nMost recent 10 reported dividends:\nDate\tDividends\tapprox. Dividend Yield %"
+            date_close_df = ticker_data_dict['history'][['Date','Close']]
+            for idx, row in dividends_df.tail(10).iterrows():
+                try:
+                    close_price_on_this_date = float(date_close_df[date_close_df.Date == row['Date']].Close)
+                    dividends_yield_percent = f"{100*row['Dividends']/close_price_on_this_date:.2f}%"
+                except:
+                    dividends_yield_percent = "NA"
+                dividends_info += f"\n{row['Date'].date()}\t{row['Dividends']}\t{dividends_yield_percent}"
+
+    # measures
+    risk_info = f"\n\nBeta measure unavailable"
+    # beta: covariance of stock with market
+    if 'beta' in ticker_info_keys:
+        beta = ticker_info['beta']
+        if beta is not None:
+            risk_info = f"\n\nBeta: {beta:.2f}"
+            if beta > 1.00:
+                risk_info = f"{risk_info} (more volatile than the overall market)"
+            if beta <= 1.00:
+                risk_info = f"{risk_info} (less volatile than the overall market)"
+
+    # summary
+    if 'longBusinessSummary' in ticker_info_keys:
+        long_business_summary = f"\n\n{ticker_info['longBusinessSummary']}"
+    else:
+        long_business_summary = ""
+
+    formatted_str = f"{ticker_long_name}{sector_info}{earnings_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}"  
+    return formatted_str
+
+
+def test_data():
     data_dict = {}
     tickers = list(set(['AAPL', 'AMZN', 'FB', 'GOOGL', 'MSFT', 'NFLX', 'TSLA']))
     for ticker in tickers:
@@ -207,12 +289,13 @@ def demo_data():
     return data_dict
 
 
-def demo():
-    data_dict = demo_data()
+def test():
+    data_dict = test_data()
     for key in data_dict.keys():
         df = data_dict[key]
         df['history'][['Close']].plot()
         plt.show()
+        print(get_formatted_ticker_data(df))
 
     d1 = datetime(1970,1,1,tzinfo=timezone.utc) + timedelta(seconds=1604620800)
     assert timestamp_to_datetime(datetime_to_timestamp(d1)) == d1, "unequal datetime"

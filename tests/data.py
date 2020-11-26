@@ -6,4 +6,4 @@
 
 from investment import data
 
-data.demo()
+data.test()

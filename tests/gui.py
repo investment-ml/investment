@@ -4,7 +4,6 @@
 #
 # License: GNU General Public License v3 (GPLv3)
 
- 
-__version__ = "0.1.0a11"
+from investment import gui
 
-__license__ = "GPL v3"
+gui.test()

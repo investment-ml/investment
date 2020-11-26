@@ -4,6 +4,6 @@
 #
 # License: GNU General Public License v3 (GPLv3)
 
-from ._gui import demo
+from ._gui import main, test
 
-__all__ = ["demo",]
+__all__ = ["main","test",]
