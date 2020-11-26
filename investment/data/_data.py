@@ -292,10 +292,12 @@ def test_data():
 def test():
     data_dict = test_data()
     for key in data_dict.keys():
+        print("\n<-------------------------------------------------------------------------------------------")
         df = data_dict[key]
         df['history'][['Close']].plot()
         plt.show()
         print(get_formatted_ticker_data(df))
+        print("------------------------------------------------------------------------------------------->\n")
 
     d1 = datetime(1970,1,1,tzinfo=timezone.utc) + timedelta(seconds=1604620800)
     assert timestamp_to_datetime(datetime_to_timestamp(d1)) == d1, "unequal datetime"
