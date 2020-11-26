@@ -119,7 +119,7 @@ class SnappingCursor(Cursor):
                     self.UI.ticker_canvas_coord_label.setText(f"date={pd.to_datetime(event.xdata).date()}, EMA9 price=${event.ydata:.2f}")
                 if self.name == 'index_canvas_cursor':
                     self.UI.index_canvas_coord_label.setText(f"date={pd.to_datetime(event.xdata).date()}, EMA9 PVI={event.ydata:.2f}")
-        super().onmove(event)
+            super().onmove(event)
 
 
 class canvas(FigureCanvasQTAgg):

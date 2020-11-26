@@ -5,6 +5,6 @@
 # License: GNU General Public License v3 (GPLv3)
 
  
-__version__ = "0.1.0a8"
+__version__ = "0.1.0a9"
 
 __license__ = "GPL v3"
