@@ -7,9 +7,8 @@
 import sys
 
 import matplotlib
-matplotlib.use('Qt5Agg') # backend
-
 print(matplotlib.get_backend())
+matplotlib.use('Qt5Agg') # backend
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, qApp
@@ -124,6 +123,7 @@ class SnappingCursor(Cursor):
             super().onmove(event)
 
 
+# reference: https://matplotlib.org/faq/usage_faq.html
 class canvas(FigureCanvasQTAgg):
     def __init__(self, parent=None, width=6.0, height=3.0, dpi=72, tight_layout=True, *args, **kwargs):
         self.figure = plt.figure(figsize=(width, height), dpi=dpi, tight_layout=tight_layout, *args, **kwargs)
