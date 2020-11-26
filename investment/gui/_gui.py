@@ -7,7 +7,9 @@
 import sys
 
 import matplotlib
-matplotlib.use('Qt5Agg')
+matplotlib.use('Qt5Agg') # backend
+
+print(matplotlib.get_backend())
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, qApp
