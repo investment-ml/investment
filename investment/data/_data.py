@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 import os
 from os.path import join
 import pathlib
@@ -17,6 +17,25 @@ import pickle
 import shutil
 
 import warnings
+
+
+def datetime_to_tzinfo(x):
+    return x.astimezone().tzinfo
+    
+def today_utc():
+    t1 = datetime.today()
+    return datetime(t1.year, t1.month, t1.day, tzinfo=timezone.utc)
+
+def today_utc_timestamp():
+    d1 = today_utc()
+    return d1.timestamp()
+
+# timestamp: seconds since epoch
+def timestamp_to_datetime(x):
+    return datetime(1970,1,1,tzinfo=timezone.utc) + timedelta(seconds=x)
+
+def datetime_to_timestamp(x):
+    return x.timestamp()
 
 # references:
 # https://www.quora.com/Using-Python-whats-the-best-way-to-get-stock-data
@@ -79,6 +98,7 @@ def download_ticker_info_dict(ticker: str = None):
         info_dict['options']               = this_ticker.options
     except:
         info_dict['options']               = None
+    info_dict['data_download_time']        = datetime.now()
     info_dict['history']                   = pd.DataFrame()
     return info_dict
 
@@ -193,3 +213,10 @@ def demo():
         df = data_dict[key]
         df['history'][['Close']].plot()
         plt.show()
+
+    d1 = datetime(1970,1,1,tzinfo=timezone.utc) + timedelta(seconds=1604620800)
+    assert timestamp_to_datetime(datetime_to_timestamp(d1)) == d1, "unequal datetime"
+
+    t_list = [1604620800, today_utc_timestamp()]
+    for t in t_list:
+        assert datetime_to_timestamp(timestamp_to_datetime(t)) == t, "unequal timestamp"

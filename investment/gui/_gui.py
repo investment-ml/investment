@@ -28,7 +28,7 @@ from os.path import join
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 import matplotlib.pyplot as plt
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from ..data import get_ticker_data_dict, Volume_Index, Moving_Average
 
@@ -108,7 +108,7 @@ class SnappingCursor(Cursor):
     def onmove(self, event):
         if event.inaxes:
             if type(event.xdata) == np.float64:
-                x_datetime = datetime(1970,1,1) + timedelta(days=event.xdata)
+                x_datetime = datetime(1970,1,1,tzinfo=timezone.utc) + timedelta(days=event.xdata)
                 index = min(np.searchsorted(self.x, np.datetime64(x_datetime)), len(self.x)-1) # np.datetime64() is used to be congruent with self.x
                 if index == self._last_index:
                     return  # still on the same data point. Nothing to do.
@@ -118,7 +118,7 @@ class SnappingCursor(Cursor):
                 if self.name == 'ticker_canvas_cursor':
                     self.UI.ticker_canvas_coord_label.setText(f"date={pd.to_datetime(event.xdata).date()}, EMA9 price=${event.ydata:.2f}")
                 if self.name == 'index_canvas_cursor':
-                    self.UI.index_canvas_coord_label.setText(f"date={pd.to_datetime(event.xdata).date()}, EMA9 PVI={event.ydata:.2f}")
+                    self.UI.index_canvas_coord_label.setText(f"date={pd.to_datetime(event.xdata).date()}, EMA9 index={event.ydata:.2f}")
             super().onmove(event)
 
 
@@ -225,6 +225,10 @@ class message_dialog(QDialog):
 class index_canvas_options(QComboBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.reset()
+
+    def reset(self):
+        self.clear()
         self.addItem("-- Select an index canvas option --")
 
 
@@ -494,6 +498,7 @@ class UI_control(object):
         self._UI.ticker_lastdate_calendar_dialog.ticker_lastdate_calendar_dialog_ok_button.clicked.connect(self._ticker_lastdate_dialog_ok_button_clicked)
         self._UI.ticker_download_latest_data_from_yfinance_pushbutton.clicked.connect(self._ticker_download_latest_data_from_yfinance)
         self._UI.message_dialog.textinfo_ok_button.clicked.connect(self._message_dialog_textinfo_ok_button_clicked)
+        self._UI.index_canvas_options.currentIndexChanged.connect(self._index_canvas_options_change)
         self.timeframe_text = None
         self.ticker_data_dict_in_effect = None
         self._ticker_selected = False
@@ -503,6 +508,7 @@ class UI_control(object):
         self.timeframe_dict = {"1 month": 1/12, "2 months": 1/6, "3 months": 1/4, "6 months": 1/2, "1 year": 1.0, "2 years": 2.0, "5 years": 5.0, "10 years": 10.0, "All time": float('inf')}
         self.time_last_date = pd.to_datetime(date.today())
         self.timeframe_selection_index = 5
+        self.index_options_selection_index = 1
 
     def _group_selection_change(self, index: int = None):
         if index > 0:
@@ -527,6 +533,8 @@ class UI_control(object):
             self._UI.index_selection.reset()
             # index textinfo
             self._UI.index_textinfo.clear()
+            # index canvas selection
+            self._UI.index_canvas_options.reset()
             # ticker lastdate and redownload pushbuttons
             self._UI.ticker_lastdate_pushbutton.reset()
             self._UI.ticker_download_latest_data_from_yfinance_pushbutton.reset()
@@ -574,8 +582,16 @@ class UI_control(object):
                         dividends_yield_percent = "NA"
                     dividends_info = f"{dividends_info}\n{row['Date'].date()}\t{row['Dividends']}\t{dividends_yield_percent}"
 
+            # earnings
+            earnings_info = f"\n\nEarnings info not available"
+            if 'trailingEps' in ticker_info_keys:
+                trailingEps = ticker_info['trailingEps']
+                if trailingEps is not None:
+                    earnings_info = f"\n\nEarnings per share (EPS) from the last four quarters: ${trailingEps:.2f}"
+
             # measures
             risk_info = f"\n\nBeta measure not available"
+            # beta: covariance of stock with market
             if 'beta' in ticker_info_keys:
                 beta = ticker_info['beta']
                 if beta is not None:
@@ -591,7 +607,7 @@ class UI_control(object):
             else:
                 long_business_summary = ""
 
-            self._UI.ticker_textinfo.setText(f"{ticker_long_name}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}")
+            self._UI.ticker_textinfo.setText(f"{ticker_long_name}{institutions_holding_info}{dividends_info}{earnings_info}{risk_info}{long_business_summary}")
 
             self._UI.ticker_timeframe_selection.reset()
             
@@ -609,9 +625,17 @@ class UI_control(object):
             self._draw_ticker_canvas()
             self._draw_index_canvas()
 
+            self._UI.index_selection.reset()
             self._UI.index_selection.addItem("PVI and NVI")
             self._UI.index_selection.setCurrentIndex(1)
             self._UI.index_textinfo.setText(f"PVI (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd is optimistic (or turning pessimistic).\n\nNVI (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money') may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).")
+
+            # index canvas selection
+            self._UI.index_canvas_options.reset()
+            self._UI.index_canvas_options.addItem("PVI")
+            self._UI.index_canvas_options.addItem("NVI")
+            self.index_options_selection_index = 1
+            self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
 
             self._UI.ticker_lastdate_pushbutton.setEnabled(True)
             self._UI.ticker_download_latest_data_from_yfinance_pushbutton.setEnabled(True)
@@ -634,17 +658,30 @@ class UI_control(object):
     def _draw_index_canvas(self):
         canvas = self._UI.index_canvas
         canvas.axes.clear()
-        index_plotline, = canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'], self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='tab:green',                      linewidth=1)
+        index_plotline_PVI_EMA9, = canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'], self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='tab:green',                      linewidth=1)
         canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                   self.ticker_data_dict_in_effect['history']['PVI_EMA255'], color='tab:green',  linestyle="dashed", linewidth=1)
-        canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                   self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='tab:orange',                     linewidth=1)
+        index_plotline_NVI_EMA9, = canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                   self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='tab:orange',                     linewidth=1)
         canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                   self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='tab:orange', linestyle="dashed", linewidth=1)
         canvas.axes.set_xlabel('Date', fontsize=10.0)
         canvas.axes.set_ylabel('PVI (green) and NVI (orange)', fontsize=10.0)
         #################################################
+        if self.index_options_selection_index == 1:
+            index_plotline = index_plotline_PVI_EMA9
+        elif self.index_options_selection_index == 2:
+            index_plotline = index_plotline_NVI_EMA9
+        else:
+            raise ValueError("index options selection index not within range")
         self.index_canvas_cursor = SnappingCursor(plotline=index_plotline, ax=canvas.axes, useblit=True, color='black', linestyle='dashed', linewidth=1, name='index_canvas_cursor', UI=self._UI)
         canvas.mpl_connect('motion_notify_event', self.index_canvas_cursor.onmove)
         #################################################
         canvas.draw()
+
+    def _index_canvas_options_change(self, index: int = None):
+        if index > 0:
+            self.index_options_text = self._UI.index_canvas_options.itemText(index)
+            self.index_options_selection_index = index
+
+            self._draw_index_canvas() 
 
     def _ticker_timeframe_selection_change(self, index: int = None):
         if index > 0:
