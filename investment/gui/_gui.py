@@ -7,9 +7,12 @@
 import sys
 
 import matplotlib
+#print(matplotlib.rcsetup.interactive_bk)
+#print(matplotlib.rcsetup.non_interactive_bk)
+#print(matplotlib.rcsetup.all_backends)
 
-# AGG (http://antigrain.com/) backend is for writing to file, not for rendering in a window. Thus, it's a headless framework.
-if matplotlib.get_backend() != 'agg': 
+# non_interactive_bk, for example: AGG (http://antigrain.com/) backend is for writing to file, not for rendering in a window. Thus, it's a headless framework.
+if matplotlib.get_backend() not in matplotlib.rcsetup.non_interactive_bk: 
     matplotlib.use('Qt5Agg') # backend
 
 from PyQt5.QtWidgets import QApplication
@@ -325,7 +328,7 @@ class download_all_data_dialog(QDialog):
         self.n_tickers = len(ticker_group_dict['All'])
         self.setWindowTitle("Download all data and store as cache")
         self.label = QLabel(parent=self)
-        self.label.setText(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be 400M+ and the process will take about ~50 minutes.")
+        self.label.setText(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be 400M+ and the process will take about 25~50+ minutes.")
         self.download_progressbar = QProgressBar(parent=self, objectName="ProgressBar")
         self.download_button = QPushButton(parent=self)
         self.close_button = QPushButton(parent=self)
@@ -373,7 +376,7 @@ class download_all_data_dialog(QDialog):
             self.close_button.setText('Download completed. Return to App')
             self.close_button.setEnabled(True)
             self.close_button.setDefault(True)
-            self.close_button.repaint()
+            self.close_button.repaint() # to cope with a bug in PyQt5
 
 
 class app_menu(object):
@@ -665,7 +668,7 @@ class UI_control(object):
         if self._ticker_selected:
             self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, force_redownload = True, download_today_data=self._UI.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir)
             self._ticker_lastdate_dialog_use_last_available_date_button_clicked()
-            self._UI.repaint()
+            self._UI.repaint() # to cope with a bug in PyQt5
 
     def _ticker_lastdate_dialog_use_last_available_date_button_clicked(self):
         self.time_last_date = self.ticker_data_dict_original['history']['Date'].iloc[-1]
