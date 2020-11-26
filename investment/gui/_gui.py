@@ -7,7 +7,9 @@
 import sys
 
 import matplotlib
-if matplotlib.get_backend() != 'agg'
+
+# AGG (http://antigrain.com/) backend is for writing to file, not for rendering in a window. Thus, it's a headless framework.
+if matplotlib.get_backend() != 'agg': 
     matplotlib.use('Qt5Agg') # backend
 
 from PyQt5.QtWidgets import QApplication
