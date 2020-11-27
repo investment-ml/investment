@@ -69,8 +69,8 @@ def download_ticker_history_df(ticker: str = None, verbose: bool = True, downloa
             successful_download = False
             if auto_retry:
                 print(f"Download unsuccessful. ticker = {ticker}. Trying in 5 seconds: ", end='')
-                for seconds in (5,0,-1):
-                    print(f"{seconds}...")
+                for seconds in range(5,0,-1):
+                    print(f"{seconds}...", end='')
                     time.sleep(1)
             else:
                 print(f"Warning: Download unsuccessful. ticker = {ticker}. No auto retrying.")
@@ -143,8 +143,8 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
             successful_download = False
             if auto_retry:
                 print(f"Download unsuccessful. ticker = {ticker}. Trying in 5 seconds: ", end='')
-                for seconds in (5,0,-1):
-                    print(f"{seconds}...")
+                for seconds in range(5,0,-1):
+                    print(f"{seconds}...", end='')
                     time.sleep(1)
             else:
                 print(f"Warning: Download unsuccessful. ticker = {ticker}. No auto retrying.")
