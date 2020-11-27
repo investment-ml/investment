@@ -670,5 +670,5 @@ def main():
 def test():
     for ticker in random.sample(ticker_group_dict['All'], len(ticker_group_dict['All'])):
         print("\n<-------------------------------------------------------------------------------------------")
-        print(get_formatted_ticker_data(get_ticker_data_dict(ticker=ticker, force_redownload=False, download_today_data=False, auto_retry=True)))
+        print(get_formatted_ticker_data(get_ticker_data_dict(ticker=ticker, force_redownload=False, download_today_data=True, auto_retry=True)))
         print("------------------------------------------------------------------------------------------->\n")
