@@ -258,6 +258,14 @@ def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownl
 
 def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
 
+    if not 'info' in ticker_data_dict.keys():
+        if use_html:
+            formatted_str = f"<body style=\"font-family:Courier New;\">the key 'info' does not exist in ticker_data_dict</body>"
+        else:
+            formatted_str = f"the key 'info' does not exist in ticker_data_dict"
+
+        return formatted_str
+
     ticker_info = ticker_data_dict['info']
     ticker_info_keys = ticker_info.keys()
 
@@ -366,9 +374,9 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                 except:
                     dividends_yield_percent = "NA"
                 if use_html:
-                    dividends_info_df = dividends_info_df.append({'Date': row['Date'].date(), 'Dividends': f"${row['Dividends']}", 'Yield %': dividends_yield_percent}, ignore_index = True)
+                    dividends_info_df = dividends_info_df.append({'Date': row['Date'].date(), 'Dividends': f"${row['Dividends']:.2f}", 'Yield %': dividends_yield_percent}, ignore_index = True)
                 else:
-                    dividends_info += f"\n{row['Date'].date()}\t{row['Dividends']}\t{dividends_yield_percent}"
+                    dividends_info += f"\n{row['Date'].date()}\t${row['Dividends']:.2f}\t{dividends_yield_percent}"
             if use_html:
                 dividends_info += dividends_info_df.to_html(index=False)
 
