@@ -58,7 +58,7 @@ def download_ticker_history_df(ticker: str = None, verbose: bool = True, downloa
     
     ####################################################################################################
     if verbose:
-        print(f"<--- Try to download [{ticker}] from yfinance, end_datetime: [{end_datetime}]")
+        print(f"\n<--- Try to download history of [{ticker}] from yfinance, end_datetime: [{end_datetime}]")
 
     successful_download = False
     while not successful_download:
@@ -86,7 +86,7 @@ def download_ticker_history_df(ticker: str = None, verbose: bool = True, downloa
     return df
 
 
-def download_ticker_info_dict(ticker: str = None, auto_retry: bool = False):
+def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_retry: bool = False):
 
     if ticker is None:
         raise ValueError("Error: ticker cannot be None")
@@ -95,6 +95,9 @@ def download_ticker_info_dict(ticker: str = None, auto_retry: bool = False):
 
     info_dict = {}
     this_ticker = yf.Ticker(ticker)
+
+    if verbose:
+        print(f"\n<--- Try to download info of [{ticker}] from yfinance")
 
     ####################################################################
 
@@ -149,6 +152,9 @@ def download_ticker_info_dict(ticker: str = None, auto_retry: bool = False):
 
     ####################################################################
 
+    if verbose:
+        print('Download completed --->')
+
     info_dict['data_download_time']        = datetime.now()
     info_dict['history']                   = pd.DataFrame()
     return info_dict
@@ -193,7 +199,7 @@ def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownl
             raise SystemError("cannot download ticker history")
 
         try:
-            ticker_info_dict = download_ticker_info_dict(ticker, auto_retry = auto_retry)
+            ticker_info_dict = download_ticker_info_dict(ticker, verbose = verbose, auto_retry = auto_retry)
         except:
             raise SystemError("cannot download ticker info dict")
 
@@ -233,7 +239,7 @@ def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownl
             warnings.warn("the redownloaded df has an older end date, compared to the current one --> the current one will be used instead")
         else:
             try:
-                ticker_info_dict = download_ticker_info_dict(ticker, auto_retry = auto_retry)
+                ticker_info_dict = download_ticker_info_dict(ticker, verbose = verbose, auto_retry = auto_retry)
             except:
                 raise SystemError("cannot download ticker info dict")
             shutil.copy2( ticker_history_df_file, data_backup_dir )
