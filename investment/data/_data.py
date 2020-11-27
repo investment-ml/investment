@@ -326,18 +326,19 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                 institutions_holding_info = f"<br/><br/>Shares held by institutions: {100*percent_held_by_institutions:.2f}%"
             else:
                 institutions_holding_info = f"\n\nShares held by institutions: {100*percent_held_by_institutions:.2f}%"
-            institutional_holders_df = ticker_data_dict['institutional_holders']
-            if institutional_holders_df is not None:
-                if all(elem in institutional_holders_df.columns for elem in ['% Out','Value']):
-                    tmp_df = institutional_holders_df.drop(['% Out','Value'], axis=1, inplace=False) # axis: 0=row, 1=col
-                    if 'sharesOutstanding' in ticker_info_keys:
-                        sharesOutstanding = ticker_info['sharesOutstanding']
-                        if sharesOutstanding is not None:
-                            tmp_df['% Out'] = tmp_df['Shares'].apply(lambda x: f"{x/sharesOutstanding * 100:.2f}%")
-                    if use_html:
-                        institutions_holding_info += f"<br/><br/>Institutional Holders:{tmp_df.to_html(index=False)}"
-                    else:
-                        institutions_holding_info += f"\n\nInstitutional Holders:\n{tmp_df.to_string(index=False)}"
+            if 'institutional_holders' in ticker_data_dict.keys():
+                institutional_holders_df = ticker_data_dict['institutional_holders']
+                if institutional_holders_df is not None:
+                    if all(elem in institutional_holders_df.columns for elem in ['% Out','Value']):
+                        tmp_df = institutional_holders_df.drop(['% Out','Value'], axis=1, inplace=False) # axis: 0=row, 1=col
+                        if 'sharesOutstanding' in ticker_info_keys:
+                            sharesOutstanding = ticker_info['sharesOutstanding']
+                            if sharesOutstanding is not None:
+                                tmp_df['% Out'] = tmp_df['Shares'].apply(lambda x: f"{x/sharesOutstanding * 100:.2f}%")
+                        if use_html:
+                            institutions_holding_info += f"<br/><br/>Institutional Holders:{tmp_df.to_html(index=False)}"
+                        else:
+                            institutions_holding_info += f"\n\nInstitutional Holders:\n{tmp_df.to_string(index=False)}"
 
     # dividends
     if use_html:
