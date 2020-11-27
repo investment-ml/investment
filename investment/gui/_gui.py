@@ -274,7 +274,7 @@ class ticker_thread(QThread):
         super().__init__()
         self.app_window = app_window
     def run(self):
-        for idx, ticker in enumerate(random.shuffle(ticker_group_dict['All'])):
+        for idx, ticker in enumerate(random.sample(ticker_group_dict['All'], len(ticker_group_dict['All']))):
             try:
                 #time.sleep(0.001)
                 get_ticker_data_dict(ticker = ticker, force_redownload = True, download_today_data = self.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir = self.app_window.app_menu.preferences_dialog.data_root_dir, auto_retry = True)
@@ -668,7 +668,7 @@ def main():
 
 
 def test():
-    for ticker in random.shuffle(ticker_group_dict['All']):
+    for ticker in random.sample(ticker_group_dict['All'], len(ticker_group_dict['All'])):
         print("\n<-------------------------------------------------------------------------------------------")
         print(get_formatted_ticker_data(get_ticker_data_dict(ticker=ticker, force_redownload=False, download_today_data=True)))
         print("------------------------------------------------------------------------------------------->\n")
