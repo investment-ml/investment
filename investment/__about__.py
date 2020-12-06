@@ -4,6 +4,6 @@
 #
 #  License: LGPL
 
-__version__ = "0.1.0a12"
+__version__ = "0.1.0a13"
 
 __license__ = "LGPL-3.0"
