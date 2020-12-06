@@ -21,8 +21,8 @@
 A Python Library for Investment
 ===============================
 
-Install and Run
----------------
+Install and Execute
+-------------------
 
 
 .. code-block:: bash
@@ -30,8 +30,8 @@ Install and Run
    $ python -m venv env        # the binary may be called 'python3'
    $ source env/bin/activate   # for Linux and macOS
    $ env\Scripts\activate.bat  # for Windows 
-   $ pip install investment
-   $ python -c "from investment import gui; gui.main()"
+   $ pip install investment    # this only needs to be done once
+   $ python -c "from investment import gui; gui.main()" # after installation, one needs to execute the app within the virtual environment
 
 
 Sample Screenshot
