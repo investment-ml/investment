@@ -17,7 +17,7 @@ import pickle
 import shutil
 
 from urllib.request import urlopen
-from PySide2.QtCore import QByteArray
+import base64
 
 import time
 
@@ -195,7 +195,7 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
                 if info_dict['info']['logo_url'] is not None:
                     try:
                         page = urlopen(info_dict['info']['logo_url'])
-                        info_dict['info']['logo'] = QByteArray(page.read())
+                        info_dict['info']['logo'] = bytearray(page.read())
                     except:
                         pass
 
@@ -548,7 +548,7 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
     logo = ""
     if 'logo' in ticker_info_keys:
         if ticker_info['logo'] is not None:
-            logo_base64 = ticker_info['logo'].toBase64()
+            logo_base64 = base64.b64encode(ticker_info['logo'])
             if logo_base64 is not None:
                 if use_html:
                     logo = f"<br/><hr>Logo:<br/><img src=\"data:image/png;base64,{str(logo_base64,'utf-8')}\">"

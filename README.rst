@@ -1,6 +1,6 @@
 .. -*- mode: rst -*-
 
-|BuildTest|_ |PyPi|_ |License|_ |Downloads|_ |PythonVersion|_
+|PyPi|_ |License|_ |Downloads|_ |PythonVersion|_
 
 .. |BuildTest| image:: https://travis-ci.com/investment-ml/investment.svg?branch=master
 .. _BuildTest: https://travis-ci.com/investment-ml/investment

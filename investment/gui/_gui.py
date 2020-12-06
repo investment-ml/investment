@@ -465,8 +465,8 @@ class web_url(QLineEdit):
 
 # https://myprogrammingnotes.com/suppress-js-error-output-qtwebengine.html
 class web_engine_page(QWebEnginePage):
-    def __init__(self, profile):
-        super().__init__(profile, None) # parent=None
+    def __init__(self, profile, parent):
+        super().__init__(profile, parent) # parent=None
     def javaScriptConsoleMessage(self, *args, **kwargs):
         pass
     
@@ -485,7 +485,7 @@ class web_view(QWebEngineView):
         self.web_engine_profile = QWebEngineProfile()
         #print(self.web_engine_profile.isOffTheRecord())
         #print(self.web_engine_profile.persistentStoragePath())
-        self.web_engine_page = web_engine_page(profile=self.web_engine_profile)
+        self.web_engine_page = web_engine_page(profile=self.web_engine_profile, parent=self)
         #print(self.web_engine_page.profile().isOffTheRecord())
         self.setPage(self.web_engine_page)
         if not self.page().profile().isOffTheRecord():
