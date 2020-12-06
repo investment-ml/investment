@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
+#  Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
 #
-# License: GNU General Public License v3 (GPLv3)
+#  License: LGPL
 
- 
-__version__ = "0.1.0a11"
+__version__ = "0.1.0a12"
 
-__license__ = "GPL v3"
+__license__ = "LGPL"

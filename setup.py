@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
+#  Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
 #
-# License: GNU General Public License v3 (GPLv3)
-
+#  License: LGPL
 
 import setuptools
 
@@ -32,7 +31,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
         "Operating System :: OS Independent",
     ],
     install_requires=required,

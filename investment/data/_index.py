@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
+#  Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
 #
-# License: GNU General Public License v3 (GPLv3)
+#  License: LGPL
 
 import pandas as pd
 import numpy as np
@@ -20,6 +20,8 @@ class Volume_Index(object):
         if type(volume) == pd.Series:
             volume = volume.to_numpy()
         n_periods = close_price.shape[0]
+        if n_periods == 0:
+            raise ValueError(f"n_periods cannot be zero")
         PVI = np.empty(shape=n_periods, dtype=float)
         NVI = np.empty(shape=n_periods, dtype=float)
         PVI[0] = 1.0
@@ -37,8 +39,8 @@ class Volume_Index(object):
             else:
                 PVI[today_idx] = PVI[today_idx-1]
                 NVI[today_idx] = NVI[today_idx-1] + ((close_price[today_idx] - close_price[today_idx-1]) / close_price[today_idx-1] * NVI[today_idx-1])
-        PVI /= np.max(PVI)
-        NVI /= np.max(NVI)
+        PVI *= 100/np.max(PVI)
+        NVI *= 100/np.max(NVI)
         return Moving_Average(periods=self.short_periods).Exponential(PVI), Moving_Average(periods=self.short_periods).Exponential(NVI), Moving_Average(periods=self.long_periods).Exponential(PVI), Moving_Average(periods=self.long_periods).Exponential(NVI)
 
 

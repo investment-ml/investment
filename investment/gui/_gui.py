@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
+#  Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
 #
-# License: GNU General Public License v3 (GPLv3)
+#  License: LGPL
 
 import sys
 
@@ -15,16 +15,20 @@ import matplotlib
 if matplotlib.get_backend() not in matplotlib.rcsetup.non_interactive_bk: 
     matplotlib.use('Qt5Agg') # backend
 
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
+from urllib.parse import urlparse
+
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, qApp
 from PyQt5.QtWidgets import QGridLayout
 from PyQt5.QtWidgets import QComboBox, QCheckBox
-from PyQt5.QtWidgets import QTextEdit
+from PyQt5.QtWidgets import QTextEdit, QLineEdit
 from PyQt5.QtWidgets import QCalendarWidget
 from PyQt5.QtWidgets import QPushButton, QLabel, QProgressBar
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QDialog, QToolBar
 from PyQt5.QtGui import QFontDatabase
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
 
 import copy
 
@@ -36,7 +40,7 @@ import matplotlib.pyplot as plt
 
 from datetime import date, datetime, timedelta, timezone
 
-from ..data import get_ticker_data_dict, get_formatted_ticker_data, Volume_Index, Moving_Average, ticker_group_dict, group_desc_dict
+from ..data import get_ticker_data_dict, get_formatted_ticker_data, Volume_Index, Moving_Average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict
 
 import numpy as np
 import pandas as pd
@@ -60,6 +64,24 @@ StyleSheet = '''
 
 App_name = "Investment Library"
 
+# https://stackoverflow.com/questions/35894171/redirect-qdebug-output-to-file-with-pyqt5
+def qt_message_handler(mode, context, message):
+    if mode == QtCore.QtInfoMsg:
+        mode = 'INFO'
+    elif mode == QtCore.QtWarningMsg:
+        mode = 'WARNING'
+    elif mode == QtCore.QtCriticalMsg:
+        mode = 'CRITICAL'
+    elif mode == QtCore.QtFatalMsg:
+        mode = 'FATAL'
+    else:
+        mode = 'DEBUG'
+    print('>>> qt_message_handler: line: %d, func: %s(), file: %s' % (context.line, context.function, context.file))
+    print('>>>   %s: %s\n' % (mode, message))
+
+QtCore.qInstallMessageHandler(qt_message_handler)
+QtCore.qDebug('<<qDebug init>>')
+
 # references: 
 # https://matplotlib.org/api/widgets_api.html
 # https://matplotlib.org/3.3.0/gallery/misc/cursor_demo.html
@@ -68,6 +90,8 @@ class SnappingCursor(Cursor):
     def __init__(self, plotline, name=None, UI=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.x, self.y = plotline.get_data()
+        dy = (self.y.max() - self.y.min()) / self.y.size
+        self.y_grad = np.gradient(self.y, dy, edge_order=2)
         self._last_index = None
         self.name = name
         self.UI = UI
@@ -76,16 +100,17 @@ class SnappingCursor(Cursor):
         if event.inaxes:
             if type(event.xdata) == np.float64:
                 x_datetime = datetime(1970,1,1,tzinfo=timezone.utc) + timedelta(days=event.xdata)
-                index = min(np.searchsorted(self.x, np.datetime64(x_datetime)), len(self.x)-1) # np.datetime64() is used to be congruent with self.x
+                index = min(np.searchsorted(self.x, pd.to_datetime(x_datetime, utc=True)), len(self.x)-1) # np.datetime64() is used to be congruent with self.x
                 if index == self._last_index:
                     return  # still on the same data point. Nothing to do.
                 self._last_index = index
                 event.xdata = self.x[index]
                 event.ydata = self.y[index]
+                event.ydata_grad = self.y_grad[index]
                 if self.name == 'ticker_canvas_cursor':
-                    self.UI.ticker_canvas_coord_label.setText(f"date={pd.to_datetime(event.xdata).date()}, EMA9 price=${event.ydata:.2f}")
+                    self.UI.ticker_canvas_coord_label.setText(f"{pd.to_datetime(event.xdata, utc=True).date()}, ${event.ydata:.2f}, slope={event.ydata_grad:.2f}")
                 if self.name == 'index_canvas_cursor':
-                    self.UI.index_canvas_coord_label.setText(f"date={pd.to_datetime(event.xdata).date()}, EMA9 index={event.ydata:.2f}")
+                    self.UI.index_canvas_coord_label.setText(f"{pd.to_datetime(event.xdata, utc=True).date()}, {event.ydata:.2f}, slope={event.ydata_grad:.2f}")
             super().onmove(event)
 
 
@@ -100,17 +125,33 @@ class canvas(FigureCanvasQTAgg):
         
 
 class group_selection(QComboBox):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(parent=parent, *args, **kwargs)
+        self.setFixedWidth(parent.app_window.width*0.12)
+        self.reset()
+
+    def reset(self):
         self.addItem("-- Select a sector or ticker group --")
         self.groups = list(ticker_group_dict.keys())
         for group in self.groups:
             self.addItem(group)    
 
 
+class subgroup_selection(QComboBox):
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(parent=parent, *args, **kwargs)
+        self.setFixedWidth(parent.app_window.width*0.12)
+        self.reset()
+
+    def reset(self):
+        self.clear()
+        self.addItem("-- Select an industry or ticker subgroup --")
+
+
 class ticker_selection(QComboBox):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(parent=parent, *args, **kwargs)
+        self.setFixedWidth(parent.app_window.width*0.12)
         self.reset()
     
     def reset(self):
@@ -345,6 +386,121 @@ class download_all_data_dialog(QDialog):
             self.close_button.repaint() # to cope with a bug in PyQt5
 
 
+class research_dialog(QDialog):
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(parent=parent, *args, **kwargs)
+        self.app_window = parent
+        self.home_url_str = "https://google.com"
+        self.home_qurl = QUrl.fromUserInput(self.home_url_str)
+        self.home_url_str = self.home_qurl.toString()
+        # lineedit
+        self.web_url_lineedit = web_url(parent=self, url_str = self.home_url_str)
+        # webview
+        self.webview = web_view(parent=self, qurl = self.home_qurl)
+        self.web_url_lineedit.returnPressed.connect(self.web_url_entered)
+        self.webview.page().urlChanged.connect(self.webview_url_changed)
+        self.webview.page().titleChanged.connect(self.setWindowTitle)
+        # toolbar
+        self.toolBar = QToolBar(parent=self)
+        #
+        self.backButton = QPushButton(parent=self)
+        self.backButton.setText("Back")
+        self.backButton.setAutoDefault(False)
+        self.backButton.clicked.connect(self.webview.back)
+        self.toolBar.addWidget(self.backButton)
+        #
+        self.forwardButton = QPushButton(parent=self)
+        self.forwardButton.setText("Forward")
+        self.forwardButton.setAutoDefault(False)
+        self.forwardButton.clicked.connect(self.webview.forward)
+        self.toolBar.addWidget(self.forwardButton)
+        #
+        self.reloadButton = QPushButton(parent=self)
+        self.reloadButton.setText("Reload")
+        self.reloadButton.setAutoDefault(False)
+        self.reloadButton.clicked.connect(self.webview.reload)
+        self.toolBar.addWidget(self.reloadButton)
+        #
+        self.website1Button = QPushButton(parent=self)
+        self.website1Button.setText(self.webview.ref_website1)
+        self.website1Button.setAutoDefault(False)
+        self.website1Button.clicked.connect(self.webview.reload_website1)
+        self.toolBar.addWidget(self.website1Button)
+        #
+        self.website2Button = QPushButton(parent=self)
+        self.website2Button.setText(self.webview.ref_website2)
+        self.website2Button.setAutoDefault(False)
+        self.website2Button.clicked.connect(self.webview.reload_website2)
+        self.toolBar.addWidget(self.website2Button)
+        #
+        self.website3Button = QPushButton(parent=self)
+        self.website3Button.setText(self.webview.ref_website3)
+        self.website3Button.setAutoDefault(False)
+        self.website3Button.clicked.connect(self.webview.reload_website3)
+        self.toolBar.addWidget(self.website3Button)
+        # layout
+        self.layout = QGridLayout()
+        self.layout.addWidget(self.web_url_lineedit, 0, 0)
+        self.layout.addWidget(self.toolBar, 1, 0)
+        self.layout.addWidget(self.webview, 2, 0)
+        self.setLayout(self.layout)
+
+    def web_url_entered(self):
+        url_entered = self.web_url_lineedit.text()
+        qurl_entered = QUrl.fromUserInput(url_entered)
+        if qurl_entered.isValid():
+            self.webview.load(qurl_entered)
+
+    def webview_url_changed(self, qurl):
+        self.web_url_lineedit.setText(qurl.toString())
+
+
+class web_url(QLineEdit):
+    def __init__(self, url_str="", *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setReadOnly(False)
+        self.setText(url_str)
+
+
+# https://myprogrammingnotes.com/suppress-js-error-output-qtwebengine.html
+class web_engine_page(QWebEnginePage):
+    def __init__(self, profile):
+        super().__init__(profile, None) # parent=None
+    def javaScriptConsoleMessage(self, *args, **kwargs):
+        pass
+    
+
+# reference: https://doc.qt.io/qtforpython/examples/tabbedbrowser.html
+class web_view(QWebEngineView):
+    def __init__(self, parent, qurl):
+        super().__init__()
+        # references
+        #self.page().profile().cachePath()
+        #self.page().profile().cookieStore()
+        #self.page().profile().persistentStoragePath()
+        #self.page().profile().clearAllVisitedLinks()
+        #self.page().profile().clearHttpCache()
+        #self.page().profile().cookieStore().deleteAllCookies()
+        self.web_engine_profile = QWebEngineProfile()
+        #print(self.web_engine_profile.isOffTheRecord())
+        #print(self.web_engine_profile.persistentStoragePath())
+        self.web_engine_page = web_engine_page(profile=self.web_engine_profile)
+        #print(self.web_engine_page.profile().isOffTheRecord())
+        self.setPage(self.web_engine_page)
+        if not self.page().profile().isOffTheRecord():
+            raise ValueError("the profile should be off-the-record.")
+        self.setUrl(qurl)
+        self.ref_website1 = "Investopedia"
+        self.ref_website2 = "Nasdaq"
+        self.ref_website3 = "Yahoo Finance"
+    def reload_website1(self):
+        self.load(QUrl.fromUserInput("https://investopedia.com"))
+    def reload_website2(self):
+        self.load(QUrl.fromUserInput("https://www.nasdaq.com/"))
+    def reload_website3(self):
+        self.load(QUrl.fromUserInput("https://finance.yahoo.com/"))
+
+
 class app_menu(object):
     def __init__(self, app_window=None):
         self.app_window = app_window
@@ -352,6 +508,7 @@ class app_menu(object):
         self.about_dialog = about_dialog(parent=self.app_window)
         self.preferences_dialog = preferences_dialog(parent=self.app_window, force_redownload_yfinance_data=self.force_redownload_yfinance_data, download_today_data=self.download_today_data, data_root_dir=self.data_root_dir)
         self.download_all_data_dialog = download_all_data_dialog(parent=self.app_window)
+        self.research_dialog = research_dialog(parent=self.app_window)
         # about
         aboutAct = QAction('&About', parent=self.app_window)
         aboutAct.setShortcut('Ctrl+A')
@@ -375,12 +532,18 @@ class app_menu(object):
         # menubar
         self.app_window.menubar = self.app_window.menuBar()
         self.app_window.menubar.setNativeMenuBar(False)
-        # appMenu
+        # 1. appMenu
         self.app_window.AppMenu = self.app_window.menubar.addMenu('&App')
         self.app_window.AppMenu.addAction(aboutAct)
         self.app_window.AppMenu.addAction(prefAct)
         self.app_window.AppMenu.addAction(download_all_Act)
         self.app_window.AppMenu.addAction(exitAct)
+        # view
+        RoWAct = QAction('&Useful websites', parent=self.app_window)
+        RoWAct.triggered.connect(self.research_dialog.exec)
+        # 2. researchMenu
+        self.app_window.ResearchMenu = self.app_window.menubar.addMenu('&Research')
+        self.app_window.ResearchMenu.addAction(RoWAct)
 
     def _default_preference_settings(self):
         self.force_redownload_yfinance_data = False
@@ -395,8 +558,8 @@ class app_window(QMainWindow):
         # screen
         screen = app.primaryScreen()
         dpi = 72/screen.devicePixelRatio()
-        width = screen.availableGeometry().width() * 0.95
-        height = screen.availableGeometry().height() * 0.70
+        self.width = screen.availableGeometry().width() * 0.96
+        self.height = screen.availableGeometry().height() * 0.75
 
         # menuBar
         self.app_menu = app_menu(app_window=self)
@@ -405,7 +568,7 @@ class app_window(QMainWindow):
         self.setCentralWidget(self.UI)
         # others
         self.setWindowTitle(f"{App_name}")
-        self.resize(width, height)
+        self.resize(self.width, self.height)
         #self.setGeometry(300, 300, 300, 200)
 
 
@@ -415,22 +578,24 @@ class UI(QWidget):
 
         self.app_window = app_window
 
-        self.group_selection = group_selection()
-        self.ticker_selection = ticker_selection()
-        self.ticker_textinfo = textinfo()
-        self.ticker_textinfo.setFixedHeight(400)
+        self.group_selection = group_selection(parent=self)
+        self.subgroup_selection = subgroup_selection(parent=self)
 
-        self.index_selection = index_selection()
-        self.index_textinfo = textinfo()
-        self.index_textinfo.setFixedHeight(400)
+        self.ticker_selection = ticker_selection(parent=self)
+        self.ticker_textinfo = textinfo(parent=self)
+        self.ticker_textinfo.setFixedHeight(self.app_window.height*0.55)
 
-        self.ticker_timeframe_selection = ticker_timeframe_selection()
-        self.ticker_lastdate_pushbutton = ticker_lastdate_pushbutton()
-        self.ticker_download_latest_data_from_yfinance_pushbutton = ticker_download_latest_data_from_yfinance_pushbutton()
+        self.index_selection = index_selection(parent=self)
+        self.index_textinfo = textinfo(parent=self)
+        self.index_textinfo.setFixedHeight(self.app_window.height*0.55)
+
+        self.ticker_timeframe_selection = ticker_timeframe_selection(parent=self)
+        self.ticker_lastdate_pushbutton = ticker_lastdate_pushbutton(parent=self)
+        self.ticker_download_latest_data_from_yfinance_pushbutton = ticker_download_latest_data_from_yfinance_pushbutton(parent=self)
         self.ticker_canvas_coord_label = QLabel(parent=self, text='')
         self.ticker_lastdate_calendar_dialog = ticker_lastdate_calendar_dialog(parent=self)
         self.ticker_canvas = canvas(parent=self, dpi=dpi)
-        self.index_canvas_options = index_canvas_options()
+        self.index_canvas_options = index_canvas_options(parent=self)
         self.index_canvas_coord_label = QLabel(parent=self, text='')
         self.index_canvas = canvas(parent=self, dpi=dpi)
 
@@ -438,19 +603,20 @@ class UI(QWidget):
 
         # the layout
         self.layout = QGridLayout()
-        self.layout.addWidget(self.group_selection,  0, 0, 1, 1)
-        self.layout.addWidget(self.ticker_selection, 0, 1, 1, 1)
-        self.layout.addWidget(self.ticker_textinfo,  1, 0, 2, 2, Qt.AlignTop)
-        self.layout.addWidget(self.index_selection,  3, 0, 1, 1)
-        self.layout.addWidget(self.index_textinfo,   4, 0, 2, 2, Qt.AlignTop)
-        self.layout.addWidget(self.ticker_timeframe_selection, 0, 2)
-        self.layout.addWidget(self.ticker_lastdate_pushbutton, 0, 3)
-        self.layout.addWidget(self.ticker_download_latest_data_from_yfinance_pushbutton, 0, 4)
-        self.layout.addWidget(self.ticker_canvas_coord_label, 0, 5)
-        self.layout.addWidget(self.ticker_canvas, 1, 2, 2, 4)
-        self.layout.addWidget(self.index_canvas_options, 3, 2)
-        self.layout.addWidget(self.index_canvas_coord_label, 3, 3)
-        self.layout.addWidget(self.index_canvas,  4, 2, 2, 4)
+        self.layout.addWidget(self.group_selection,    0, 0, 1, 1)
+        self.layout.addWidget(self.subgroup_selection, 0, 1, 1, 1)
+        self.layout.addWidget(self.ticker_selection,   0, 2, 1, 1)
+        self.layout.addWidget(self.ticker_textinfo,    1, 0, 2, 3, Qt.AlignTop)
+        self.layout.addWidget(self.index_selection,    3, 0, 1, 1)
+        self.layout.addWidget(self.index_textinfo,     4, 0, 2, 3, Qt.AlignTop)
+        self.layout.addWidget(self.ticker_timeframe_selection, 0, 3)
+        self.layout.addWidget(self.ticker_lastdate_pushbutton, 0, 4)
+        self.layout.addWidget(self.ticker_download_latest_data_from_yfinance_pushbutton, 0, 5)
+        self.layout.addWidget(self.ticker_canvas_coord_label, 0, 6)
+        self.layout.addWidget(self.ticker_canvas, 1, 3, 2, 4)
+        self.layout.addWidget(self.index_canvas_options,     3, 3)
+        self.layout.addWidget(self.index_canvas_coord_label, 3, 4)
+        self.layout.addWidget(self.index_canvas,  4, 3, 2, 4)
         self.setLayout(self.layout)
 
         # control
@@ -464,6 +630,7 @@ class UI_control(object):
         self._UI = UI
         # connect signals
         self._UI.group_selection.currentIndexChanged.connect(self._group_selection_change)
+        self._UI.subgroup_selection.currentIndexChanged.connect(self._subgroup_selection_change)
         self._UI.ticker_selection.currentIndexChanged.connect(self._ticker_selection_change)
         self._UI.ticker_timeframe_selection.currentIndexChanged.connect(self._ticker_timeframe_selection_change)
         self._UI.ticker_lastdate_pushbutton.clicked.connect(self._ticker_lastdate_pushbutton_clicked)
@@ -478,41 +645,67 @@ class UI_control(object):
         self.selected_ticker = None
         self.ticker_canvas_cursor = None
         self.index_canvas_cursor = None
-        self.timeframe_dict = {"1 month": 1/12, "2 months": 1/6, "3 months": 1/4, "6 months": 1/2, "1 year": 1.0, "2 years": 2.0, "5 years": 5.0, "10 years": 10.0, "All time": float('inf')}
-        self.time_last_date = pd.to_datetime(date.today())
-        self.timeframe_selection_index = 5
+        self.timeframe_dict = {"1 week": 1/52, "2 weeks": 1/26, "1 month": 1/12, "2 months": 1/6, "3 months": 1/4, "6 months": 1/2, "1 year": 1.0, "2 years": 2.0, "5 years": 5.0, "10 years": 10.0, "All time": float('inf')}
+        self.time_last_date = pd.to_datetime(date.today(), utc=True)
+        self.timeframe_selection_index = list(self.timeframe_dict).index('1 year') + 1
         self.index_options_selection_index = 1
+        self._group_selected = None
 
     def _group_selection_change(self, index: int = None):
         if index > 0:
-            group_selected = self._UI.group_selection.itemText(index)
+            self._group_selected = self._UI.group_selection.itemText(index)
+            # subgroup selection
+            self._UI.subgroup_selection.reset()
+            for subgroup in subgroup_group_dict[self._group_selected]:
+                self._UI.subgroup_selection.addItem(subgroup)
+            self._UI.subgroup_selection.setCurrentIndex(1) # The item of index=1 is 'All'
             # ticker selection
             self._UI.ticker_selection.reset()
-            for ticker in sorted(ticker_group_dict[group_selected]):
+            for ticker in ticker_group_dict[self._group_selected]:
                 self._UI.ticker_selection.addItem(ticker)
             # ticker texinfo
-            self._UI.ticker_textinfo.setText(group_desc_dict[group_selected])
-            # ticker frame selection
-            self._UI.ticker_timeframe_selection.reset()
-            # ticker canvas
-            self._UI.ticker_canvas.axes.clear()
-            self._UI.ticker_canvas.draw()
-            self._UI.ticker_canvas_coord_label.clear()
-            # index canvas
-            self._UI.index_canvas.axes.clear()
-            self._UI.index_canvas.draw()
-            self._UI.index_canvas_coord_label.clear()
-            # index selection
-            self._UI.index_selection.reset()
-            # index textinfo
-            self._UI.index_textinfo.clear()
-            # index canvas selection
-            self._UI.index_canvas_options.reset()
-            # ticker lastdate and redownload pushbuttons
-            self._UI.ticker_lastdate_pushbutton.reset()
-            self._UI.ticker_download_latest_data_from_yfinance_pushbutton.reset()
-            # others
-            self._ticker_selected = False
+            self._UI.ticker_textinfo.setText(group_desc_dict[self._group_selected])
+            # group_or_subgroup_selection_change
+            self._group_or_subgroup_selection_change()
+
+    def _subgroup_selection_change(self, index: int = None):
+        if index > 0:
+            subgroup_selected = self._UI.subgroup_selection.itemText(index)
+            # ticker selection
+            self._UI.ticker_selection.reset()
+            if index == 1: # 'All'
+                for ticker in ticker_group_dict[self._group_selected]:
+                    self._UI.ticker_selection.addItem(ticker)
+                # ticker texinfo
+                self._UI.ticker_textinfo.setText(group_desc_dict[self._group_selected])
+            else:
+                for ticker in ticker_subgroup_dict[subgroup_selected]:
+                    self._UI.ticker_selection.addItem(ticker)
+                # ticker texinfo
+                self._UI.ticker_textinfo.setText(group_desc_dict[self._group_selected] + f"\n\nSubgroup: [{subgroup_selected}]")
+
+    def _group_or_subgroup_selection_change(self):
+        # ticker frame selection
+        self._UI.ticker_timeframe_selection.reset()
+        # ticker canvas
+        self._UI.ticker_canvas.axes.clear()
+        self._UI.ticker_canvas.draw()
+        self._UI.ticker_canvas_coord_label.clear()
+        # index canvas
+        self._UI.index_canvas.axes.clear()
+        self._UI.index_canvas.draw()
+        self._UI.index_canvas_coord_label.clear()
+        # index selection
+        self._UI.index_selection.reset()
+        # index textinfo
+        self._UI.index_textinfo.clear()
+        # index canvas selection
+        self._UI.index_canvas_options.reset()
+        # ticker lastdate and redownload pushbuttons
+        self._UI.ticker_lastdate_pushbutton.reset()
+        self._UI.ticker_download_latest_data_from_yfinance_pushbutton.reset()
+        # others
+        self._ticker_selected = False
 
     def _ticker_selection_change(self, index: int = None):
         if index > 0:
@@ -609,9 +802,9 @@ class UI_control(object):
                     time_first_date = history_df['Date'].iloc[0]
                 else:
                     time_first_date = self.time_last_date - timedelta(days=365.25*self.timeframe_dict[self.timeframe_text])
-                history_df = history_df[(time_first_date<=history_df['Date']) & (history_df['Date']<=self.time_last_date)]
+                history_df = history_df[(time_first_date<=history_df['Date']) & (history_df['Date']<=self.time_last_date)].copy()
                 if len(history_df) == 0:
-                    self._UI.message_dialog.textinfo.setText(f"No data available in the specified date range: {str(time_first_date.date())} ~ {str(self.time_last_date.date())}")
+                    self._UI.message_dialog.textinfo.setText(f"No data available within the specified date range: {str(time_first_date.date())} ~ {str(self.time_last_date.date())}")
                     self._UI.message_dialog.exec()
                     return
                 self.ticker_data_dict_in_effect['history'] = history_df
@@ -646,7 +839,7 @@ class UI_control(object):
         self._ticker_lastdate_dialog_any_button_clicked()
 
     def _ticker_lastdate_dialog_ok_button_clicked(self):
-        self.time_last_date = pd.to_datetime(self._UI.ticker_lastdate_calendar_dialog.ticker_lastdate_calendar.selectedDate().toPyDate())
+        self.time_last_date = pd.to_datetime(self._UI.ticker_lastdate_calendar_dialog.ticker_lastdate_calendar.selectedDate().toPyDate(), utc=True)
         self._ticker_lastdate_dialog_any_button_clicked()
 
     def _ticker_lastdate_dialog_any_button_clicked(self):
@@ -668,6 +861,7 @@ def main():
 
 
 def test():
+    return
     for ticker in random.sample(ticker_group_dict['All'], len(ticker_group_dict['All'])):
         print("\n<-------------------------------------------------------------------------------------------")
         print(get_formatted_ticker_data(get_ticker_data_dict(ticker=ticker, force_redownload=False, download_today_data=True, auto_retry=True)))

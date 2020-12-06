@@ -4,6 +4,7 @@
 #
 #  License: LGPL
 
-from investment import data
+from ._math import probability
+from ._stats import sigmoid
 
-data.test()
+__all__ = ["probability","sigmoid",]
