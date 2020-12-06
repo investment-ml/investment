@@ -6,4 +6,4 @@
 
 __version__ = "0.1.0a12"
 
-__license__ = "LGPL"
+__license__ = "LGPL-3.0"
