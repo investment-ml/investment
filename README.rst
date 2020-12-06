@@ -21,21 +21,17 @@
 A Python Library for Investment
 ===============================
 
-Install
--------
+Install and Run
+---------------
+
 
 .. code-block:: bash
 
-   pip install investment
-
-
-Example
--------
-
-.. code-block:: bash
-
-   from investment import gui
-   gui.main()
+   $ python -m venv env        # the binary may be called 'python3'
+   $ source env/bin/activate   # for Linux and macOS
+   $ env\Scripts\activate.bat  # for Windows 
+   $ pip install investment
+   $ python -c "from investment import gui; gui.main()"
 
 
 Sample Screenshot
