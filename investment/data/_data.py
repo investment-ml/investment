@@ -17,7 +17,7 @@ import pickle
 import shutil
 
 from urllib.request import urlopen
-from PyQt5.QtCore import QByteArray
+from PySide2.QtCore import QByteArray
 
 import time
 

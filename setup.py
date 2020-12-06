@@ -23,7 +23,7 @@ setuptools.setup(
     license=investment.__license__,
     long_description=long_description,
     long_description_content_type="text/x-rst",
-    url="https://github.com/investment-ml/investment",
+    #url="https://github.com/investment-ml/investment",
     packages=setuptools.find_packages(),
     # https://pypi.org/classifiers/
     classifiers=[

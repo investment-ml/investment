@@ -15,20 +15,21 @@ import matplotlib
 if matplotlib.get_backend() not in matplotlib.rcsetup.non_interactive_bk: 
     matplotlib.use('Qt5Agg') # backend
 
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
+import PySide2
+from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
 from urllib.parse import urlparse
 
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, qApp
-from PyQt5.QtWidgets import QGridLayout
-from PyQt5.QtWidgets import QComboBox, QCheckBox
-from PyQt5.QtWidgets import QTextEdit, QLineEdit
-from PyQt5.QtWidgets import QCalendarWidget
-from PyQt5.QtWidgets import QPushButton, QLabel, QProgressBar
-from PyQt5.QtWidgets import QDialog, QToolBar
-from PyQt5.QtGui import QFontDatabase
-from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
+from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QMainWindow, QWidget, QAction
+from PySide2.QtWidgets import QGridLayout
+from PySide2.QtWidgets import QComboBox, QCheckBox
+from PySide2.QtWidgets import QTextEdit, QLineEdit
+from PySide2.QtWidgets import QCalendarWidget
+from PySide2.QtWidgets import QPushButton, QLabel, QProgressBar
+from PySide2.QtWidgets import QDialog, QToolBar
+from PySide2.QtGui import QFontDatabase
+from PySide2 import QtCore
+from PySide2.QtCore import Qt, QThread, Signal, QUrl
 
 import copy
 
@@ -310,7 +311,7 @@ class preferences_dialog(QDialog):
 
 # reference: https://pythonpyqt.com/pyqt-progressbar/
 class ticker_thread(QThread):
-    _signal = pyqtSignal(int, str)
+    _signal = Signal(int, str)
     def __init__(self, app_window=None):
         super().__init__()
         self.app_window = app_window
@@ -857,7 +858,7 @@ def main():
     app.setStyleSheet(StyleSheet)
     window = app_window(app=app)
     window.show()
-    sys.exit(app.exec())
+    sys.exit(app.exec_())
 
 
 def test():
