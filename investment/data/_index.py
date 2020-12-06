@@ -2,7 +2,7 @@
 
 #  Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
 #
-#  License: LGPL
+#  License: LGPL-3.0
 
 import pandas as pd
 import numpy as np

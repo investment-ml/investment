@@ -2,7 +2,7 @@
 
 #  Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
 #
-#  License: LGPL
+#  License: LGPL-3.0
 
 from ._data import test, test_data, get_ticker_data_dict, get_formatted_ticker_data, timedata
 from ._index import Volume_Index, Moving_Average

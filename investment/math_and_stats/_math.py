@@ -2,7 +2,7 @@
 
 #  Author: Investment Prediction Enthusiast <investment.ml.prediction@gmail.com>
 #
-#  License: LGPL
+#  License: LGPL-3.0
 
 class probability:
     def p_A_given_B(self, p_B_given_A, p_A, p_B):
