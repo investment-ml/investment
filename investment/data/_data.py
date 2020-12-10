@@ -262,7 +262,7 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
     return info_dict
 
 
-def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownload: bool = False, smart_redownload: bool = True, download_today_data: bool = False, data_root_dir: str = None, auto_retry: bool = False):
+def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownload: bool = False, smart_redownload: bool = False, download_today_data: bool = False, data_root_dir: str = None, auto_retry: bool = False):
 
     if ticker is None:
         raise ValueError("Error: ticker cannot be None")

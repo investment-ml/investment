@@ -22,14 +22,14 @@ from urllib.parse import urlparse
 from PySide2.QtWidgets import QApplication
 from PySide2.QtWidgets import QMainWindow, QWidget, QAction
 from PySide2.QtWidgets import QGridLayout
-from PySide2.QtWidgets import QComboBox, QCheckBox
+from PySide2.QtWidgets import QComboBox, QCheckBox, QCompleter
 from PySide2.QtWidgets import QTextEdit, QLineEdit
 from PySide2.QtWidgets import QCalendarWidget
 from PySide2.QtWidgets import QPushButton, QLabel, QProgressBar
 from PySide2.QtWidgets import QDialog, QToolBar
 from PySide2.QtGui import QFontDatabase
 from PySide2 import QtCore
-from PySide2.QtCore import Qt, QThread, Signal, QUrl
+from PySide2.QtCore import Qt, QThread, Signal, QUrl, QSortFilterProxyModel
 
 import copy
 
@@ -83,6 +83,54 @@ def qt_message_handler(mode, context, message):
 #QtCore.qInstallMessageHandler(qt_message_handler)
 #QtCore.qDebug('<<qDebug init>>')
 
+# https://stackoverflow.com/questions/4827207/how-do-i-filter-the-pyqt-qcombobox-items-based-on-the-text-input
+class ExtendedComboBox(QComboBox):
+    def __init__(self, parent=None):
+        super(ExtendedComboBox, self).__init__(parent)
+
+        self.setMaxVisibleItems(40)
+        #self.setFocusPolicy(Qt.StrongFocus)
+        self.setEditable(True)
+
+        # add a filter model to filter matching items
+        self.pFilterModel = QSortFilterProxyModel(self)
+        self.pFilterModel.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.pFilterModel.setSourceModel(self.model())
+
+        # add a completer, which uses the filter model
+        self.completer = QCompleter(self.pFilterModel, self)
+        # always show all (filtered) completions
+        self.completer.setCompletionMode(QCompleter.UnfilteredPopupCompletion)
+        self.setCompleter(self.completer)
+
+        # connect signals
+        self.lineEdit().textEdited.connect(self.pFilterModel.setFilterFixedString)
+        self.completer.activated.connect(self.on_completer_activated)
+
+
+    # on selection of an item from the completer, select the corresponding item from combobox 
+    def on_completer_activated(self, text):
+        if text:
+            index = self.findText(text)
+            self.setCurrentIndex(index)
+            self.activated[str].emit(self.itemText(index))
+
+
+    # on model change, update the models of the filter and completer as well 
+    def setModel(self, model):
+        super(ExtendedComboBox, self).setModel(model)
+        self.pFilterModel.setSourceModel(model)
+        self.completer.setModel(self.pFilterModel)
+
+
+    # on model column change, update the model column of the filter and completer as well
+    def setModelColumn(self, column):
+        self.completer.setCompletionColumn(column)
+        self.pFilterModel.setFilterKeyColumn(column)
+        super(ExtendedComboBox, self).setModelColumn(column)  
+
+
+
 # references: 
 # https://matplotlib.org/api/widgets_api.html
 # https://matplotlib.org/3.3.0/gallery/misc/cursor_demo.html
@@ -125,6 +173,18 @@ class canvas(FigureCanvasQTAgg):
         super().__init__(self.figure)
         
 
+class ticker_selection(ExtendedComboBox):
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(parent=parent, *args, **kwargs)
+        self.setFixedWidth(parent.app_window.width*0.12)
+        self.reset()
+    
+    def reset(self):
+        self.clear()
+        self.addItem("-- Select a ticker --")
+        self.setFocusPolicy(Qt.ClickFocus)
+
+
 class group_selection(QComboBox):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
@@ -135,7 +195,7 @@ class group_selection(QComboBox):
         self.addItem("-- Select a sector or ticker group --")
         self.groups = list(ticker_group_dict.keys())
         for group in self.groups:
-            self.addItem(group)    
+            self.addItem(group)
 
 
 class subgroup_selection(QComboBox):
@@ -147,17 +207,6 @@ class subgroup_selection(QComboBox):
     def reset(self):
         self.clear()
         self.addItem("-- Select an industry or ticker subgroup --")
-
-
-class ticker_selection(QComboBox):
-    def __init__(self, parent=None, *args, **kwargs):
-        super().__init__(parent=parent, *args, **kwargs)
-        self.setFixedWidth(parent.app_window.width*0.12)
-        self.reset()
-    
-    def reset(self):
-        self.clear()
-        self.addItem("-- Select a ticker --")
 
 
 class index_selection(QComboBox):

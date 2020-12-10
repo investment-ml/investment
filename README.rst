@@ -32,7 +32,7 @@ Install and Execute
    $ env\Scripts\activate.bat  # for Windows 
    $ pip install investment    # this only needs to be done once
 
-   # A Chrome browser driver must also be installed on your computer
+   # Note: A Chrome browser driver must also be installed on your computer first
    # see https://pypi.org/project/selenium/
 
    $ python -c "from investment import gui; gui.main()" # after installation, execute the app within the virtual environment
