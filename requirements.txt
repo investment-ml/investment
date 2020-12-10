@@ -2,3 +2,4 @@ matplotlib>=3.3.2
 yfinance>=0.1.54
 pandas>=1.1.4
 PySide2>=5.15.2
+selenium>=3.141.0

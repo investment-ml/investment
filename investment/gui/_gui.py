@@ -312,14 +312,15 @@ class preferences_dialog(QDialog):
 # reference: https://pythonpyqt.com/pyqt-progressbar/
 class ticker_thread(QThread):
     _signal = Signal(int, str)
-    def __init__(self, app_window=None):
+    def __init__(self, app_window=None, smart_redownload=None):
         super().__init__()
         self.app_window = app_window
+        self.smart_redownload = smart_redownload
     def run(self):
-        for idx, ticker in enumerate(random.sample(ticker_group_dict['All'], len(ticker_group_dict['All']))):
+        for idx, ticker in enumerate(ticker_group_dict['All']):
             try:
                 #time.sleep(0.001)
-                get_ticker_data_dict(ticker = ticker, force_redownload = True, download_today_data = self.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir = self.app_window.app_menu.preferences_dialog.data_root_dir, auto_retry = True)
+                get_ticker_data_dict(ticker = ticker, force_redownload = True, smart_redownload = self.smart_redownload, download_today_data = self.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir = self.app_window.app_menu.preferences_dialog.data_root_dir, auto_retry = True)
             except:
                 print(f"Warning: Unable to download this ticker = {ticker}")
             self._signal.emit(idx+1, ticker)
@@ -332,21 +333,29 @@ class download_all_data_dialog(QDialog):
         self.setWindowTitle("Download all data and store as cache")
         self.label = QLabel(parent=self)
         self.label.setText(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be 400M+ and the process will take about 25~50+ minutes.")
+        self.checkbox_smart_redownload = QCheckBox('Do not re-download data that are already up-to-date as of yesterday/today.', parent=self)
+        self.checkbox_smart_redownload.stateChanged.connect(self._checkbox_smart_redownload_state_changed)
         self.download_progressbar = QProgressBar(parent=self, objectName="ProgressBar")
         self.download_button = QPushButton(parent=self)
         self.close_button = QPushButton(parent=self)
         self.layout = QGridLayout()
         self.layout.addWidget(self.label, 0, 0)
-        self.layout.addWidget(self.download_progressbar, 1, 0)
-        self.layout.addWidget(self.download_button, 2, 0)
-        self.layout.addWidget(self.close_button, 3, 0)
+        self.layout.addWidget(self.checkbox_smart_redownload, 1, 0)
+        self.layout.addWidget(self.download_progressbar, 2, 0)
+        self.layout.addWidget(self.download_button, 3, 0)
+        self.layout.addWidget(self.close_button, 4, 0)
         self.setLayout(self.layout)
         self.download_button.clicked.connect(self._download_button_clicked)
         self.close_button.clicked.connect(self._close_button_clicked)
         self.app_window = parent
         self._reset()
 
+    def _checkbox_smart_redownload_state_changed(self):
+        self.smart_redownload = self.checkbox_smart_redownload.isChecked()
+
     def _reset(self):
+        self.checkbox_smart_redownload.setChecked(True)
+        self.smart_redownload = True
         self.download_progressbar.setMinimum(0)
         self.download_progressbar.setMaximum(self.n_tickers)
         self.download_progressbar.setValue(0)
@@ -361,6 +370,7 @@ class download_all_data_dialog(QDialog):
         self.hide()
 
     def _download_button_clicked(self):
+        self.checkbox_smart_redownload.setEnabled(False)
         self.download_button.setEnabled(False)
         self.close_button.setEnabled(False)
         self.download_button.setDefault(False)
@@ -371,7 +381,7 @@ class download_all_data_dialog(QDialog):
         # then the download_progressbar update won't show.
         # it is like we need to remove any external function call in self.download_progressbar.setValue(idx) in the signal.connect(), in MacOS
         # to see the effect, try to uncomment the # time.sleep(0.003) statement below; you will see how unsmooth it is.
-        self.thread=ticker_thread(app_window=self.app_window)
+        self.thread=ticker_thread(app_window=self.app_window, smart_redownload=self.smart_redownload)
         self.thread._signal.connect(self._download_this_ticker)
         self.thread.start()
 
@@ -529,7 +539,7 @@ class app_menu(object):
         exitAct = QAction('&Exit', parent=self.app_window)
         exitAct.setShortcut('Ctrl+Q')
         exitAct.setStatusTip('Exit app')
-        exitAct.triggered.connect(qApp.quit)
+        exitAct.triggered.connect(self.app_window.app.quit)
         # menubar
         self.app_window.menubar = self.app_window.menuBar()
         self.app_window.menubar.setNativeMenuBar(False)
@@ -548,16 +558,17 @@ class app_menu(object):
 
     def _default_preference_settings(self):
         self.force_redownload_yfinance_data = False
-        self.download_today_data = False
+        self.download_today_data = True
         self.data_root_dir = join(str(pathlib.Path.home()), ".investment")
 
 
 class app_window(QMainWindow):
     def __init__(self, app=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.app = app
 
         # screen
-        screen = app.primaryScreen()
+        screen = self.app.primaryScreen()
         dpi = 72/screen.devicePixelRatio()
         self.width = screen.availableGeometry().width() * 0.96
         self.height = screen.availableGeometry().height() * 0.75

@@ -31,7 +31,11 @@ Install and Execute
    $ source env/bin/activate   # for Linux and macOS
    $ env\Scripts\activate.bat  # for Windows 
    $ pip install investment    # this only needs to be done once
-   $ python -c "from investment import gui; gui.main()" # after installation, one needs to execute the app within the virtual environment
+
+   # A Chrome browser driver must also be installed on your computer
+   # see https://pypi.org/project/selenium/
+
+   $ python -c "from investment import gui; gui.main()" # after installation, execute the app within the virtual environment
 
 
 Sample Screenshot

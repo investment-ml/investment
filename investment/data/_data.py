@@ -4,6 +4,9 @@
 #
 #  License: LGPL-3.0
 
+import re
+from selenium import webdriver
+
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -186,7 +189,7 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
     while not successful_download and retry_times>=0:
         try:
             try:
-                info_dict['info']                      = this_ticker.info
+                info_dict['info'] = this_ticker.info
             except:
                 info_dict['info'] = None
 
@@ -251,10 +254,15 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
 
     info_dict['data_download_time']        = datetime.now(timezone.utc)
     info_dict['history']                   = pd.DataFrame()
+
+    ####################################################################
+
+    info_dict['price_target'] = web_scrape().price_target(ticker=ticker)
+
     return info_dict
 
 
-def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownload: bool = False, download_today_data: bool = False, data_root_dir: str = None, auto_retry: bool = False):
+def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownload: bool = False, smart_redownload: bool = True, download_today_data: bool = False, data_root_dir: str = None, auto_retry: bool = False):
 
     if ticker is None:
         raise ValueError("Error: ticker cannot be None")
@@ -303,43 +311,53 @@ def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownl
     elif force_redownload:
 
         curr_df = pd.read_csv(ticker_history_df_file, index_col=False)
-        try:
-            new_df = download_ticker_history_df(ticker = ticker, verbose = verbose, download_today_data = download_today_data, auto_retry = auto_retry)
-        except:
-            raise SystemError("cannot download ticker history")
 
-        curr_first_date_str = curr_df['Date'].iloc[0]
-        curr_first_date = datetime.strptime(curr_first_date_str, "%Y-%m-%d").date()
-        curr_last_date_str = curr_df['Date'].iloc[-1]
-        curr_last_date = datetime.strptime(curr_last_date_str, "%Y-%m-%d").date()
+        do_force_redownload = True
 
-        new_first_date_str = new_df['Date'].iloc[0]
-        new_first_date = datetime.strptime(new_first_date_str, "%Y-%m-%d").date()
-        new_last_date_str = new_df['Date'].iloc[-1]
-        new_last_date = datetime.strptime(new_last_date_str, "%Y-%m-%d").date()
+        if smart_redownload:
+            curr_last_date_str = curr_df['Date'].iloc[-1]
+            curr_last_date = datetime.strptime(curr_last_date_str, "%Y-%m-%d").date()
+            if (curr_last_date == datetime.today().date()) or (curr_last_date == (datetime.today().date()-timedelta(days=1))):
+                do_force_redownload = False
 
-        # making sure the new df always has a wider date coverage
-        if curr_df.shape[0] > new_df.shape[0]:
-            #raise ValueError(f"for ticker [{ticker}], the redownloaded df has fewer rows than the current one")
-            print(f"ticker: [{ticker}]")
-            print("*** The redownloaded df has fewer rows than the current one --> the current one will be used instead")
-        elif (curr_first_date - new_first_date) < timedelta(days=0):
-            #raise ValueError(f"for ticker [{ticker}], the redownloaded df has a more recent start date: {new_first_date_str}, compared to the current one: {curr_first_date_str}")
-            print(f"ticker: [{ticker}]")
-            print("*** The redownloaded df has a more recent start date, compared to the current one --> the current one will be used instead")
-        elif (curr_last_date - new_last_date) > timedelta(days=0):
-            #raise ValueError(f"for ticker [{ticker}], the redownloaded df has an older end date: {new_last_date_str}, compared to the current one: {curr_last_date_str}")
-            print(f"ticker: [{ticker}]")
-            print("*** The redownloaded df has an older end date, compared to the current one --> the current one will be used instead")
-        else:
+        if do_force_redownload:
             try:
-                ticker_info_dict = download_ticker_info_dict(ticker, verbose = verbose, auto_retry = auto_retry)
+                new_df = download_ticker_history_df(ticker = ticker, verbose = verbose, download_today_data = download_today_data, auto_retry = auto_retry)
             except:
-                raise SystemError("cannot download ticker info dict")
-            shutil.copy2( ticker_history_df_file, data_backup_dir )
-            shutil.copy2( ticker_info_dict_file,  data_backup_dir )
-            new_df.to_csv(ticker_history_df_file, index=False)
-            pickle.dump(ticker_info_dict, open(ticker_info_dict_file, "wb"))
+                raise SystemError("cannot download ticker history")
+
+            curr_first_date_str = curr_df['Date'].iloc[0]
+            curr_first_date = datetime.strptime(curr_first_date_str, "%Y-%m-%d").date()
+            curr_last_date_str = curr_df['Date'].iloc[-1]
+            curr_last_date = datetime.strptime(curr_last_date_str, "%Y-%m-%d").date()
+
+            new_first_date_str = new_df['Date'].iloc[0]
+            new_first_date = datetime.strptime(new_first_date_str, "%Y-%m-%d").date()
+            new_last_date_str = new_df['Date'].iloc[-1]
+            new_last_date = datetime.strptime(new_last_date_str, "%Y-%m-%d").date()
+
+            # making sure the new df always has a wider date coverage
+            if curr_df.shape[0] > new_df.shape[0]:
+                #raise ValueError(f"for ticker [{ticker}], the redownloaded df has fewer rows than the current one")
+                print(f"ticker: [{ticker}]")
+                print("*** The redownloaded df has fewer rows than the current one --> the current one will be used instead")
+            elif (curr_first_date - new_first_date) < timedelta(days=0):
+                #raise ValueError(f"for ticker [{ticker}], the redownloaded df has a more recent start date: {new_first_date_str}, compared to the current one: {curr_first_date_str}")
+                print(f"ticker: [{ticker}]")
+                print("*** The redownloaded df has a more recent start date, compared to the current one --> the current one will be used instead")
+            elif (curr_last_date - new_last_date) > timedelta(days=0):
+                #raise ValueError(f"for ticker [{ticker}], the redownloaded df has an older end date: {new_last_date_str}, compared to the current one: {curr_last_date_str}")
+                print(f"ticker: [{ticker}]")
+                print("*** The redownloaded df has an older end date, compared to the current one --> the current one will be used instead")
+            else:
+                try:
+                    ticker_info_dict = download_ticker_info_dict(ticker, verbose = verbose, auto_retry = auto_retry)
+                except:
+                    raise SystemError("cannot download ticker info dict")
+                shutil.copy2( ticker_history_df_file, data_backup_dir )
+                shutil.copy2( ticker_info_dict_file,  data_backup_dir )
+                new_df.to_csv(ticker_history_df_file, index=False)
+                pickle.dump(ticker_info_dict, open(ticker_info_dict_file, "wb"))
 
     history_df = pd.read_csv(ticker_history_df_file, index_col=False)
     history_df = history_df[(history_df['Volume']>0) & (history_df['Close']>0)]
@@ -353,6 +371,8 @@ def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownl
 
 
 def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
+
+    this_ticker = Ticker(ticker_data_dict=ticker_data_dict)
 
     if use_html:
         formatted_str = f"<body style=\"font-family:Courier New;\">the key 'info' does not exist in ticker_data_dict</body>"
@@ -388,7 +408,6 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
             sector_info += f", Industry: [{ticker_info['industry']}]"
 
     # earnings
-    this_ticker = Ticker(ticker_data_dict=ticker_data_dict)
     if use_html:
         earnings_info = f"<br/><hr>Earnings info unavailable"
     else:
@@ -409,6 +428,18 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
             else:
                 earnings_info += f"\n\nThe 5-yr EPS growth rate is estimated to be {this_ticker.Eps_growth_rate:+.2f}% (compound rate per year)"
     
+    # price target
+    if use_html:
+        price_target_info = f"<br/><hr>Price target info unavailable"
+    else:
+        price_target_info = f"\n\nPrice target info unavailable"
+    if this_ticker.price_target is not None:
+        up_side_pct = 100 * (this_ticker.price_target - this_ticker.last_close_price) / this_ticker.last_close_price
+        if use_html:
+            price_target_info = f"<br/><hr>1-yr price target: ${this_ticker.price_target} (<b><span style=\"color:blue;\">{up_side_pct:+.2f}%</span></b> upside)"
+        else:
+            price_target_info = f"\n\n1-yr price target: ${this_ticker.price_target} ({up_side_pct:+.2f}% upside)"
+
     # apples-to-apples comparison
     # e.g., https://www.investopedia.com/terms/p/price-earningsratio.asp#investor-expectations
     if use_html:
@@ -557,9 +588,9 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                         logo = f"\n\nLogo: {ticker_info['logo_url']}"
 
     if use_html:
-        formatted_str = f"<body style=\"font-family:Courier New;\">{ticker_long_name}{sector_info}{earnings_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}</body>"  
+        formatted_str = f"<body style=\"font-family:Courier New;\">{ticker_long_name}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}</body>"  
     else:
-        formatted_str = f"{ticker_long_name}{sector_info}{earnings_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}"  
+        formatted_str = f"{ticker_long_name}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}"  
     
     return formatted_str
 
@@ -590,3 +621,29 @@ def test():
         print(f"timestamp = {t.timestamp}, datetime = {t.datetime}")
 
     gradient_test()
+
+
+class web_scrape(object):
+    def price_target(self, ticker='AAPL', host='yahoo_finance'):
+        assert host in ['yahoo_finance',], "unexpected host"
+        #print(f'web scraping [{ticker}] 1-yr price target on [{host}] ... ', end = '')
+        options = webdriver.ChromeOptions()
+        options.headless = True
+        browser = webdriver.Chrome(options=options)
+        if host == 'yahoo_finance':
+            browser.get('https://finance.yahoo.com/quote/' + ticker.upper() )
+        app = browser.find_element_by_id('app')
+        self.price_target = None
+        try:
+            if host == 'yahoo_finance':
+                main = app.find_element_by_id('Main')
+                m = re.search('\n1y Target Est (.+?)\n', main.text)
+                if m is not None:
+                    self.price_target = float(m.group(1))
+            #print(f"{self.price_target:.2f}")
+        except:
+            #print("")
+            pass
+        browser.quit()
+        return self.price_target
+
