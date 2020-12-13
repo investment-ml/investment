@@ -107,7 +107,6 @@ class ExtendedComboBox(QComboBox):
         self.lineEdit().textEdited.connect(self.pFilterModel.setFilterFixedString)
         self.completer.activated.connect(self.on_completer_activated)
 
-
     # on selection of an item from the completer, select the corresponding item from combobox 
     def on_completer_activated(self, text):
         if text:
@@ -115,13 +114,11 @@ class ExtendedComboBox(QComboBox):
             self.setCurrentIndex(index)
             self.activated[str].emit(self.itemText(index))
 
-
     # on model change, update the models of the filter and completer as well 
     def setModel(self, model):
         super(ExtendedComboBox, self).setModel(model)
         self.pFilterModel.setSourceModel(model)
         self.completer.setModel(self.pFilterModel)
-
 
     # on model column change, update the model column of the filter and completer as well
     def setModelColumn(self, column):
@@ -361,12 +358,13 @@ class preferences_dialog(QDialog):
 # reference: https://pythonpyqt.com/pyqt-progressbar/
 class ticker_thread(QThread):
     _signal = Signal(int, str)
-    def __init__(self, app_window=None, smart_redownload=None):
+    def __init__(self, app_window=None, smart_redownload=None, tickers_to_download=[]):
         super().__init__()
         self.app_window = app_window
         self.smart_redownload = smart_redownload
+        self.tickers_to_download = tickers_to_download
     def run(self):
-        for idx, ticker in enumerate(ticker_group_dict['All']):
+        for idx, ticker in enumerate(self.tickers_to_download):
             try:
                 #time.sleep(0.001)
                 get_ticker_data_dict(ticker = ticker, force_redownload = True, smart_redownload = self.smart_redownload, download_today_data = self.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir = self.app_window.app_menu.preferences_dialog.data_root_dir, auto_retry = True)
@@ -375,29 +373,94 @@ class ticker_thread(QThread):
             self._signal.emit(idx+1, ticker)
 
 
-class download_all_data_dialog(QDialog):
+class download_data_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
-        self.n_tickers = len(ticker_group_dict['All'])
-        self.setWindowTitle("Download all data and store as cache")
-        self.label = QLabel(parent=self)
-        self.label.setText(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be ~2G and the process will take hours.")
+        self.setWindowTitle("Download data and store as cache")
+        self.main_label = QLabel(parent=self)
+        self.group_selection_label = QLabel(parent=self)
+        self.group_selection_label.setText('Ticker group(s) to download:')
+        #
+        self.dow30_checkbox = QCheckBox('DOW 30', parent=self)
+        self.nasdaq100_checkbox = QCheckBox('NASDAQ 100', parent=self)
+        self.sandp500_checkbox = QCheckBox('S&&P 500', parent=self)
+        self.russell1k_checkbox = QCheckBox('Russell 1000', parent=self)
+        self.russell2k_checkbox = QCheckBox('Russell 2000', parent=self)
+        self.russell3k_checkbox = QCheckBox('Russell 3000', parent=self)
+        self.comp_checkbox = QCheckBox('NASDAQ Composite', parent=self)
+        self.etf_db_checkbox = QCheckBox('ETF database', parent=self)
+        self.equity_db_checkbox = QCheckBox('Equity database', parent=self)
+        #
+        self.dow30_checkbox.setChecked(True)
+        self.nasdaq100_checkbox.setChecked(True)
+        self.sandp500_checkbox.setChecked(True)
+        #
+        self.dow30_checkbox.stateChanged.connect(self._update_download_selection)
+        self.nasdaq100_checkbox.stateChanged.connect(self._update_download_selection)
+        self.sandp500_checkbox.stateChanged.connect(self._update_download_selection)
+        self.russell1k_checkbox.stateChanged.connect(self._update_download_selection)
+        self.russell2k_checkbox.stateChanged.connect(self._update_download_selection)
+        self.russell3k_checkbox.stateChanged.connect(self._update_download_selection)
+        self.comp_checkbox.stateChanged.connect(self._update_download_selection)
+        self.etf_db_checkbox.stateChanged.connect(self._update_download_selection)
+        self.equity_db_checkbox.stateChanged.connect(self._update_download_selection)
+        #
+        self.options_label = QLabel(parent=self)
+        self.options_label.setText('Option:')
         self.checkbox_smart_redownload = QCheckBox('Do not re-download if exsting data are already up-to-date (as of -7d ~ now).', parent=self)
         self.checkbox_smart_redownload.stateChanged.connect(self._checkbox_smart_redownload_state_changed)
         self.download_progressbar = QProgressBar(parent=self, objectName="ProgressBar")
         self.download_button = QPushButton(parent=self)
         self.close_button = QPushButton(parent=self)
         self.layout = QGridLayout()
-        self.layout.addWidget(self.label, 0, 0)
-        self.layout.addWidget(self.checkbox_smart_redownload, 1, 0)
-        self.layout.addWidget(self.download_progressbar, 2, 0)
-        self.layout.addWidget(self.download_button, 3, 0)
-        self.layout.addWidget(self.close_button, 4, 0)
+        self.layout.addWidget(self.main_label, 0, 0)
+        self.layout.addWidget(self.group_selection_label, 1, 0)
+        self.layout.addWidget(self.dow30_checkbox, 2, 0)
+        self.layout.addWidget(self.nasdaq100_checkbox, 3, 0)
+        self.layout.addWidget(self.sandp500_checkbox, 4, 0)
+        self.layout.addWidget(self.russell1k_checkbox, 5, 0)
+        self.layout.addWidget(self.russell2k_checkbox, 6, 0)
+        self.layout.addWidget(self.russell3k_checkbox, 7, 0)
+        self.layout.addWidget(self.comp_checkbox, 8, 0)
+        self.layout.addWidget(self.etf_db_checkbox, 9, 0)
+        self.layout.addWidget(self.equity_db_checkbox, 10, 0)
+        self.layout.addWidget(self.options_label, 11, 0)
+        self.layout.addWidget(self.checkbox_smart_redownload, 12, 0)
+        self.layout.addWidget(self.download_progressbar, 13, 0)
+        self.layout.addWidget(self.download_button, 14, 0)
+        self.layout.addWidget(self.close_button, 15, 0)
         self.setLayout(self.layout)
         self.download_button.clicked.connect(self._download_button_clicked)
         self.close_button.clicked.connect(self._close_button_clicked)
         self.app_window = parent
-        self._reset()
+        self._update_download_selection()
+        #self._reset()
+
+    def _update_download_selection(self):
+        self.tickers_to_download = []
+        if self.dow30_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['DOW 30']
+        if self.nasdaq100_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['NASDAQ 100']
+        if self.sandp500_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['S&P 500']
+        if self.russell1k_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['Russell 1000']
+        if self.russell2k_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['Russell 2000']
+        if self.russell3k_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['Russell 3000']
+        if self.comp_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['NASDAQ Composite']
+        if self.etf_db_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['ETF database']
+        if self.equity_db_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['Equity database']
+        self.tickers_to_download = sorted(list(set(self.tickers_to_download)))
+        self.n_tickers = len(self.tickers_to_download)
+        self.main_label.setText(f"Ready to download the latest data of [{self.n_tickers}] tickers and store as cache?\nNote: the data may take lots of space and the process may take hours.")
+        if self.n_tickers > 0:
+            self._reset()
 
     def _checkbox_smart_redownload_state_changed(self):
         self.smart_redownload = self.checkbox_smart_redownload.isChecked()
@@ -419,20 +482,21 @@ class download_all_data_dialog(QDialog):
         self.hide()
 
     def _download_button_clicked(self):
-        self.checkbox_smart_redownload.setEnabled(False)
-        self.download_button.setEnabled(False)
-        self.close_button.setEnabled(False)
-        self.download_button.setDefault(False)
-        self.download_button.repaint()
-        self.close_button.repaint()
-        # the reason to use this ticker_thread() is because in MacOS, there is an update problem in PyQt5
-        # specifically, if there is any 'external' function call, like get_ticker_data_dict(), or even time.sleep(), after 'self.download_progressbar.setValue(idx)' in the _download_this_ticker() function
-        # then the download_progressbar update won't show.
-        # it is like we need to remove any external function call in self.download_progressbar.setValue(idx) in the signal.connect(), in MacOS
-        # to see the effect, try to uncomment the # time.sleep(0.003) statement below; you will see how unsmooth it is.
-        self.thread=ticker_thread(app_window=self.app_window, smart_redownload=self.smart_redownload)
-        self.thread._signal.connect(self._download_this_ticker)
-        self.thread.start()
+        if self.n_tickers > 0:
+            self.checkbox_smart_redownload.setEnabled(False)
+            self.download_button.setEnabled(False)
+            self.close_button.setEnabled(False)
+            self.download_button.setDefault(False)
+            self.download_button.repaint()
+            self.close_button.repaint()
+            # the reason to use this ticker_thread() is because in MacOS, there is an update problem in PyQt5
+            # specifically, if there is any 'external' function call, like get_ticker_data_dict(), or even time.sleep(), after 'self.download_progressbar.setValue(idx)' in the _download_this_ticker() function
+            # then the download_progressbar update won't show.
+            # it is like we need to remove any external function call in self.download_progressbar.setValue(idx) in the signal.connect(), in MacOS
+            # to see the effect, try to uncomment the # time.sleep(0.003) statement below; you will see how unsmooth it is.
+            self.thread=ticker_thread(app_window=self.app_window, smart_redownload=self.smart_redownload, tickers_to_download=self.tickers_to_download)
+            self.thread._signal.connect(self._download_this_ticker)
+            self.thread.start()
 
     def _download_this_ticker(self, idx: int = None, ticker: str = None):
         self.download_progressbar.setValue(idx)
@@ -468,8 +532,8 @@ class high_dividends_dialog(QDialog):
         self.setLayout(self.layout)
 
 
-class etf_db_dialog(QDialog):
-    def __init__(self, parent=None, *args, **kwargs):
+class ticker_db_dialog(QDialog):
+    def __init__(self, parent=None, etf=True, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.app_window = parent
         self.resize(self.app_window.width*0.4, self.app_window.height*0.6)
@@ -477,14 +541,16 @@ class etf_db_dialog(QDialog):
         self.search_label.setText('Search:')
         self.search_lineedit = QLineEdit(parent=self)
         self.search_lineedit.returnPressed.connect(self._search_lineedit_return_pressed)
-        self.search_backward_checkbox = QCheckBox(parent=self)
-        self.search_backward_checkbox.setText('Backward')
-        self.search_case_sensitive_checkbox = QCheckBox(parent=self)
-        self.search_case_sensitive_checkbox.setText('Case Sensitive')
+        self.search_backward_checkbox = QCheckBox('Backward', parent=self)
+        self.search_case_sensitive_checkbox = QCheckBox('Case Sensitive', parent=self)
         self.text_browser = QTextBrowser(parent=self)
-        df1 = nasdaqlisted_df[ nasdaqlisted_df['ETF'] == 'Y' ][['ticker', 'Security Name']]
+        if etf:
+            df1 = nasdaqlisted_df[ nasdaqlisted_df['ETF'] == 'Y' ][['ticker', 'Security Name']]
+            df2 = otherlisted_df[ otherlisted_df['ETF'] == 'Y' ][['ticker', 'Security Name', 'Exchange']]
+        else:
+            df1 = nasdaqlisted_df[ nasdaqlisted_df['ETF'] == 'N' ][['ticker', 'Security Name']]
+            df2 = otherlisted_df[ otherlisted_df['ETF'] == 'N' ][['ticker', 'Security Name', 'Exchange']]            
         df1['Exchange'] = 'Nasdaq'
-        df2 = otherlisted_df[ otherlisted_df['ETF'] == 'Y' ][['ticker', 'Security Name', 'Exchange']]
         df2['Exchange'] = df2['Exchange'].map({'A': 'NYSE MKT',
                                                'N': 'New York Stock Exchange (NYSE)',
                                                'P': 'NYSE ARCA',
@@ -632,10 +698,11 @@ class app_menu(object):
         self._default_preference_settings()
         self.about_dialog = about_dialog(parent=self.app_window)
         self.preferences_dialog = preferences_dialog(parent=self.app_window, force_redownload_yfinance_data=self.force_redownload_yfinance_data, download_today_data=self.download_today_data, data_root_dir=self.data_root_dir)
-        self.download_all_data_dialog = download_all_data_dialog(parent=self.app_window)
+        self.download_data_dialog = download_data_dialog(parent=self.app_window)
         self.research_dialog = research_dialog(parent=self.app_window)
         self.high_dividends_dialog = high_dividends_dialog(parent=self.app_window)
-        self.etf_db_dialog = etf_db_dialog(parent=self.app_window)
+        self.etf_db_dialog = ticker_db_dialog(parent=self.app_window, etf=True)
+        self.equity_db_dialog = ticker_db_dialog(parent=self.app_window, etf=False)
         # about
         aboutAct = QAction('&About', parent=self.app_window)
         aboutAct.setShortcut('Ctrl+A')
@@ -647,10 +714,10 @@ class app_menu(object):
         prefAct.setStatusTip('Preference settings')
         prefAct.triggered.connect(self.preferences_dialog.exec)
         # download data
-        download_all_Act = QAction('&Download all data', parent=self.app_window)
-        download_all_Act.setShortcut('Ctrl+D')
-        download_all_Act.setStatusTip('Download the latest data of all the 600+ tickers included in this App to cache')
-        download_all_Act.triggered.connect(self.download_all_data_dialog.exec)        
+        download_Act = QAction('&Download data as cache', parent=self.app_window)
+        download_Act.setShortcut('Ctrl+D')
+        download_Act.setStatusTip('Download the latest data of tickers and store as cache')
+        download_Act.triggered.connect(self.download_data_dialog.exec)        
         # exit
         exitAct = QAction('&Exit', parent=self.app_window)
         exitAct.setShortcut('Ctrl+Q')
@@ -663,7 +730,7 @@ class app_menu(object):
         self.app_window.AppMenu = self.app_window.menubar.addMenu('&App')
         self.app_window.AppMenu.addAction(aboutAct)
         self.app_window.AppMenu.addAction(prefAct)
-        self.app_window.AppMenu.addAction(download_all_Act)
+        self.app_window.AppMenu.addAction(download_Act)
         self.app_window.AppMenu.addAction(exitAct)
         # view
         webAct = QAction('&Useful websites', parent=self.app_window)
@@ -674,11 +741,15 @@ class app_menu(object):
         #
         etf_db_Act = QAction('&ETF database', parent=self.app_window)
         etf_db_Act.triggered.connect(self.etf_db_dialog.exec)
+        #
+        equity_db_Act = QAction('&Equity database', parent=self.app_window)
+        equity_db_Act.triggered.connect(self.equity_db_dialog.exec)
         # 2. researchMenu
         self.app_window.ResearchMenu = self.app_window.menubar.addMenu('&Research')
         self.app_window.ResearchMenu.addAction(webAct)
         self.app_window.ResearchMenu.addAction(high_dividendsAct)
         self.app_window.ResearchMenu.addAction(etf_db_Act)
+        self.app_window.ResearchMenu.addAction(equity_db_Act)
 
     def _default_preference_settings(self):
         self.force_redownload_yfinance_data = False
@@ -846,6 +917,8 @@ class UI_control(object):
     def _ticker_selection_change(self, index: int = None):
         if index > 0:
             self.selected_ticker = self._UI.ticker_selection.itemText(index)
+            if self.selected_ticker not in ticker_group_dict['All']:
+                return
 
             self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, force_redownload = self._UI.app_window.app_menu.preferences_dialog.force_redownload_yfinance_data, download_today_data = self._UI.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir)
             self.ticker_data_dict_in_effect = copy.deepcopy(self.ticker_data_dict_original)

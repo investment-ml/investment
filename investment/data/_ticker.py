@@ -29,6 +29,96 @@ import pathlib
 # https://www.ftserussell.com/resources/russell-reconstitution (download PDF)
 # https://www.adobe.com/acrobat/online/pdf-to-excel.html (PDF to Excel conversion)
 
+###########################################################################################
+
+nasdaqlisted_df = pd.DataFrame()
+otherlisted_df = pd.DataFrame()
+global_data_root_dir = join(str(pathlib.Path.home()), ".investment")
+
+###########################################################################################
+
+def Internet_connection_available():
+    try:
+        sock = socket.create_connection(("www.google.com", 80))
+        if sock is not None:
+            sock.close
+        return True
+    except OSError:
+        pass
+    return False
+
+# references:
+# https://quant.stackexchange.com/questions/1640/where-to-download-list-of-all-common-stocks-traded-on-nyse-nasdaq-and-amex
+# http://www.nasdaqtrader.com/trader.aspx?id=symboldirdefs
+def download_nasdaqtrader_data(data_root_dir: str = None):
+    if data_root_dir is None:
+         raise ValueError("Error: data_root_dir cannot be None")
+
+    data_dir = join(data_root_dir, "ticker_data/nasdaqtrader")
+    if not os.path.exists(data_dir):
+        try:
+            pathlib.Path(data_dir).mkdir(parents=True, exist_ok=True)
+        except:
+            raise IOError(f"cannot create data dir: {data_dir}")
+    ftp_server = 'ftp.nasdaqtrader.com'
+    ftp_username = 'anonymous'
+    ftp_password = 'anonymous'
+    ftp = ftplib.FTP(ftp_server)
+    ftp.login(ftp_username, ftp_password)
+    files = [('SymbolDirectory/nasdaqlisted.txt', join(data_dir, 'nasdaqlisted.txt')), 
+             ('SymbolDirectory/otherlisted.txt',  join(data_dir, 'otherlisted.txt' ))]
+    for file_ in files:
+        with open(file_[1], "wb") as f:
+            ftp.retrbinary("RETR " + file_[0], f.write)
+    ftp.quit()
+
+
+def load_nasdaqtrader_data(data_root_dir: str = None):
+
+    from ._data import timedata
+
+    if data_root_dir is None:
+        raise ValueError("Error: data_root_dir cannot be None")
+
+    file1 = pathlib.Path(join(data_root_dir, "ticker_data/nasdaqtrader/nasdaqlisted.txt"))
+    file2 = pathlib.Path(join(data_root_dir, "ticker_data/nasdaqtrader/otherlisted.txt"))
+
+    to_download = False
+
+    if file1.exists():
+        if timedata().now.datetime - timedata(time_stamp=file1.stat().st_ctime).datetime > timedelta(days=1): # creation time
+            to_download = True
+    else:
+        to_download = True
+
+    if file2.exists():
+        if timedata().now.datetime - timedata(time_stamp=file2.stat().st_ctime).datetime > timedelta(days=1): # creation time
+            to_download = True
+    else:
+        to_download = True
+
+    if not Internet_connection_available():
+        to_download = False
+        if (not file1.exists()) and (not file2.exists()):
+            raise RuntimeError("Internet is unavailable but the system depends on certain nasdaqtrader files to run")
+
+    if to_download:
+        download_nasdaqtrader_data(data_root_dir = data_root_dir) # always get the most up-to-date version
+
+    global nasdaqlisted_df
+    global otherlisted_df
+
+    nasdaqlisted_df = pd.read_csv(file1,sep='|',header=0,skipfooter=1,engine='python')
+    otherlisted_df = pd.read_csv(file2,sep='|',header=0,skipfooter=1,engine='python')
+    nasdaqlisted_df['ticker'] = nasdaqlisted_df['Symbol'].str.replace('\.','\-').str.replace('\\','')
+    otherlisted_df['ticker'] = otherlisted_df['NASDAQ Symbol'].str.replace('\.','\-').str.replace('\\','')
+    nasdaqlisted_df = nasdaqlisted_df[ (nasdaqlisted_df['Test Issue'] == 'N') & (nasdaqlisted_df['NextShares'] == 'N') ].drop(['Test Issue','Symbol','NextShares','Round Lot Size'], axis=1)
+    otherlisted_df = otherlisted_df[ otherlisted_df['Test Issue'] == 'N' ].drop(['Test Issue','NASDAQ Symbol','ACT Symbol','CQS Symbol','Round Lot Size'], axis=1)
+
+load_nasdaqtrader_data(data_root_dir=global_data_root_dir)
+   
+###########################################################################################
+
 # this one can be modified
 ticker_group_dict = {'All': [],
                      'Basic Materials': ['DOW','HUN','EXP','AVTR','ECL','APD','DD','FNV','NEM','GDX','XLB'],
@@ -45,6 +135,7 @@ ticker_group_dict = {'All': [],
                      'Dividend Stocks (11/2020)': ['BMY','WMT','HD','AAPL','MSFT'],
                      'Growth Stocks (11/2020)': ['ALGN','FIVE','LGIH','MELI','PTON'],
                      'ETF': ['JETS', 'ONEQ', 'IEMG', 'VTHR', 'IWB', 'IWM', 'IWV', 'IWF', 'VTV', 'SCHD', 'USMV', 'VEA', 'VWO', 'AGG', 'LQD', 'GLD', 'VTI', 'DIA', 'OILU', 'OILD', 'TQQQ', 'SQQQ', 'UDOW', 'SDOW', 'UVXY', 'SVXY', 'KORU', 'YANG', 'YINN', 'QQQ', 'VOO','SPY','IVV','TMF','TMV','TBF','TLT','ESPO','GDX','XLC','XLI','XLF','XLE','XLV','XLB','XLK','XLU','XLP','XLY','XLRE'],
+                     'ETF database': [],
                      'Major Market Indices': ['DIA','SPLG','IVV','VOO','SPY','QQQ','ONEQ','IWM','VTWO','VXX'],
                      'DOW 30': ['GS','WMT','MCD','CRM','DIS','NKE','CAT','TRV','VZ','JPM','IBM','HD','INTC','AAPL','MMM','MSFT','JNJ','CSCO','V','DOW','MRK','PG','AXP','KO','AMGN','HON','UNH','WBA','CVX','BA'],
                      'NASDAQ 100': ['AAPL', 'ADBE', 'ADI', 'ADP', 'ADSK', 'ALGN', 'ALXN', 'AMAT', 'AMD', 'AMGN', 'AMZN', 'ANSS', 'ASML', 'ATVI', 'AVGO', 'BIDU', 'BIIB', 'BKNG', 'BMRN', 'CDNS', 'CDW', 'CERN', 'CHKP', 'CHTR', 'CMCSA', 'COST', 'CPRT', 'CSCO', 'CSX', 'CTAS', 'CTSH', 'CTXS', 'DLTR', 'DOCU', 'DXCM', 'EA', 'EBAY', 'EXC', 'EXPE', 'FAST', 'FB', 'FISV', 'FOX', 'FOXA', 'GILD', 'GOOG', 'GOOGL', 'IDXX', 'ILMN', 'INCY', 'INTC', 'INTU', 'ISRG', 'JD', 'KDP', 'KHC', 'KLAC', 'LBTYA', 'LBTYK', 'LRCX', 'LULU', 'MAR', 'MCHP', 'MDLZ', 'MELI', 'MNST', 'MRNA', 'MSFT', 'MU', 'MXIM', 'NFLX', 'NTES', 'NVDA', 'NXPI', 'ORLY', 'PAYX', 'PCAR', 'PDD', 'PEP', 'PYPL', 'QCOM', 'REGN', 'ROST', 'SBUX', 'SGEN', 'SIRI', 'SNPS', 'SPLK', 'SWKS', 'TCOM', 'TMUS', 'TSLA', 'TTWO', 'TXN', 'ULTA', 'VRSK', 'VRSN', 'VRTX', 'WBA', 'WDAY', 'XEL', 'XLNX', 'ZM'],
@@ -56,9 +147,20 @@ ticker_group_dict = {'All': [],
                      'NASDAQ Composite': ['AACG', 'AACQ', 'AAL', 'AAME', 'AAOI', 'AAON', 'AAPL', 'AAWW', 'AAXN', 'ABCB', 'ABCM', 'ABEO', 'ABIO', 'ABMD', 'ABNB', 'ABST', 'ABTX', 'ABUS', 'ACAD', 'ACAM', 'ACBI', 'ACCD', 'ACER', 'ACET', 'ACEV', 'ACGL', 'ACHC', 'ACHV', 'ACIA', 'ACIU', 'ACIW', 'ACLS', 'ACMR', 'ACNB', 'ACOR', 'ACRS', 'ACRX', 'ACST', 'ACTC', 'ACTG', 'ADAP', 'ADBE', 'ADES', 'ADI', 'ADIL', 'ADMA', 'ADMP', 'ADMS', 'ADOC', 'ADP', 'ADPT', 'ADSK', 'ADTN', 'ADTX', 'ADUS', 'ADV', 'ADVM', 'ADXN', 'ADXS', 'AEGN', 'AEHL', 'AEHR', 'AEIS', 'AEMD', 'AEP', 'AERI', 'AESE', 'AEY', 'AEYE', 'AEZS', 'AFIB', 'AFIN', 'AFMD', 'AFYA', 'AGBA', 'AGC', 'AGEN', 'AGFS', 'AGIO', 'AGLE', 'AGMH', 'AGNC', 'AGRX', 'AGTC', 'AGYS', 'AHAC', 'AHCO', 'AHPI', 'AIH', 'AIHS', 'AIKI', 'AIMC', 'AIRG', 'AIRT', 'AKAM', 'AKBA', 'AKER', 'AKRO', 'AKTS', 'AKTX', 'AKU', 'AKUS', 'ALAC', 'ALBO', 'ALCO', 'ALDX', 'ALEC', 'ALGM', 'ALGN', 'ALGS', 'ALGT', 'ALIM', 'ALJJ', 'ALKS', 'ALLK', 'ALLO', 'ALLT', 'ALNA', 'ALNY', 'ALOT', 'ALPN', 'ALRM', 'ALRN', 'ALRS', 'ALSK', 'ALT', 'ALTA', 'ALTM', 'ALTR', 'ALVR', 'ALXN', 'ALXO', 'ALYA', 'AMAL', 'AMAT', 'AMBA', 'AMCI', 'AMCX', 'AMD', 'AMED', 'AMEH', 'AMGN', 'AMHC', 'AMKR', 'AMNB', 'AMOT', 'AMPH', 'AMRB', 'AMRH', 'AMRK', 'AMRN', 'AMRS', 'AMSC', 'AMSF', 'AMST', 'AMSWA', 'AMTB', 'AMTBB', 'AMTI', 'AMTX', 'AMWD', 'AMYT', 'AMZN', 'ANAB', 'ANAT', 'ANCN', 'ANDA', 'ANDE', 'ANGI', 'ANGO', 'ANIK', 'ANIP', 'ANIX', 'ANNX', 'ANPC', 'ANSS', 'ANTE', 'ANY', 'AOSL', 'AOUT', 'APA', 'APDN', 'APEI', 'APEN', 'APHA', 'API', 'APLS', 'APLT', 'APM', 'APOG', 'APOP', 'APPF', 'APPN', 'APPS', 'APRE', 'APTO', 'APTX', 'APVO', 'APWC', 'APXT', 'APYX', 'AQB', 'AQMS', 'AQST', 'ARAV', 'ARAY', 'ARCB', 'ARCE', 'ARCT', 'ARDS', 'ARDX', 'AREC', 'ARGX', 'ARKR', 'ARLP', 'ARNA', 'AROW', 'ARPO', 'ARQT', 'ARRY', 'ARTL', 'ARTNA', 'ARTW', 'ARVN', 'ARWR', 'ARYA', 'ASLN', 'ASMB', 'ASML', 'ASND', 'ASO', 'ASPS', 'ASPU', 'ASRT', 'ASRV', 'ASTC', 'ASTE', 'ASUR', 'ASYS', 'ATAX', 'ATCX', 'ATEC', 'ATEX', 'ATHA', 'ATHE', 'ATHX', 'ATIF', 'ATLC', 'ATLO', 'ATNF', 'ATNI', 'ATNX', 'ATOM', 'ATOS', 'ATRA', 'ATRC', 'ATRI', 'ATRO', 'ATRS', 'ATSG', 'ATVI', 'ATXI', 'AUB', 'AUBN', 'AUDC', 'AUPH', 'AUTL', 'AUTO', 'AUVI', 'AVAV', 'AVCO', 'AVCT', 'AVDL', 'AVEO', 'AVGO', 'AVGR', 'AVID', 'AVIR', 'AVNW', 'AVO', 'AVRO', 'AVT', 'AVXL', 'AWH', 'AWRE', 'AXAS', 'AXDX', 'AXGN', 'AXLA', 'AXNX', 'AXSM', 'AXTI', 'AY', 'AYLA', 'AYRO', 'AYTU', 'AZN', 'AZPN', 'AZRX', 'AZYO', 'BAND', 'BANF', 'BANR', 'BASI', 'BATRA', 'BATRK', 'BBBY', 'BBCP', 'BBGI', 'BBI', 'BBIG', 'BBIO', 'BBQ', 'BBSI', 'BCBP', 'BCDA', 'BCEL', 'BCLI', 'BCML', 'BCOR', 'BCOV', 'BCOW', 'BCPC', 'BCRX', 'BCTG', 'BCYC', 'BDGE', 'BDSI', 'BDSX', 'BDTX', 'BEAM', 'BEAT', 'BECN', 'BEEM', 'BELFA', 'BELFB', 'BFC', 'BFIN', 'BFRA', 'BFST', 'BGCP', 'BGFV', 'BGNE', 'BHAT', 'BHF', 'BHTG', 'BIDU', 'BIGC', 'BIIB', 'BILI', 'BIMI', 'BIOC', 'BIOL', 'BIVI', 'BJRI', 'BKEP', 'BKNG', 'BKSC', 'BKYI', 'BL', 'BLBD', 'BLCM', 'BLCT', 'BLDP', 'BLDR', 'BLFS', 'BLI', 'BLIN', 'BLKB', 'BLMN', 'BLNK', 'BLPH', 'BLRX', 'BLSA', 'BLU', 'BLUE', 'BMCH', 'BMRA', 'BMRC', 'BMRN', 'BMTC', 'BNFT', 'BNGO', 'BNR', 'BNSO', 'BNTC', 'BNTX', 'BOCH', 'BOKF', 'BOMN', 'BOOM', 'BOSC', 'BOTJ', 'BOWX', 'BOXL', 'BPFH', 'BPMC', 'BPOP', 'BPRN', 'BPTH', 'BPY', 'BPYU', 'BRID', 'BRKL', 'BRKR', 'BRKS', 'BRLI', 'BROG', 'BRP', 'BRPA', 'BRQS', 'BRY', 'BSBK', 'BSET', 'BSGM', 'BSQR', 'BSRR', 'BSVN', 'BSY', 'BTAI', 'BTAQ', 'BTBT', 'BTWN', 'BUSE', 'BVXV', 'BWAY', 'BWB', 'BWEN', 'BWFG', 'BWMX', 'BXRX', 'BYFC', 'BYND', 'BYSI', 'BZUN', 'CAAS', 'CABA', 'CAC', 'CACC', 'CAKE', 'CALA', 'CALB', 'CALM', 'CALT', 'CAMP', 'CAMT', 'CAN', 'CAPA', 'CAPR', 'CAR', 'CARA', 'CARE', 'CARG', 'CARV', 'CASA', 'CASH', 'CASI', 'CASS', 'CASY', 'CATB', 'CATC', 'CATM', 'CATY', 'CBAN', 'CBAT', 'CBAY', 'CBFV', 'CBIO', 'CBLI', 'CBMB', 'CBMG', 'CBNK', 'CBPO', 'CBRL', 'CBSH', 'CBTX', 'CCAP', 'CCB', 'CCBG', 'CCCC', 'CCLP', 'CCMP', 'CCNC', 'CCNE', 'CCOI', 'CCRC', 'CCRN', 'CCXI', 'CD', 'CDAK', 'CDEV', 'CDK', 'CDLX', 'CDMO', 'CDNA', 'CDNS', 'CDTX', 'CDW', 'CDXC', 'CDXS', 'CDZI', 'CECE', 'CELC', 'CELH', 'CEMI', 'CENT', 'CENTA', 'CENX', 'CERC', 'CERE', 'CERN', 'CERS', 'CETX', 'CEVA', 'CFB', 'CFBI', 'CFBK', 'CFFI', 'CFFN', 'CFII', 'CFMS', 'CFRX', 'CG', 'CGC', 'CGEN', 'CGIX', 'CGNX', 'CGRO', 'CHCI', 'CHCO', 'CHDN', 'CHEF', 'CHEK', 'CHFS', 'CHKP', 'CHMA', 'CHMG', 'CHNG', 'CHNR', 'CHPM', 'CHRS', 'CHRW', 'CHTR', 'CHUY', 'CIDM', 'CIGI', 'CIH', 'CIIC', 'CINF', 'CIVB', 'CIZN', 'CJJD', 'CKPT', 'CLAR', 'CLBK', 'CLBS', 'CLCT', 'CLDB', 'CLDX', 'CLEU', 'CLFD', 'CLGN', 'CLIR', 'CLLS', 'CLMT', 'CLNE', 'CLPS', 'CLPT', 'CLRB', 'CLRO', 'CLSD', 'CLSK', 'CLSN', 'CLVS', 'CLWT', 'CLXT', 'CMBM', 'CMCO', 'CMCSA', 'CMCT', 'CME', 'CMLF', 'CMLS', 'CMPI', 'CMPR', 'CMPS', 'CMRX', 'CMTL', 'CNBKA', 'CNCE', 'CNDT', 'CNET', 'CNFR', 'CNNB', 'CNOB', 'CNSL', 'CNSP', 'CNST', 'CNTG', 'CNTY', 'CNXC', 'CNXN', 'COCP', 'CODA', 'CODX', 'COFS', 'COGT', 'COHR', 'COHU', 'COKE', 'COLB', 'COLL', 'COLM', 'COMM', 'CONE', 'CONN', 'COOP', 'CORE', 'CORT', 'COST', 'COUP', 'COWN', 'CPAH', 'CPHC', 'CPIX', 'CPLP', 'CPRT', 'CPRX', 'CPSH', 'CPSI', 'CPSS', 'CPST', 'CPTA', 'CRAI', 'CRBP', 'CRDF', 'CREE', 'CREG', 'CRESY', 'CREX', 'CRIS', 'CRMT', 'CRNC', 'CRNT', 'CRNX', 'CRON', 'CROX', 'CRSA', 'CRSP', 'CRSR', 'CRTD', 'CRTO', 'CRTX', 'CRUS', 'CRVL', 'CRVS', 'CRWD', 'CRWS', 'CSBR', 'CSCO', 'CSCW', 'CSGP', 'CSGS', 'CSII', 'CSIQ', 'CSOD', 'CSPI', 'CSSE', 'CSTE', 'CSTL', 'CSTR', 'CSWC', 'CSWI', 'CSX', 'CTAS', 'CTBI', 'CTG', 'CTHR', 'CTIB', 'CTIC', 'CTMX', 'CTRE', 'CTRM', 'CTRN', 'CTSH', 'CTSO', 'CTXR', 'CTXS', 'CUE', 'CURI', 'CUTR', 'CVAC', 'CVBF', 'CVCO', 'CVCY', 'CVET', 'CVGI', 'CVGW', 'CVLB', 'CVLG', 'CVLT', 'CVLY', 'CVV', 'CWBC', 'CWBR', 'CWCO', 'CWST', 'CXDC', 'CXDO', 'CYAD', 'CYAN', 'CYBE', 'CYBR', 'CYCC', 'CYCN', 'CYRN', 'CYRX', 'CYTH', 'CYTK', 'CZNC', 'CZR', 'CZWI', 'DADA', 'DAIO', 'DAKT', 'DARE', 'DBDR', 'DBVT', 'DBX', 'DCBO', 'DCOM', 'DCPH', 'DCT', 'DCTH', 'DDOG', 'DENN', 'DFFN', 'DFHT', 'DFPH', 'DGICA', 'DGICB', 'DGII', 'DGLY', 'DGNS', 'DHC', 'DHIL', 'DIOD', 'DISCA', 'DISCB', 'DISCK', 'DISH', 'DJCO', 'DKNG', 'DLHC', 'DLPN', 'DLTH', 'DLTR', 'DMAC', 'DMLP', 'DMRC', 'DMTK', 'DNKN', 'DNLI', 'DOCU', 'DOGZ', 'DOMO', 'DOOO', 'DORM', 'DOX', 'DOYU', 'DRAD', 'DRIO', 'DRNA', 'DRRX', 'DRTT', 'DSAC', 'DSGX', 'DSKE', 'DSPG', 'DSWL', 'DTEA', 'DTIL', 'DTSS', 'DUO', 'DUOT', 'DVAX', 'DWSN', 'DXCM', 'DXLG', 'DXPE', 'DXYN', 'DYAI', 'DYN', 'DYNT', 'DZSI', 'EA', 'EAR', 'EARS', 'EAST', 'EBAY', 'EBC', 'EBIX', 'EBMT', 'EBON', 'EBSB', 'EBTC', 'ECHO', 'ECOL', 'ECOR', 'ECPG', 'EDAP', 'EDIT', 'EDRY', 'EDSA', 'EDTK', 'EDUC', 'EEFT', 'EFOI', 'EFSC', 'EGAN', 'EGBN', 'EGLE', 'EGOV', 'EGRX', 'EH', 'EHTH', 'EIDX', 'EIGI', 'EIGR', 'EKSO', 'ELOX', 'ELSE', 'ELTK', 'ELYS', 'EMCF', 'EMKR', 'EML', 'ENDP', 'ENG', 'ENLV', 'ENOB', 'ENPH', 'ENSG', 'ENTA', 'ENTG', 'ENTX', 'EOLS', 'EOSE', 'EPAY', 'EPIX', 'EPSN', 'EPZM', 'EQ', 'EQBK', 'EQIX', 'EQOS', 'ERES', 'ERIC', 'ERIE', 'ERII', 'ERYP', 'ESBK', 'ESCA', 'ESEA', 'ESGR', 'ESLT', 'ESPR', 'ESQ', 'ESSA', 'ESSC', 'ESTA', 'ESXB', 'ETAC', 'ETNB', 'ETON', 'ETSY', 'ETTX', 'EVBG', 'EVER', 'EVFM', 'EVGN', 'EVK', 'EVLO', 'EVOK', 'EVOL', 'EVOP', 'EWBC', 'EXAS', 'EXC', 'EXEL', 'EXFO', 'EXLS', 'EXPC', 'EXPD', 'EXPE', 'EXPI', 'EXPO', 'EXTR', 'EYE', 'EYEG', 'EYEN', 'EYES', 'EYPT', 'EZPW', 'FAMI', 'FANG', 'FANH', 'FARM', 'FARO', 'FAST', 'FAT', 'FATE', 'FB', 'FBIO', 'FBIZ', 'FBMS', 'FBNC', 'FBRX', 'FBSS', 'FCAC', 'FCAP', 'FCBC', 'FCBP', 'FCCO', 'FCCY', 'FCEL', 'FCFS', 'FCNCA', 'FDBC', 'FEIM', 'FELE', 'FENC', 'FEYE', 'FFBC', 'FFBW', 'FFHL', 'FFIC', 'FFIN', 'FFIV', 'FFNW', 'FFWM', 'FGBI', 'FGEN', 'FHB', 'FHTX', 'FIBK', 'FIII', 'FISI', 'FISV', 'FITB', 'FIVE', 'FIVN', 'FIXX', 'FIZZ', 'FLDM', 'FLEX', 'FLGT', 'FLIC', 'FLIR', 'FLL', 'FLMN', 'FLNT', 'FLUX', 'FLWS', 'FLXN', 'FLXS', 'FMAO', 'FMBH', 'FMBI', 'FMNB', 'FMTX', 'FNCB', 'FNHC', 'FNKO', 'FNLC', 'FNWB', 'FOCS', 'FOLD', 'FONR', 'FORD', 'FORM', 'FORR', 'FORTY', 'FOSL', 'FOX', 'FOXA', 'FOXF', 'FPAY', 'FPRX', 'FRAF', 'FRAN', 'FRBA', 'FRBK', 'FREE', 'FREQ', 'FRG', 'FRGI', 'FRHC', 'FRLN', 'FRME', 'FROG', 'FRPH', 'FRPT', 'FRSX', 'FRTA', 'FSBW', 'FSDC', 'FSEA', 'FSFG', 'FSLR', 'FSRV', 'FSTR', 'FSTX', 'FSV', 'FTDR', 'FTEK', 'FTFT', 'FTHM', 'FTIV', 'FTNT', 'FTOC', 'FULC', 'FULT', 'FUNC', 'FUSB', 'FUSN', 'FUTU', 'FUV', 'FVAM', 'FVCB', 'FVE', 'FWONA', 'FWONK', 'FWP', 'FWRD', 'FXNC', 'GABC', 'GAIA', 'GALT', 'GAN', 'GASS', 'GBCI', 'GBIO', 'GBLI', 'GBT', 'GCBC', 'GCMG', 'GDEN', 'GDRX', 'GDS', 'GDYN', 'GEC', 'GENC', 'GENE', 'GEOS', 'GERN', 'GEVO', 'GFED', 'GFN', 'GGAL', 'GH', 'GHIV', 'GHSI', 'GIFI', 'GIGM', 'GIII', 'GILD', 'GILT', 'GLBS', 'GLBZ', 'GLDD', 'GLG', 'GLIBA', 'GLMD', 'GLNG', 'GLPG', 'GLPI', 'GLRE', 'GLSI', 'GLTO', 'GLUU', 'GLYC', 'GMAB', 'GMBL', 'GMDA', 'GMLP', 'GNCA', 'GNFT', 'GNLN', 'GNMK', 'GNPX', 'GNRS', 'GNSS', 'GNTX', 'GNTY', 'GNUS', 'GO', 'GOCO', 'GOGL', 'GOGO', 'GOOD', 'GOOG', 'GOOGL', 'GOSS', 'GOVX', 'GP', 'GPP', 'GPRE', 'GPRO', 'GRAY', 'GRBK', 'GRCY', 'GRFS', 'GRIF', 'GRIL', 'GRIN', 'GRMN', 'GRNQ', 'GRNV', 'GROW', 'GRPN', 'GRSV', 'GRTS', 'GRTX', 'GRVY', 'GRWG', 'GSBC', 'GSHD', 'GSIT', 'GSKY', 'GSM', 'GSMG', 'GSUM', 'GT', 'GTEC', 'GTH', 'GTHX', 'GTIM', 'GTLS', 'GTYH', 'GURE', 'GVP', 'GWAC', 'GWGH', 'GWPH', 'GWRS', 'GXGX', 'GYRO', 
                                           'HA', 'HAFC', 'HAIN', 'HALL', 'HALO', 'HAPP', 'HARP', 'HAS', 'HAYN', 'HBAN', 'HBCP', 'HBIO', 'HBMD', 'HBNC', 'HBP', 'HBT', 'HCAC', 'HCAP', 'HCAT', 'HCCI', 'HCDI', 'HCKT', 'HCM', 'HCSG', 'HDS', 'HDSN', 'HEAR', 'HEC', 'HEES', 'HELE', 'HEPA', 'HFBL', 'HFEN', 'HFFG', 'HFWA', 'HGBL', 'HGEN', 'HGSH', 'HHR', 'HIBB', 'HIFS', 'HIHO', 'HIMX', 'HJLI', 'HLG', 'HLIO', 'HLIT', 'HLNE', 'HLXA', 'HMHC', 'HMNF', 'HMST', 'HMSY', 'HMTV', 'HNNA', 'HNRG', 'HOFT', 'HOFV', 'HOL', 'HOLI', 'HOLX', 'HOMB', 'HONE', 'HOOK', 'HOPE', 'HOTH', 'HPK', 'HQI', 'HQY', 'HRMY', 'HROW', 'HRTX', 'HRZN', 'HSAQ', 'HSDT', 'HSIC', 'HSII', 'HSKA', 'HSON', 'HST', 'HSTM', 'HSTO', 'HTBI', 'HTBK', 'HTBX', 'HTGM', 'HTHT', 'HTLD', 'HTLF', 'HTOO', 'HUBG', 'HUGE', 'HUIZ', 'HURC', 'HURN', 'HUSN', 'HVBC', 'HWBK', 'HWC', 'HWCC', 'HWKN', 'HX', 'HYAC', 'HYFM', 'HYMC', 'HYRE', 'HZNP', 'IAC', 'IART', 'IBCP', 'IBEX', 'IBKR', 'IBOC', 'IBTX', 'ICAD', 'ICBK', 'ICCC', 'ICCH', 'ICFI', 'ICHR', 'ICLK', 'ICLR', 'ICMB', 'ICON', 'ICPT', 'ICUI', 'IDCC', 'IDEX', 'IDN', 'IDRA', 'IDXG', 'IDXX', 'IDYA', 'IEA', 'IEC', 'IEP', 'IESC', 'IFMK', 'IFRX', 'IGAC', 'IGIC', 'IGMS', 'IHRT', 'III', 'IIIN', 'IIIV', 'IIN', 'IIVI', 'IKNX', 'ILMN', 'ILPT', 'IMAB', 'IMAC', 'IMBI', 'IMGN', 'IMKTA', 'IMMP', 'IMMR', 'IMNM', 'IMOS', 'IMRA', 'IMRN', 'IMTE', 'IMTX', 'IMUX', 'IMV', 'IMVT', 'IMXI', 'INAQ', 'INBK', 'INBX', 'INCY', 'INDB', 'INFI', 'INFN', 'INGN', 'INM', 'INMB', 'INMD', 'INO', 'INOD', 'INOV', 'INPX', 'INSE', 'INSG', 'INSM', 'INTC', 'INTG', 'INTU', 'INTZ', 'INVA', 'INVE', 'INVO', 'INZY', 'IONS', 'IOSP', 'IOVA', 'IPAR', 'IPDN', 'IPGP', 'IPHA', 'IPHI', 'IPWR', 'IQ', 'IRBT', 'IRCP', 'IRDM', 'IRIX', 'IRMD', 'IROQ', 'IRTC', 'IRWD', 'ISBC', 'ISEE', 'ISIG', 'ISNS', 'ISRG', 'ISSC', 'ISTR', 'ITAC', 'ITCI', 'ITI', 'ITIC', 'ITMR', 'ITOS', 'ITRI', 'ITRM', 'ITRN', 'IVA', 'IVAC', 'IZEA', 'JACK', 'JAGX', 'JAKK', 'JAMF', 'JAN', 'JAZZ', 'JBHT', 'JBLU', 'JBSS', 'JCOM', 'JCS', 'JCTCF', 'JD', 'JFIN', 'JFU', 'JG', 'JJSF', 'JKHY', 'JNCE', 'JOBS', 'JOUT', 'JRJC', 'JRSH', 'JRVR', 'JUPW', 'JVA', 'JYAC', 'JYNT', 'KALA', 'KALU', 'KALV', 'KBAL', 'KBNT', 'KBSF', 'KC', 'KDMN', 'KDNY', 'KDP', 'KE', 'KELYA', 'KELYB', 'KEQU', 'KERN', 'KFFB', 'KFRC', 'KHC', 'KIDS', 'KIN', 'KINS', 'KIRK', 'KLAC', 'KLDO', 'KLIC', 'KLXE', 'KMDA', 'KNDI', 'KNSA', 'KNSL', 'KNTE', 'KOD', 'KOPN', 'KOR', 'KOSS', 'KPTI', 'KRBP', 'KRKR', 'KRMD', 'KRNT', 'KRNY', 'KRON', 'KROS', 'KRTX', 'KRUS', 'KRYS', 'KSMT', 'KSPN', 'KTCC', 'KTOS', 'KTOV', 'KTRA', 'KURA', 'KVHI', 'KXIN', 'KYMR', 'KZIA', 'KZR', 'LACQ', 'LAKE', 'LAMR', 'LANC', 'LAND', 'LARK', 'LASR', 'LATN', 'LAUR', 'LAWS', 'LAZR', 'LAZY', 'LBAI', 'LBC', 'LBRDA', 'LBRDK', 'LBTYA', 'LBTYB', 'LBTYK', 'LCA', 'LCAP', 'LCNB', 'LCUT', 'LCY', 'LE', 'LECO', 'LEDS', 'LEGH', 'LEGN', 'LESL', 'LEVL', 'LFAC', 'LFUS', 'LFVN', 'LGHL', 'LGIH', 'LGND', 'LHCG', 'LI', 'LIFE', 'LILA', 'LILAK', 'LINC', 'LIND', 'LIQT', 'LITE', 'LIVE', 'LIVK', 'LIVN', 'LIVX', 'LIXT', 'LIZI', 'LJPC', 'LKCO', 'LKFN', 'LKQ', 'LLIT', 'LLNW', 'LMAT', 'LMB', 'LMFA', 'LMNL', 'LMNR', 'LMNX', 'LMPX', 'LMRK', 'LMST', 'LNDC', 'LNSR', 'LNT', 'LNTH', 'LOAC', 'LOAN', 'LOB', 'LOCO', 'LOGC', 'LOGI', 'LOOP', 'LOPE', 'LORL', 'LOVE', 'LPCN', 'LPLA', 'LPRO', 'LPSN', 'LPTH', 'LPTX', 'LQDA', 'LQDT', 'LRCX', 'LRMR', 'LSAC', 'LSAQ', 'LSBK', 'LSCC', 'LSTR', 'LSXMA', 'LSXMB', 'LSXMK', 'LTBR', 'LTRN', 'LTRPA', 'LTRPB', 'LTRX', 'LULU', 'LUMO', 'LUNA', 'LUNG', 'LWAY', 'LX', 'LXEH', 'LXRX', 'LYFT', 'LYL', 'LYRA', 'LYTS', 'MAAC', 'MACK', 'MACU', 'MAGS', 'MANH', 'MANT', 'MAR', 'MARA', 'MARK', 'MARPS', 'MASI', 'MAT', 'MATW', 'MAXN', 'MAYS', 'MBCN', 'MBII', 'MBIN', 'MBIO', 'MBOT', 'MBRX', 'MBUU', 'MBWM', 'MCAC', 'MCBC', 'MCBS', 'MCEP', 'MCFE', 'MCFT', 'MCHP', 'MCHX', 'MCMJ', 'MCRB', 'MCRI', 'MDB', 'MDCA', 'MDGL', 'MDGS', 'MDIA', 'MDJH', 'MDLZ', 'MDNA', 'MDRR', 'MDRX', 'MDVL', 'MDWD', 'MDXG', 'MEDP', 'MEDS', 'MEIP', 'MELI', 'MEOH', 'MERC', 'MESA', 'MESO', 'METC', 'METX', 'MFH', 'MFIN', 'MFNC', 'MGEE', 'MGEN', 'MGI', 'MGIC', 'MGLN', 'MGNI', 'MGNX', 'MGPI', 'MGRC', 'MGTA', 'MGTX', 'MGYR', 'MHLD', 'MICT', 'MIDD', 'MIK', 'MIME', 'MIND', 'MIRM', 'MIST', 'MITK', 'MITO', 'MKD', 'MKGI', 'MKSI', 'MKTX', 'MLAB', 'MLAC', 'MLCO', 'MLHR', 'MLND', 'MLVF', 'MMAC', 'MMLP', 'MMSI', 'MMYT', 'MNCL', 'MNDO', 'MNKD', 'MNOV', 'MNPR', 'MNRO', 'MNSB', 'MNST', 'MNTX', 'MOFG', 'MOGO', 'MOHO', 'MOMO', 'MOR', 'MORF', 'MORN', 'MOSY', 'MOTS', 'MOXC', 'MPAA', 'MPB', 'MPWR', 'MRAM', 'MRBK', 'MRCY', 'MREO', 'MRIN', 'MRKR', 'MRLN', 'MRNA', 'MRNS', 'MRSN', 'MRTN', 'MRTX', 'MRUS', 'MRVI', 'MRVL', 'MSBI', 'MSEX', 'MSFT', 'MSON', 'MSTR', 'MSVB', 'MTBC', 'MTC', 'MTCH', 'MTCR', 'MTEM', 'MTEX', 'MTLS', 'MTP', 'MTRX', 'MTSC', 'MTSI', 'MTSL', 'MU', 'MVBF', 'MVIS', 'MWK', 'MXIM', 'MYFW', 'MYGN', 'MYRG', 'MYSZ', 'MYT', 'NAII', 'NAKD', 'NAOV', 'NARI', 'NATH', 'NATI', 'NATR', 'NAVI', 'NBAC', 'NBEV', 'NBIX', 'NBLX', 'NBN', 'NBRV', 'NBSE', 'NBTB', 'NCBS', 'NCMI', 'NCNA', 'NCNO', 'NCSM', 'NCTY', 'NDAQ', 'NDLS', 'NDRA', 'NDSN', 'NEO', 'NEOG', 'NEON', 'NEOS', 'NEPH', 'NEPT', 'NERV', 'NESR', 'NETE', 'NEWA', 'NEWT', 'NEXT', 'NFBK', 'NFE', 'NFLX', 'NGAC', 'NGHC', 'NGM', 'NGMS', 'NH', 'NHIC', 'NHLD', 'NHTC', 'NICE', 'NICK', 'NISN', 'NIU', 'NK', 'NKLA', 'NKSH', 'NKTR', 'NKTX', 'NLOK', 'NLTX', 'NMCI', 'NMFC', 'NMIH', 'NMMC', 'NMRD', 'NMRK', 'NMTR', 'NNBR', 'NNDM', 'NNOX', 'NODK', 'NOVN', 'NOVS', 'NOVT', 'NPA', 'NRBO', 'NRC', 'NRIM', 'NRIX', 'NSEC', 'NSIT', 'NSSC', 'NSTG', 'NSYS', 'NTAP', 'NTCT', 'NTEC', 'NTES', 'NTGR', 'NTIC', 'NTLA', 'NTNX', 'NTRA', 'NTRS', 'NTUS', 'NTWK', 'NUAN', 'NURO', 'NUVA', 'NUZE', 'NVAX', 'NVCN', 'NVCR', 'NVDA', 'NVEC', 'NVEE', 'NVFY', 'NVIV', 'NVMI', 'NVUS', 'NWBI', 'NWE', 'NWFL', 'NWL', 'NWLI', 'NWPX', 'NWS', 'NWSA', 'NXGN', 'NXPI', 'NXST', 'NXTC', 'NXTD', 'NYMT', 'NYMX', 'OAS', 'OBAS', 'OBCI', 'OBLN', 'OBNK', 'OBSV', 'OCC', 'OCFC', 'OCGN', 'OCUL', 'OCUP', 'ODFL', 'ODP', 'ODT', 'OEG', 'OESX', 'OFED', 'OFIX', 'OFLX', 'OGI', 'OIIM', 'OKTA', 'OLB', 'OLED', 'OLLI', 'OLMA', 'OM', 'OMAB', 'OMCL', 'OMER', 'OMEX', 'OMP', 'ON', 'ONB', 'ONCR', 'ONCS', 'ONCT', 'ONCY', 'ONDS', 'ONEM', 'ONEW', 'ONTX', 'ONVO', 'OPBK', 'OPCH', 'OPES', 'OPGN', 'OPHC', 'OPI', 'OPK', 'OPNT', 'OPOF', 'OPRA', 'OPRT', 'OPRX', 'OPT', 'OPTN', 'OPTT', 'ORBC', 'ORGO', 'ORGS', 'ORIC', 'ORLY', 'ORMP', 'ORPH', 'ORRF', 'ORTX', 'OSBC', 'OSIS', 'OSMT', 'OSN', 'OSPN', 'OSS', 'OSTK', 'OSUR', 'OSW', 'OTEL', 'OTEX', 'OTIC', 'OTLK', 'OTRK', 'OTTR', 'OVBC', 'OVID', 'OVLY', 'OXBR', 'OXFD', 'OYST', 'OZK', 'OZON', 'PAAS', 'PACB', 'PACW', 'PAE', 'PAHC', 'PAIC', 'PAND', 'PANL', 'PASG', 'PATI', 'PATK', 'PAVM', 'PAYA', 'PAYS', 'PAYX', 'PBCT', 'PBFS', 'PBHC', 'PBIP', 'PBLA', 'PBPB', 'PBTS', 'PBYI', 'PCAR', 'PCB', 'PCH', 'PCOM', 'PCRX', 'PCSA', 'PCSB', 'PCTI', 'PCTY', 'PCVX', 'PCYG', 'PCYO', 'PDCE', 'PDCO', 'PDD', 'PDEX', 'PDFS', 'PDLB', 'PDLI', 'PDSB', 'PEBK', 'PEBO', 'PECK', 'PEGA', 'PEIX', 'PENN', 'PEP', 'PERI', 'PESI', 'PETQ', 'PETS', 'PETZ', 'PFBC', 'PFBI', 'PFC', 'PFG', 'PFHD', 'PFIE', 'PFIN', 'PFIS', 'PFMT', 'PFPT', 'PFSW', 'PGC', 'PGEN', 'PGNY', 'PHAS', 'PHAT', 'PHCF', 'PHIO', 'PHUN', 'PI', 'PICO', 'PIH', 'PINC', 'PIRS', 'PIXY', 'PKBK', 'PKOH', 'PLAB', 'PLAY', 'PLBC', 'PLCE', 'PLIN', 'PLL', 'PLMR', 'PLPC', 'PLRX', 'PLSE', 'PLUG', 'PLUS', 'PLXP', 'PLXS', 'PLYA', 'PMBC', 'PMD', 'PME', 'PMVP', 'PNBK', 'PNFP', 'PNRG', 'PNTG', 'POAI', 'PODD', 'POLA', 'POOL', 'POWI', 'POWL', 'POWW', 'PPBI', 'PPC', 'PPD', 'PPIH', 'PPSI', 'PRAA', 'PRAH', 'PRAX', 'PRCP', 'PRDO', 'PRFT', 'PRFX', 'PRGS', 'PRGX', 'PRIM', 'PRLD', 'PROF', 'PROG', 'PROV', 'PRPH', 'PRPL', 'PRPO', 'PRQR', 'PRSC', 'PRTA', 'PRTC', 'PRTH', 'PRTK', 'PRTS', 'PRVB', 'PRVL', 'PS', 'PSAC', 'PSHG', 'PSMT', 'PSNL', 'PSTI', 'PSTV', 'PSTX', 'PT', 'PTAC', 'PTC', 'PTCT', 'PTE', 'PTEN', 'PTGX', 'PTI', 'PTNR', 'PTON', 'PTPI', 'PTRS', 'PTSI', 'PTVCA', 'PTVCB', 'PTVE', 'PUBM', 'PULM', 'PUYI', 'PVAC', 'PVBC', 'PWFL', 'PWOD', 'PXLW', 'PXS', 'PYPD', 'PYPL', 'PZZA', 'QADA', 'QADB', 'QCOM', 'QCRH', 'QDEL', 'QELL', 'QFIN', 'QH', 'QIWI', 'QK', 'QLGN', 'QLYS', 'QMCO', 'QNST', 'QRHC', 'QRTEA', 'QRTEB', 'QRVO', 'QTNT', 'QTRX', 'QTT', 'QUIK', 'QUMU', 'QURE', 'RACA', 'RADA', 'RADI', 'RAIL', 'RAPT', 'RARE', 'RAVE', 'RAVN', 'RBB', 'RBBN', 'RBCAA', 'RBCN', 'RBKB', 'RBNC', 'RCEL', 'RCHG', 'RCII', 'RCKT', 'RCKY', 'RCM', 'RCMT', 'RCON', 'RDCM', 'RDFN', 'RDHL', 'RDI', 'RDIB', 'RDNT', 'RDUS', 'RDVT', 'RDWR', 'REAL', 'REDU', 'REED', 'REFR', 'REG', 'REGI', 'REGN', 'REKR', 'RELL', 'RELV', 'REPH', 'REPL', 'RESN', 'RETA', 'RETO', 'REYN', 'RFIL', 'RGCO', 'RGEN', 'RGLD', 'RGLS', 'RGNX', 'RGP', 'RIBT', 'RICK', 'RIDE', 'RIGL', 'RILY', 'RIOT', 'RIVE', 'RKDA', 'RLAY', 'RLMD', 'RMBI', 'RMBL', 'RMBS', 'RMCF', 'RMNI', 'RMR', 'RMTI', 'RNA', 'RNDB', 'RNET', 'RNLX', 'RNST', 'RNWK', 'ROAD', 'ROCH', 'ROCK', 'ROIC', 'ROKU', 'ROLL', 'ROOT', 'ROST', 'RP', 'RPAY', 'RPD', 'RPRX', 'RPTX', 'RRBI', 'RRGB', 'RRR', 'RSSS', 'RTLR', 'RUBY', 'RUHN', 'RUN', 'RUSHA', 'RUSHB', 'RUTH', 'RVMD', 'RVNC', 'RVSB', 'RWLK', 'RXT', 'RYAAY', 'RYTM', 'RZLT', 'SABR', 'SAFM', 'SAFT', 'SAGE', 'SAIA', 'SAII', 'SAL', 'SALM', 'SAMA', 'SAMG', 'SANM', 'SANW', 'SASR', 'SATS', 'SAVA', 'SBAC', 'SBBP', 'SBCF', 'SBFG', 'SBGI', 'SBLK', 'SBNY', 'SBRA', 'SBSI', 'SBT', 'SBTX', 'SBUX', 'SCHL', 'SCHN', 'SCKT', 'SCOR', 'SCPH', 'SCPL', 
                                           'SCSC', 'SCVL', 'SCWX', 'SCYX', 'SDC', 'SDGR', 'SEAC', 'SECO', 'SEDG', 'SEED', 'SEEL', 'SEER', 'SEIC', 'SELB', 'SELF', 'SENEA', 'SENEB', 'SESN', 'SFBC', 'SFBS', 'SFET', 'SFIX', 'SFM', 'SFNC', 'SFST', 'SFT', 'SG', 'SGA', 'SGAM', 'SGBX', 'SGC', 'SGEN', 'SGH', 'SGLB', 'SGMA', 'SGMO', 'SGMS', 'SGOC', 'SGRP', 'SGRY', 'SGTX', 'SHBI', 'SHC', 'SHEN', 'SHIP', 'SHOO', 'SHSP', 'SHYF', 'SIBN', 'SIC', 'SIEB', 'SIEN', 'SIFY', 'SIGA', 'SIGI', 'SILC', 'SILK', 'SIMO', 'SINA', 'SINO', 'SINT', 'SIOX', 'SIRI', 'SITM', 'SIVB', 'SJ', 'SKYW', 'SLAB', 'SLCT', 'SLDB', 'SLGG', 'SLGL', 'SLGN', 'SLM', 'SLN', 'SLNO', 'SLP', 'SLRX', 'SLS', 'SMBC', 'SMBK', 'SMCI', 'SMED', 'SMID', 'SMIT', 'SMMC', 'SMMF', 'SMMT', 'SMPL', 'SMSI', 'SMTC', 'SMTI', 'SMTX', 'SNBR', 'SNCA', 'SNCR', 'SND', 'SNDE', 'SNDL', 'SNDX', 'SNES', 'SNEX', 'SNFCA', 'SNGX', 'SNOA', 'SNPS', 'SNSS', 'SNY', 'SOHO', 'SOHU', 'SOLO', 'SOLY', 'SONA', 'SONM', 'SONN', 'SONO', 'SP', 'SPCB', 'SPFI', 'SPI', 'SPKE', 'SPLK', 'SPNE', 'SPNS', 'SPOK', 'SPPI', 'SPRB', 'SPRO', 'SPRT', 'SPSC', 'SPT', 'SPTN', 'SPWH', 'SPWR', 'SQBG', 'SQFT', 'SRAC', 'SRAX', 'SRCE', 'SRCL', 'SRDX', 'SREV', 'SRGA', 'SRNE', 'SRPT', 'SRRA', 'SRRK', 'SRTS', 'SSB', 'SSBI', 'SSKN', 'SSNC', 'SSNT', 'SSP', 'SSPK', 'SSRM', 'SSTI', 'SSYS', 'STAA', 'STAF', 'STAY', 'STBA', 'STCN', 'STEP', 'STFC', 'STIM', 'STKL', 'STKS', 'STLD', 'STMP', 'STND', 'STNE', 'STOK', 'STRA', 'STRL', 'STRM', 'STRO', 'STRS', 'STRT', 'STSA', 'STTK', 'STWO', 'STX', 'STXB', 'SUMO', 'SUMR', 'SUNW', 'SUPN', 'SURF', 'SV', 'SVA', 'SVAC', 'SVBI', 'SVC', 'SVMK', 'SVRA', 'SWAV', 'SWBI', 'SWIR', 'SWKH', 'SWKS', 'SWTX', 'SXTC', 'SY', 'SYBT', 'SYBX', 'SYKE', 'SYNA', 'SYNC', 'SYNH', 'SYNL', 'SYPR', 'SYRS', 'SYTA', 'TA', 'TACO', 'TACT', 'TAIT', 'TANH', 'TAOP', 'TARA', 'TARS', 'TAST', 'TATT', 'TAYD', 'TBBK', 'TBIO', 'TBK', 'TBLT', 'TBNK', 'TBPH', 'TC', 'TCBI', 'TCBK', 'TCCO', 'TCDA', 'TCF', 'TCFC', 'TCMD', 'TCOM', 'TCON', 'TCRR', 'TCX', 'TDAC', 'TEAM', 'TECH', 'TEDU', 'TELA', 'TELL', 'TENB', 'TENX', 'TER', 'TESS', 'TFFP', 'TFSL', 'TGA', 'TGLS', 'TGTX', 'TH', 'THBR', 'THCA', 'THCB', 'THFF', 'THMO', 'THRM', 'THRY', 'THTX', 'TIG', 'TIGO', 'TIGR', 'TILE', 'TIPT', 'TITN', 'TLC', 'TLGT', 'TLMD', 'TLND', 'TLRY', 'TLS', 'TLSA', 'TMDI', 'TMDX', 'TMTS', 'TMUS', 'TNAV', 'TNDM', 'TNXP', 'TOMZ', 'TOPS', 'TOTA', 'TOUR', 'TOWN', 'TPCO', 'TPIC', 'TPTX', 'TRCH', 'TREE', 'TRHC', 'TRIB', 'TRIL', 'TRIP', 'TRIT', 'TRMB', 'TRMD', 'TRMK', 'TRMT', 'TRNS', 'TROW', 'TRS', 'TRST', 'TRUE', 'TRUP', 'TRVG', 'TRVI', 'TRVN', 'TSBK', 'TSC', 'TSCO', 'TSEM', 'TSHA', 'TSLA', 'TSRI', 'TTCF', 'TTD', 'TTEC', 'TTEK', 'TTGT', 'TTMI', 'TTNP', 'TTOO', 'TTWO', 'TUSK', 'TVTX', 'TVTY', 'TW', 'TWCT', 'TWIN', 'TWNK', 'TWOU', 'TWST', 'TXG', 'TXMD', 'TXN', 'TXRH', 'TYHT', 'TYME', 'TZAC', 'TZOO', 'UAL', 'UBCP', 'UBFO', 'UBOH', 'UBSI', 'UBX', 'UCBI', 'UCL', 'UCTT', 'UEIC', 'UEPS', 'UFCS', 'UFPI', 'UFPT', 'UG', 'UHAL', 'UIHC', 'UK', 'ULBI', 'ULH', 'ULTA', 'UMBF', 'UMPQ', 'UNAM', 'UNB', 'UNIT', 'UNTY', 'UONE', 'UONEK', 'UPLD', 'UPWK', 'URBN', 'URGN', 'UROV', 'USAK', 'USAP', 'USAT', 'USAU', 'USCR', 'USEG', 'USIO', 'USLM', 'USWS', 'UTHR', 'UTMD', 'UTSI', 'UVSP', 'UXIN', 'VACQ', 'VALU', 'VBFC', 'VBIV', 'VBLT', 'VBTX', 'VC', 'VCEL', 'VCNX', 'VCTR', 'VCYT', 'VECO', 'VEON', 'VERB', 'VERI', 'VERO', 'VERU', 'VERX', 'VERY', 'VFF', 'VG', 'VIAC', 'VIACA', 'VIAV', 'VICR', 'VIE', 'VIH', 'VIOT', 'VIR', 'VIRC', 'VIRT', 'VISL', 'VITL', 'VIVE', 'VIVO', 'VJET', 'VKTX', 'VLDR', 'VLGEA', 'VLY', 'VMAC', 'VMAR', 'VMD', 'VNDA', 'VNET', 'VNOM', 'VOD', 'VOXX', 'VRA', 'VRAY', 'VRCA', 'VREX', 'VRM', 'VRME', 'VRNA', 'VRNS', 'VRNT', 'VRRM', 'VRSK', 'VRSN', 'VRTS', 'VRTU', 'VRTX', 'VSAT', 'VSEC', 'VSPR', 'VSTA', 'VSTM', 'VTGN', 'VTNR', 'VTRS', 'VTRU', 'VTSI', 'VTVT', 'VUZI', 'VVPR', 'VXRT', 'VYGR', 'VYNE', 'WABC', 'WAFD', 'WAFU', 'WASH', 'WATT', 'WB', 'WBA', 'WDAY', 'WDC', 'WDFC', 'WEN', 'WERN', 'WETF', 'WEYS', 'WHLM', 'WHLR', 'WIFI', 'WILC', 'WIMI', 'WINA', 'WING', 'WINT', 'WIRE', 'WISA', 'WIX', 'WKEY', 'WKHS', 'WLDN', 'WLFC', 'WLTW', 'WMG', 'WNEB', 'WORX', 'WPRT', 'WRAP', 'WRLD', 'WSBC', 'WSBF', 'WSC', 'WSFS', 'WSG', 'WSTG', 'WTBA', 'WTER', 'WTFC', 'WTRE', 'WTRH', 'WVE', 'WVFC', 'WVVI', 'WW', 'WWD', 'WWR', 'WYNN', 'XAIR', 'XBIO', 'XBIT', 'XCUR', 'XEL', 'XELA', 'XELB', 'XENE', 'XENT', 'XERS', 'XFOR', 'XGN', 'XLNX', 'XLRN', 'XNCR', 'XNET', 'XOMA', 'XONE', 'XP', 'XPEL', 'XPER', 'XRAY', 'XSPA', 'XTLB', 'YGMZ', 'YI', 'YJ', 'YMAB', 'YNDX', 'YORW', 'YQ', 'YRCW', 'YSAC', 'YTEN', 'YTRA', 'YVR', 'YY', 'Z', 'ZAGG', 'ZBRA', 'ZCMD', 'ZEAL', 'ZEUS', 'ZG', 'ZGNX', 'ZGYH', 'ZI', 'ZION', 'ZIOP', 'ZIXI', 'ZKIN', 'ZLAB', 'ZM', 'ZNGA', 'ZNTL', 'ZS', 'ZSAN', 'ZUMZ', 'ZVO', 'ZYNE', 'ZYXI',],
+                     'Equity database': [],
                      'Others': ['JWN','KSS','HMC','BRK-A','PROG','DS','OBSV']}
 
 ticker_group_dict['Russell 3000'] = sorted(ticker_group_dict['Russell 1000'] + ticker_group_dict['Russell 2000'])
+
+###########################################################################################
+
+df1 = nasdaqlisted_df[['ticker', 'ETF']]
+df2 = otherlisted_df[['ticker', 'ETF']]        
+df = pd.concat([df1, df2],axis=0)[['ticker', 'ETF']].reset_index().drop(['index'],axis=1) # axis=0 (1): row (column)
+ticker_group_dict['ETF database'] = df[ df['ETF'] == 'Y' ]['ticker'].tolist()
+ticker_group_dict['Equity database'] = df[ df['ETF'] == 'N' ]['ticker'].tolist()
+
+###########################################################################################
 
 # Note: there are 145 industries, and their names are unique
 subgroup_group_dict = {'All': [],
@@ -238,6 +340,7 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Dividend Stocks (11/2020)': f"Dividend Stocks (11/2020)",
                    'Growth Stocks (11/2020)': f"Growth Stocks (11/2020)",
                    'ETF': f"Exchange-traded fund (ETF) is a basket of securities that trade on an exchange. Unlike mutual funds (which only trade once a day after the market closes), ETF is just like a stock and share prices fluctuate all day as the ETF is bought and sold.\n\nExchange-traded note (ETN) is a basket of unsecured debt securities that track an underlying index of securities and trade on a major exchange like a stock.\n\nDifference: Investing ETF is investing in a fund that holds the asset it tracks. That asset may be stocks, bonds, gold or other commodities, or futures contracts. In contrast, ETN is more like a bond. It's an unsecured debt note issued by an institution. If the underwriter (usually a bank) were to go bankrupt, the investor would risk a total default.",
+                   'ETF database': f"https://nasdaqtrader.com/",
                    'Major Market Indices': f"https://www.investing.com/indices/major-indices",
                    'DOW 30': f"Dow Jones Industrial Average 30 Components",
                    'NASDAQ 100': f"A stock market index made up of 103 equity securities issued by 100 of the largest non-financial companies listed on the Nasdaq stock market.\n\nThe complete index, NASDAQ Composite (COMP), has 2,667 securities as of February 2020.\n\nBecause the index is weighted by market capitalization, the index is rather top-heavy. In fact, the top 10 stocks in the Nasdaq Composite account for one-third of the index’s performance.",
@@ -246,6 +349,7 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Russell 2000': f"The Russell 2000 Index, a subset of the Russell 3000 Index, includes ~2,000 smallest-cap American companies in the Russell 3000 Index.",
                    'Russell 3000': f"The Russell 3000 Index, a market-capitalization-weighted equity index maintained by FTSE Russell, provides exposure to the entire U.S. stock market and represents about 98% of all U.S incorporated equity securities.\n\nRussell 3000 = Russell 1000 (larger cap) + Russell 2000 (smaller cap).",
                    'NASDAQ Composite': f"https://en.wikipedia.org/wiki/NASDAQ_Composite",
+                   'Equity database': f"https://nasdaqtrader.com/",
                    'Others': f"Others"}
 
 def ticker_preprocessing():
@@ -279,95 +383,6 @@ def ticker_preprocessing():
 
 ticker_preprocessing()
 
-###########################################################################################
-
-nasdaqlisted_df = pd.DataFrame()
-otherlisted_df = pd.DataFrame()
-global_data_root_dir = join(str(pathlib.Path.home()), ".investment")
-
-###########################################################################################
-
-def Internet_connection_available():
-    try:
-        sock = socket.create_connection(("www.google.com", 80))
-        if sock is not None:
-            sock.close
-        return True
-    except OSError:
-        pass
-    return False
-
-# references:
-# https://quant.stackexchange.com/questions/1640/where-to-download-list-of-all-common-stocks-traded-on-nyse-nasdaq-and-amex
-# http://www.nasdaqtrader.com/trader.aspx?id=symboldirdefs
-def download_nasdaqtrader_data(data_root_dir: str = None):
-    if data_root_dir is None:
-         raise ValueError("Error: data_root_dir cannot be None")
-
-    data_dir = join(data_root_dir, "ticker_data/nasdaqtrader")
-    if not os.path.exists(data_dir):
-        try:
-            pathlib.Path(data_dir).mkdir(parents=True, exist_ok=True)
-        except:
-            raise IOError(f"cannot create data dir: {data_dir}")
-    ftp_server = 'ftp.nasdaqtrader.com'
-    ftp_username = 'anonymous'
-    ftp_password = 'anonymous'
-    ftp = ftplib.FTP(ftp_server)
-    ftp.login(ftp_username, ftp_password)
-    files = [('SymbolDirectory/nasdaqlisted.txt', join(data_dir, 'nasdaqlisted.txt')), 
-             ('SymbolDirectory/otherlisted.txt',  join(data_dir, 'otherlisted.txt' ))]
-    for file_ in files:
-        with open(file_[1], "wb") as f:
-            ftp.retrbinary("RETR " + file_[0], f.write)
-    ftp.quit()
-
-
-def load_nasdaqtrader_data(data_root_dir: str = None):
-
-    from ._data import timedata
-
-    if data_root_dir is None:
-        raise ValueError("Error: data_root_dir cannot be None")
-
-    file1 = pathlib.Path(join(data_root_dir, "ticker_data/nasdaqtrader/nasdaqlisted.txt"))
-    file2 = pathlib.Path(join(data_root_dir, "ticker_data/nasdaqtrader/otherlisted.txt"))
-
-    to_download = False
-
-    if file1.exists():
-        if timedata().now.datetime - timedata(time_stamp=file1.stat().st_ctime).datetime > timedelta(days=3): # creation time
-            to_download = True
-    else:
-        to_download = True
-
-    if file2.exists():
-        if timedata().now.datetime - timedata(time_stamp=file2.stat().st_ctime).datetime > timedelta(days=3): # creation time
-            to_download = True
-    else:
-        to_download = True
-
-    if not Internet_connection_available():
-        to_download = False
-        if (not file1.exists()) and (not file2.exists()):
-            raise RuntimeError("Internet unavailable but the system depends on certain nasdaqtrader files")
-
-    if to_download:
-        download_nasdaqtrader_data(data_root_dir = data_root_dir) # always get the most up-to-date version
-
-    global nasdaqlisted_df
-    global otherlisted_df
-
-    nasdaqlisted_df = pd.read_csv(file1,sep='|',header=0,skipfooter=1,engine='python')
-    otherlisted_df = pd.read_csv(file2,sep='|',header=0,skipfooter=1,engine='python')
-    nasdaqlisted_df['ticker'] = nasdaqlisted_df['Symbol'].str.replace('\.','\-')
-    otherlisted_df['ticker'] = otherlisted_df['NASDAQ Symbol'].str.replace('\.','\-')
-    nasdaqlisted_df = nasdaqlisted_df[ (nasdaqlisted_df['Test Issue'] == 'N') & (nasdaqlisted_df['NextShares'] == 'N') ].drop(['Test Issue','Symbol','NextShares','Round Lot Size'], axis=1)
-    otherlisted_df = otherlisted_df[ otherlisted_df['Test Issue'] == 'N' ].drop(['Test Issue','NASDAQ Symbol','ACT Symbol','CQS Symbol','Round Lot Size'], axis=1)
-
-
-load_nasdaqtrader_data(data_root_dir=global_data_root_dir)
-   
 ###########################################################################################
 
 class Ticker(object):
