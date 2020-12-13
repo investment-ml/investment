@@ -111,7 +111,7 @@ def load_nasdaqtrader_data(data_root_dir: str = None):
     nasdaqlisted_df = pd.read_csv(file1,sep='|',header=0,skipfooter=1,engine='python')
     otherlisted_df = pd.read_csv(file2,sep='|',header=0,skipfooter=1,engine='python')
     nasdaqlisted_df['ticker'] = nasdaqlisted_df['Symbol'].str.replace('\.','\-').str.replace('\\','')
-    otherlisted_df['ticker'] = otherlisted_df['NASDAQ Symbol'].str.replace('\.','\-').str.replace('\\','')
+    otherlisted_df['ticker'] = otherlisted_df['NASDAQ Symbol'].str.replace('\.','\-').str.replace('\\','').str.replace('ACIC=','ACIC-UN').str.replace('AJAX=','AJAX-UN')
     nasdaqlisted_df = nasdaqlisted_df[ (nasdaqlisted_df['Test Issue'] == 'N') & (nasdaqlisted_df['NextShares'] == 'N') ].drop(['Test Issue','Symbol','NextShares','Round Lot Size'], axis=1)
     otherlisted_df = otherlisted_df[ otherlisted_df['Test Issue'] == 'N' ].drop(['Test Issue','NASDAQ Symbol','ACT Symbol','CQS Symbol','Round Lot Size'], axis=1)
 

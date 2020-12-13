@@ -356,7 +356,7 @@ class preferences_dialog(QDialog):
 
 
 # reference: https://pythonpyqt.com/pyqt-progressbar/
-class ticker_thread(QThread):
+class ticker_download_thread(QThread):
     _signal = Signal(int, str)
     def __init__(self, app_window=None, smart_redownload=None, tickers_to_download=[]):
         super().__init__()
@@ -371,6 +371,24 @@ class ticker_thread(QThread):
             except:
                 print(f"Warning: Unable to download this ticker = {ticker}")
             self._signal.emit(idx+1, ticker)
+
+
+class ticker_analyze_for_dividends_thread(QThread):
+    _signal = Signal(pd.DataFrame)
+    def __init__(self, app_window=None, tickers_to_analyze=[]):
+        super().__init__()
+        self.app_window = app_window
+        self.tickers_to_analyze = tickers_to_analyze
+    def run(self):
+        df = pd.DataFrame(columns=['ticker','recent 1-year dividends (%)'])
+        #tickers = ticker_group_dict['All']
+        #tickers = ['MSM', 'T', 'LUMN', 'CAT']
+        #tickers = ['HCHC', 'SPRT', 'NLOK', 'QRTEA', 'QRTEB', 'LORL', 'AIV', 'FF', 'VRS', 'IRCP', 'DHT', 'AM', 'OMP', 'FRO', 'ICMB', 'TRTX', 'BXG', 'CLWT', 'PATI', 'IVR', 'OMF', 'MFA', 'CSWC', 'ORC', 'IEP', 'VHC', 'MSM', 'ARI', 'NGVC', 'NHTC', 'RC', 'ACRE', 'GEO', 'CIM', 'NLY', 'EARN', 'STWD', 'EQC', 'MNDO', 'BKEP', 'RTLR', 'TLYS', 'TRMD', 'AFIN', 'DMLP', 'ANH', 'CHMI', 'NAT', 'HRZN', 'SSNT', 'OKE', 'AGNC', 'DX', 'EFC', 'ABR', 'HVT', 'OLP', 'CCAP', 'SFL', 'NBLX', 'MARPS', 'ETRN', 'GNL', 'SNDR', 'CMO', 'KREF', 'BXMT', 'CPLP', 'NEWT', 'MNRL', 'HT', 'BPY', 'EV', 'BPYU', 'ITIC', 'NCMI', 'GMLP', 'NMFC', 'APAM', 'TWO', 'XLE', 'AJX', 'PMT', 'AMRK', 'ARR', 'PKE', 'LOAN', 'BGS', 'WMB', 'MAC', 'HIHO', 'GOOD', 'VNO', 'GPP', 'BRG', 'AROC', 'PLYM', 'OPI', 'CNA', 'UNIT', 'FCAU', 'BRMK', 'VGR', 'HP', 'SBRA', 'BLX', 'SFE', 'UVV', 'MO', 'SOHO', 'HCAP', 'RGR', 'OHI', 'SPKE', 'CLNY', 'WDR', 'FHI', 'LMRK', 'NYMT', 'ISSC', 'APTS', 'SNR', 'DHIL', 'WSBF', 'FLMN', 'TOT', 'SYX', 'BRT', 'XOM', 'AMSF', 'FFG', 'CRWS', 'PK', 'PZN', 'QIWI', 'CIO', 'NPK', 'BKE', 'SRC', 'NRZ', 'CPLG', 'NVEC', 'WSR', 'LADR', 'KMI', 'NYCB', 'NHI', 'IIIN', 'GMRE', 'NAVI', 'SKT', 'NWBI', 'FSP', 'ATAX', 'NTB', 'BDN', 'ALX', 'HRB', 'CTO', 'T', ]
+        for ticker in self.tickers_to_analyze:
+            df = df.append({'ticker': ticker, 'recent 1-year dividends (%)': round(Ticker(ticker).last_1yr_dividends_pct,2)}, ignore_index=True)
+        df = df.sort_values(by=['recent 1-year dividends (%)'], ascending=False)
+        df = df[ df['recent 1-year dividends (%)'] > 0 ].reset_index().drop(['index'],axis=1)
+        self._signal.emit(df)
 
 
 class download_data_dialog(QDialog):
@@ -498,7 +516,7 @@ class download_data_dialog(QDialog):
             # then the download_progressbar update won't show.
             # it is like we need to remove any external function call in self.download_progressbar.setValue(idx) in the signal.connect(), in MacOS
             # to see the effect, try to uncomment the # time.sleep(0.003) statement below; you will see how unsmooth it is.
-            self.thread=ticker_thread(app_window=self.app_window, smart_redownload=self.smart_redownload, tickers_to_download=self.tickers_to_download)
+            self.thread=ticker_download_thread(app_window=self.app_window, smart_redownload=self.smart_redownload, tickers_to_download=self.tickers_to_download)
             self.thread._signal.connect(self._download_this_ticker)
             self.thread.start()
 
@@ -522,23 +540,94 @@ class high_dividends_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.app_window = parent
-        self.resize(self.app_window.width*0.2, self.app_window.height*0.4)
+        self.resize(self.app_window.width*0.2, self.app_window.height*0.8)
+        self.label = QLabel('Ticker group(s) to analyze for dividends:', parent=self)
+        #
+        self.dow30_checkbox = QCheckBox('DOW 30', parent=self)
+        self.nasdaq100_checkbox = QCheckBox('NASDAQ 100', parent=self)
+        self.sandp500_checkbox = QCheckBox('S&&P 500', parent=self)
+        self.russell1k_checkbox = QCheckBox('Russell 1000', parent=self)
+        self.russell2k_checkbox = QCheckBox('Russell 2000', parent=self)
+        self.russell3k_checkbox = QCheckBox('Russell 3000', parent=self)
+        self.comp_checkbox = QCheckBox('NASDAQ Composite', parent=self)
+        self.etf_db_checkbox = QCheckBox('ETF database', parent=self)
+        self.equity_db_checkbox = QCheckBox('Equity database', parent=self)
+        #
+        self.dow30_checkbox.setChecked(True)
+        self.nasdaq100_checkbox.setChecked(False)
+        self.sandp500_checkbox.setChecked(False)
+        #
+        self.dow30_checkbox.stateChanged.connect(self._update_checkbox_selection)
+        self.nasdaq100_checkbox.stateChanged.connect(self._update_checkbox_selection)
+        self.sandp500_checkbox.stateChanged.connect(self._update_checkbox_selection)
+        self.russell1k_checkbox.stateChanged.connect(self._update_checkbox_selection)
+        self.russell2k_checkbox.stateChanged.connect(self._update_checkbox_selection)
+        self.russell3k_checkbox.stateChanged.connect(self._update_checkbox_selection)
+        self.comp_checkbox.stateChanged.connect(self._update_checkbox_selection)
+        self.etf_db_checkbox.stateChanged.connect(self._update_checkbox_selection)
+        self.equity_db_checkbox.stateChanged.connect(self._update_checkbox_selection)
+        #
+        self.exec_pushbutton = QPushButton('Analyze', parent=self)
+        self.exec_pushbutton.clicked.connect(self._analyze_button_clicked)
+        #
         self.text_browser = QTextBrowser(parent=self)
-        df = pd.DataFrame(columns=['ticker','recent 1-year dividends (%)'])
-        #tickers = ticker_group_dict['All']
-        tickers = ['MSM', 'T', 'LUMN', 'CAT']
-        #tickers = ['HCHC', 'SPRT', 'NLOK', 'QRTEA', 'QRTEB', 'LORL', 'AIV', 'FF', 'VRS', 'IRCP', 'DHT', 'AM', 'OMP', 'FRO', 'ICMB', 'TRTX', 'BXG', 'CLWT', 'PATI', 'IVR', 'OMF', 'MFA', 'CSWC', 'ORC', 'IEP', 'VHC', 'MSM', 'ARI', 'NGVC', 'NHTC', 'RC', 'ACRE', 'GEO', 'CIM', 'NLY', 'EARN', 'STWD', 'EQC', 'MNDO', 'BKEP', 'RTLR', 'TLYS', 'TRMD', 'AFIN', 'DMLP', 'ANH', 'CHMI', 'NAT', 'HRZN', 'SSNT', 'OKE', 'AGNC', 'DX', 'EFC', 'ABR', 'HVT', 'OLP', 'CCAP', 'SFL', 'NBLX', 'MARPS', 'ETRN', 'GNL', 'SNDR', 'CMO', 'KREF', 'BXMT', 'CPLP', 'NEWT', 'MNRL', 'HT', 'BPY', 'EV', 'BPYU', 'ITIC', 'NCMI', 'GMLP', 'NMFC', 'APAM', 'TWO', 'XLE', 'AJX', 'PMT', 'AMRK', 'ARR', 'PKE', 'LOAN', 'BGS', 'WMB', 'MAC', 'HIHO', 'GOOD', 'VNO', 'GPP', 'BRG', 'AROC', 'PLYM', 'OPI', 'CNA', 'UNIT', 'FCAU', 'BRMK', 'VGR', 'HP', 'SBRA', 'BLX', 'SFE', 'UVV', 'MO', 'SOHO', 'HCAP', 'RGR', 'OHI', 'SPKE', 'CLNY', 'WDR', 'FHI', 'LMRK', 'NYMT', 'ISSC', 'APTS', 'SNR', 'DHIL', 'WSBF', 'FLMN', 'TOT', 'SYX', 'BRT', 'XOM', 'AMSF', 'FFG', 'CRWS', 'PK', 'PZN', 'QIWI', 'CIO', 'NPK', 'BKE', 'SRC', 'NRZ', 'CPLG', 'NVEC', 'WSR', 'LADR', 'KMI', 'NYCB', 'NHI', 'IIIN', 'GMRE', 'NAVI', 'SKT', 'NWBI', 'FSP', 'ATAX', 'NTB', 'BDN', 'ALX', 'HRB', 'CTO', 'T', ]
-        for ticker in tickers:
-            df = df.append({'ticker': ticker, 'recent 1-year dividends (%)': round(Ticker(ticker).last_1yr_dividends_pct,2)}, ignore_index=True)
-        df = df.sort_values(by=['recent 1-year dividends (%)'], ascending=False)
-        df = df[ df['recent 1-year dividends (%)'] > 0 ].reset_index().drop(['index'],axis=1)
-        #print(df)
-        self.text_browser.setHtml(df.to_html(index=False))
         # layout
         self.layout = QGridLayout()
-        self.layout.addWidget(self.text_browser, 0, 0)
+        self.layout.addWidget(self.label, 0, 0)
+        self.layout.addWidget(self.dow30_checkbox, 1, 0)
+        self.layout.addWidget(self.nasdaq100_checkbox, 2, 0)
+        self.layout.addWidget(self.sandp500_checkbox, 3, 0)
+        self.layout.addWidget(self.russell1k_checkbox, 4, 0)
+        self.layout.addWidget(self.russell2k_checkbox, 5, 0)
+        self.layout.addWidget(self.russell3k_checkbox, 6, 0)
+        self.layout.addWidget(self.comp_checkbox, 7, 0)
+        self.layout.addWidget(self.etf_db_checkbox, 8, 0)
+        self.layout.addWidget(self.equity_db_checkbox, 9, 0)
+        self.layout.addWidget(self.exec_pushbutton, 10, 0)
+        self.layout.addWidget(self.text_browser, 11, 0)
         self.setLayout(self.layout)
+        self._update_checkbox_selection()
 
+    def _update_checkbox_selection(self):
+        self.tickers_to_analyze = []
+        if self.dow30_checkbox.isChecked():
+            self.tickers_to_analyze += ticker_group_dict['DOW 30']
+        if self.nasdaq100_checkbox.isChecked():
+            self.tickers_to_analyze += ticker_group_dict['NASDAQ 100']
+        if self.sandp500_checkbox.isChecked():
+            self.tickers_to_analyze += ticker_group_dict['S&P 500']
+        if self.russell1k_checkbox.isChecked():
+            self.tickers_to_analyze += ticker_group_dict['Russell 1000']
+        if self.russell2k_checkbox.isChecked():
+            self.tickers_to_analyze += ticker_group_dict['Russell 2000']
+        if self.russell3k_checkbox.isChecked():
+            self.tickers_to_analyze += ticker_group_dict['Russell 3000']
+        if self.comp_checkbox.isChecked():
+            self.tickers_to_analyze += ticker_group_dict['NASDAQ Composite']
+        if self.etf_db_checkbox.isChecked():
+            self.tickers_to_analyze += ticker_group_dict['ETF database']
+        if self.equity_db_checkbox.isChecked():
+            self.tickers_to_analyze += ticker_group_dict['Equity database']
+        self.tickers_to_analyze = sorted(list(set(self.tickers_to_analyze)))
+        self.n_tickers = len(self.tickers_to_analyze)
+        self.exec_pushbutton.setText(f"Analyze {self.n_tickers} tickers for dividends")
+
+    def _analyze_button_clicked(self):
+        if self.n_tickers > 0:
+            #self.text_browser.clearHistory()
+            self.exec_pushbutton.setEnabled(False)
+            self.exec_pushbutton.repaint()
+            #
+            self.thread=ticker_analyze_for_dividends_thread(app_window=self.app_window, tickers_to_analyze=self.tickers_to_analyze)
+            self.thread._signal.connect(self._analyze_completed)
+            self.thread.start()
+
+    def _analyze_completed(self, df: pd.DataFrame):
+        df = df
+        self.text_browser.setHtml(df.to_html(index=False))
+        self.text_browser.repaint()
+        self.exec_pushbutton.setEnabled(True)
+        self.exec_pushbutton.repaint()
 
 class ticker_db_dialog(QDialog):
     def __init__(self, parent=None, etf=True, *args, **kwargs):
@@ -744,7 +833,7 @@ class app_menu(object):
         webAct = QAction('&Useful websites', parent=self.app_window)
         webAct.triggered.connect(self.research_dialog.exec)
         #
-        high_dividendsAct = QAction('&High-dividend equities', parent=self.app_window)
+        high_dividendsAct = QAction('&High-dividend investments', parent=self.app_window)
         high_dividendsAct.triggered.connect(self.high_dividends_dialog.exec)
         #
         etf_db_Act = QAction('&ETF database', parent=self.app_window)
