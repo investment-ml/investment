@@ -10,6 +10,11 @@ import pandas as pd
 
 from datetime import datetime, timedelta, timezone
 
+import socket
+
+import ftplib
+
+import os
 from os.path import join
 import pathlib
 
@@ -282,6 +287,16 @@ global_data_root_dir = join(str(pathlib.Path.home()), ".investment")
 
 ###########################################################################################
 
+def Internet_connection_available():
+    try:
+        sock = socket.create_connection(("www.google.com", 80))
+        if sock is not None:
+            sock.close
+        return True
+    except OSError:
+        pass
+    return False
+
 # references:
 # https://quant.stackexchange.com/questions/1640/where-to-download-list-of-all-common-stocks-traded-on-nyse-nasdaq-and-amex
 # http://www.nasdaqtrader.com/trader.aspx?id=symboldirdefs
@@ -321,16 +336,21 @@ def load_nasdaqtrader_data(data_root_dir: str = None):
     to_download = False
 
     if file1.exists():
-        if timedata().now.datetime - timedata(time_stamp=file1.stat().st_ctime).datetime > timedelta(days=7): # creation time
+        if timedata().now.datetime - timedata(time_stamp=file1.stat().st_ctime).datetime > timedelta(days=3): # creation time
             to_download = True
     else:
         to_download = True
 
     if file2.exists():
-        if timedata().now.datetime - timedata(time_stamp=file2.stat().st_ctime).datetime > timedelta(days=7): # creation time
+        if timedata().now.datetime - timedata(time_stamp=file2.stat().st_ctime).datetime > timedelta(days=3): # creation time
             to_download = True
     else:
         to_download = True
+
+    if not Internet_connection_available():
+        to_download = False
+        if (not file1.exists()) and (not file2.exists()):
+            raise RuntimeError("Internet unavailable but the system depends on certain nasdaqtrader files")
 
     if to_download:
         download_nasdaqtrader_data(data_root_dir = data_root_dir) # always get the most up-to-date version

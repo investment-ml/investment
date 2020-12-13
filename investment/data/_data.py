@@ -7,8 +7,6 @@
 import re
 from selenium import webdriver
 
-import ftplib
-
 import yfinance as yf
 import pandas as pd
 import numpy as np
