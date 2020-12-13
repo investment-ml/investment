@@ -469,13 +469,15 @@ class download_data_dialog(QDialog):
         self.checkbox_smart_redownload.setChecked(True)
         self.smart_redownload = True
         self.download_progressbar.setMinimum(0)
-        self.download_progressbar.setMaximum(self.n_tickers)
+        if self.n_tickers>0:
+            self.download_progressbar.setMaximum(self.n_tickers)
         self.download_progressbar.setValue(0)
         self.download_button.setText('Yes, please download')
         self.close_button.setText('No, please skip this optional process')
         self.download_button.setEnabled(True)
         self.close_button.setEnabled(True)
         self.download_button.setDefault(True)
+        self.checkbox_smart_redownload.setEnabled(True)
 
     def _close_button_clicked(self):
         self._reset()
@@ -506,7 +508,7 @@ class download_data_dialog(QDialog):
         if idx == self.n_tickers:
             self.close_button.setText('Download completed. Return to App')
             #
-            self.checkbox_smart_redownload.setEnabled(True)
+            #self.checkbox_smart_redownload.setEnabled(True)
             #self.download_button.setEnabled(True)
             self.close_button.setEnabled(True)
             #
