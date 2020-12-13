@@ -7,6 +7,8 @@
 import re
 from selenium import webdriver
 
+import ftplib
+
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -24,9 +26,9 @@ import base64
 
 import time
 
-from ._ticker import Ticker
-
 from functools import total_ordering
+
+###########################################################################################
 
 @total_ordering
 class timedata(object):
@@ -40,7 +42,8 @@ class timedata(object):
         """
         if time_stamp is None and date_time is None:
             if Y_m_d == {} or Y_m_d == ():
-                raise ValueError("either timestamp, datetime, or Y_m_d must be specified")
+                pass
+                #raise ValueError("either time_stamp, date_time, or Y_m_d must be specified")
             elif type(Y_m_d) == dict:
                self.datetime = datetime(Y_m_d['year'], Y_m_d['month'], Y_m_d['day'], tzinfo=timezone.utc)
             elif type(Y_m_d) == tuple:
@@ -50,7 +53,16 @@ class timedata(object):
                 self.datetime = date_time
             else:
                 self.timestamp = time_stamp
-                
+
+    @property
+    def now(self):
+        self.datetime = datetime.now(tz=timezone.utc)
+        return self
+
+    @property
+    def date(self):
+        return self._datetime.date()
+
     @property
     def datetime(self):
         return self._datetime
@@ -69,7 +81,7 @@ class timedata(object):
     def timestamp(self, seconds_since_epoch):
         self._timestamp = seconds_since_epoch
         self._datetime = datetime(1970,1,1,tzinfo=timezone.utc) + timedelta(seconds=self._timestamp)
-        assert self._datetime.timestamp() == self._timestamp, "unequal timestamp in timestamp.setter()"
+        assert round(self._datetime.timestamp(),6) == round(self._timestamp,6), "unequal timestamp in timestamp.setter()"
 
     def __sub__(self, other):
         type_of_other = type(other)
@@ -109,6 +121,7 @@ class timedata(object):
     #def datetime_to_tzinfo(self):
     #    return self.datetime.astimezone().tzinfo
 
+###########################################################################################
 
 def rmse(pred, target):
     return np.sqrt(np.mean((pred-target)**2))
@@ -120,6 +133,8 @@ def gradient_test():
     grad = np.gradient(f, x, edge_order=2)
     print(f"RMSE: {rmse(f, grad)}, max diff. = {np.abs(f-grad).max()}")
 
+###########################################################################################
+
 # references:
 # https://www.quora.com/Using-Python-whats-the-best-way-to-get-stock-data
 
@@ -130,9 +145,9 @@ def download_ticker_history_df(ticker: str = None, verbose: bool = True, downloa
     ticker = ticker.upper()
 
     if download_today_data:
-        end_datetime = datetime.now(tz=timezone.utc) #- timedelta(days=0)
+        end_datetime = timedata().now.datetime #- timedelta(days=0)
     else:
-        end_datetime = datetime.now(tz=timezone.utc) - timedelta(days=1)
+        end_datetime = timedata().now.datetime - timedelta(days=1)
     
     ####################################################################################################
     if verbose:
@@ -252,8 +267,8 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
         else:
             print('Download completed --->')
 
-    info_dict['data_download_time']        = datetime.now(timezone.utc)
-    info_dict['history']                   = pd.DataFrame()
+    info_dict['data_download_time']    = datetime.now(timezone.utc)
+    info_dict['history']               = pd.DataFrame()
 
     ####################################################################
 
@@ -264,14 +279,15 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
 
 def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownload: bool = False, smart_redownload: bool = False, download_today_data: bool = False, data_root_dir: str = None, auto_retry: bool = False):
 
+    from ._ticker import global_data_root_dir
+
     if ticker is None:
         raise ValueError("Error: ticker cannot be None")
 
     ticker = ticker.upper()
 
     if data_root_dir is None:
-        data_root_dir = join(str(pathlib.Path.home()), ".investment")
-        #data_root_dir = os.path.dirname(__file__)
+        data_root_dir = global_data_root_dir
     
     data_dir = join(data_root_dir, "ticker_data/yfinance")
     data_backup_dir = join(data_dir, "backup")
@@ -311,14 +327,15 @@ def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownl
     elif force_redownload:
 
         curr_df = pd.read_csv(ticker_history_df_file, index_col=False)
+        curr_info_dict = pickle.load( open( ticker_info_dict_file, "rb" ) )
 
         do_force_redownload = True
 
         if smart_redownload:
-            curr_last_date_str = curr_df['Date'].iloc[-1]
-            curr_last_date = datetime.strptime(curr_last_date_str, "%Y-%m-%d").date()
-            if (curr_last_date == datetime.today().date()) or (curr_last_date == (datetime.today().date()-timedelta(days=1))):
-                do_force_redownload = False
+            if 'data_download_time' in curr_info_dict.keys():
+                curr_last_date = curr_info_dict['data_download_time']
+                if (datetime.now(tz=timezone.utc) - curr_last_date) <= timedelta(days=7):
+                    do_force_redownload = False
 
         if do_force_redownload:
             try:
@@ -371,28 +388,49 @@ def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownl
 
 
 def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
-
+    from ._ticker import Ticker
     this_ticker = Ticker(ticker_data_dict=ticker_data_dict)
 
     if use_html:
-        formatted_str = f"<body style=\"font-family:Courier New;\">the key 'info' does not exist in ticker_data_dict</body>"
+        formatted_str = "<style>table, th, td {border: 1px solid black; border-collapse: collapse; padding: 2px;} body {font-family: Courier New;}</style><body>"
     else:
-        formatted_str = f"the key 'info' does not exist in ticker_data_dict"
+        formatted_str = ""
 
     if not 'info' in ticker_data_dict.keys():
+        if use_html:
+            formatted_str += f"the key 'info' does not exist in ticker_data_dict</body>"
+        else:
+            formatted_str += f"the key 'info' does not exist in ticker_data_dict"
         return formatted_str
 
     ticker_info = ticker_data_dict['info']
     if ticker_info is None:
+        if use_html:
+            formatted_str += f"the key 'info' does not exist in ticker_data_dict</body>"
+        else:
+            formatted_str += f"the key 'info' does not exist in ticker_data_dict"
         return formatted_str
 
     ticker_info_keys = ticker_info.keys()
 
     # long name
     if use_html:
-        ticker_long_name = f"<b>{ticker_info['longName']}</b>"
+        ticker_long_name = f"<b>{this_ticker.longName}</b>"
     else:
-        ticker_long_name = f"{ticker_info['longName']}"
+        ticker_long_name = f"{this_ticker.longName}"
+
+    # stock exchange listing info
+    stock_exchange_info = ""
+    if this_ticker.nasdaq_listed:
+        if use_html:
+            stock_exchange_info = f"<br/><hr>Nasdaq Listed<br/>- Name: [{this_ticker.nasdaq_security_name}]<br/>- Market category: [{this_ticker.nasdaq_market_category}]<br/>- Financial status: [{this_ticker.nasdaq_financial_status}]<br/>- ETF? [{this_ticker.nasdaq_etf}]"
+        else:
+            stock_exchange_info = f"\n\nNasdaq Listed\n- Name: [{this_ticker.nasdaq_security_name}]\n- Market category: [{this_ticker.nasdaq_market_category}]\n- Financial status: [{this_ticker.nasdaq_financial_status}]\n- ETF? [{this_ticker.nasdaq_etf}]"
+    elif this_ticker.non_nasdaq_listed:
+        if use_html:
+            stock_exchange_info = f"<br/><hr>Exchange: {this_ticker.non_nasdaq_exchange}<br/>- Name: [{this_ticker.non_nasdaq_security_name}]<br/>- ETF? [{this_ticker.non_nasdaq_etf}]"
+        else:
+            stock_exchange_info = f"\n\nExchange: {this_ticker.non_nasdaq_exchange}\n- Name: [{this_ticker.non_nasdaq_security_name}]\n- ETF? [{this_ticker.non_nasdaq_etf}]"
 
     # sector info
     if use_html:
@@ -569,17 +607,17 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
     # summary
     if 'longBusinessSummary' in ticker_info_keys:
         if use_html:
-            long_business_summary = f"<br/><hr>{ticker_info['longBusinessSummary']}"
+            long_business_summary = f"<br/><hr>{this_ticker.longBusinessSummary}"
         else:
-            long_business_summary = f"\n\n{ticker_info['longBusinessSummary']}"
+            long_business_summary = f"\n\n{this_ticker.longBusinessSummary}"
     else:
         long_business_summary = ""
 
     # logo
     logo = ""
     if 'logo' in ticker_info_keys:
-        if ticker_info['logo'] is not None:
-            logo_base64 = base64.b64encode(ticker_info['logo'])
+        if this_ticker.logo is not None:
+            logo_base64 = base64.b64encode(this_ticker.logo)
             if logo_base64 is not None:
                 if use_html:
                     logo = f"<br/><hr>Logo:<br/><img src=\"data:image/png;base64,{str(logo_base64,'utf-8')}\">"
@@ -587,10 +625,18 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                     if 'logo_url' in ticker_info_keys:
                         logo = f"\n\nLogo: {ticker_info['logo_url']}"
 
+    # major index
+    df = pd.DataFrame({'DOW 30': this_ticker.in_dow30, 'NASDAQ 100': this_ticker.in_nasdaq100, 'S&P 500': this_ticker.in_sandp500, 'Russell 1000': this_ticker.in_russell1000, 'Russell 2000': this_ticker.in_russell2000, 'NASDAQ Composite': this_ticker.in_nasdaq_composite}, index=[0])
     if use_html:
-        formatted_str = f"<body style=\"font-family:Courier New;\">{ticker_long_name}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}</body>"  
+        html_str = df.to_html(index=False).replace('<table border="1" class="dataframe">', '<table>')
+        major_indexes_info = f"<br/><hr>In major indexes:<br/>{html_str}"
     else:
-        formatted_str = f"{ticker_long_name}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}"  
+        major_indexes_info = f"\n\nIn major indexes:\n{df.to_string(index=False)}"
+
+    if use_html:
+        formatted_str += f"{ticker_long_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}{major_indexes_info}</body>"  
+    else:
+        formatted_str += f"{ticker_long_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}{major_indexes_info}"  
     
     return formatted_str
 

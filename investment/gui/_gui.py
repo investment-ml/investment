@@ -23,11 +23,11 @@ from PySide2.QtWidgets import QApplication
 from PySide2.QtWidgets import QMainWindow, QWidget, QAction
 from PySide2.QtWidgets import QGridLayout
 from PySide2.QtWidgets import QComboBox, QCheckBox, QCompleter
-from PySide2.QtWidgets import QTextEdit, QLineEdit
+from PySide2.QtWidgets import QTextEdit, QLineEdit, QTextBrowser
 from PySide2.QtWidgets import QCalendarWidget
 from PySide2.QtWidgets import QPushButton, QLabel, QProgressBar
 from PySide2.QtWidgets import QDialog, QToolBar
-from PySide2.QtGui import QFontDatabase
+from PySide2.QtGui import QFontDatabase, QTextDocument
 from PySide2 import QtCore
 from PySide2.QtCore import Qt, QThread, Signal, QUrl, QSortFilterProxyModel
 
@@ -41,7 +41,7 @@ import matplotlib.pyplot as plt
 
 from datetime import date, datetime, timedelta, timezone
 
-from ..data import get_ticker_data_dict, get_formatted_ticker_data, Volume_Index, Moving_Average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict
+from ..data import Ticker, get_ticker_data_dict, get_formatted_ticker_data, Volume_Index, Moving_Average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict, global_data_root_dir, nasdaqlisted_df, otherlisted_df
 
 import numpy as np
 import pandas as pd
@@ -88,7 +88,7 @@ class ExtendedComboBox(QComboBox):
     def __init__(self, parent=None):
         super(ExtendedComboBox, self).__init__(parent)
 
-        self.setMaxVisibleItems(40)
+        self.setMaxVisibleItems(50)
         #self.setFocusPolicy(Qt.StrongFocus)
         self.setEditable(True)
 
@@ -382,7 +382,7 @@ class download_all_data_dialog(QDialog):
         self.setWindowTitle("Download all data and store as cache")
         self.label = QLabel(parent=self)
         self.label.setText(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be 400M+ and the process will take about 25~50+ minutes.")
-        self.checkbox_smart_redownload = QCheckBox('Do not re-download data that are already up-to-date as of yesterday/today.', parent=self)
+        self.checkbox_smart_redownload = QCheckBox('Do not re-download if exsting data are already up-to-date (as of -7d ~ now).', parent=self)
         self.checkbox_smart_redownload.stateChanged.connect(self._checkbox_smart_redownload_state_changed)
         self.download_progressbar = QProgressBar(parent=self, objectName="ProgressBar")
         self.download_button = QPushButton(parent=self)
@@ -444,6 +444,66 @@ class download_all_data_dialog(QDialog):
             self.close_button.setDefault(True)
             self.download_button.repaint()
             self.close_button.repaint() # to cope with a bug in PyQt5
+
+
+class high_dividends_dialog(QDialog):
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(parent=parent, *args, **kwargs)
+        self.app_window = parent
+        self.resize(self.app_window.width*0.4, self.app_window.height*0.4)
+        self.text_browser = QTextBrowser(parent=self)
+        df = pd.DataFrame(columns=['ticker','recent 1-year dividends (%)'])
+        tickers = ['MSM', 'T', 'LUMN', 'CAT']
+        for ticker in tickers:
+            df = df.append({'ticker': ticker, 'recent 1-year dividends (%)': round(Ticker(ticker).last_1yr_dividends_pct,2)}, ignore_index=True)
+        self.text_browser.setHtml(df.to_html(index=False))
+        # layout
+        self.layout = QGridLayout()
+        self.layout.addWidget(self.text_browser, 0, 0)
+        self.setLayout(self.layout)
+
+
+class etf_db_dialog(QDialog):
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(parent=parent, *args, **kwargs)
+        self.app_window = parent
+        self.resize(self.app_window.width*0.4, self.app_window.height*0.6)
+        self.search_label = QLabel(parent=self)
+        self.search_label.setText('Search:')
+        self.search_lineedit = QLineEdit(parent=self)
+        self.search_lineedit.returnPressed.connect(self._search_lineedit_return_pressed)
+        self.search_backward_checkbox = QCheckBox(parent=self)
+        self.search_backward_checkbox.setText('Backward')
+        self.search_case_sensitive_checkbox = QCheckBox(parent=self)
+        self.search_case_sensitive_checkbox.setText('Case Sensitive')
+        self.text_browser = QTextBrowser(parent=self)
+        df1 = nasdaqlisted_df[ nasdaqlisted_df['ETF'] == 'Y' ][['ticker', 'Security Name']]
+        df1['Exchange'] = 'Nasdaq'
+        df2 = otherlisted_df[ otherlisted_df['ETF'] == 'Y' ][['ticker', 'Security Name', 'Exchange']]
+        df2['Exchange'] = df2['Exchange'].map({'A': 'NYSE MKT',
+                                               'N': 'New York Stock Exchange (NYSE)',
+                                               'P': 'NYSE ARCA',
+                                               'Z': 'BATS Global Markets (BATS)',
+                                               'V': 'Investors\' Exchange, LLC (IEXG)'})
+        df = pd.concat([df1, df2],axis=0)[['ticker', 'Security Name', 'Exchange']].reset_index().drop(['index'],axis=1) # axis=0 (1): row (column)
+        self.text_browser.setHtml(df.to_html(index=True))
+        # layout
+        self.layout = QGridLayout()
+        self.layout.addWidget(self.search_label, 0, 0)
+        self.layout.addWidget(self.search_lineedit, 0, 1)
+        self.layout.addWidget(self.search_backward_checkbox, 0, 2)
+        self.layout.addWidget(self.search_case_sensitive_checkbox, 0, 3)
+        self.layout.addWidget(self.text_browser, 1, 0, 1, 4)
+        self.setLayout(self.layout)
+
+    def _search_lineedit_return_pressed(self):
+        search_str = self.search_lineedit.text()
+        flag = QTextDocument.FindFlags()
+        if self.search_backward_checkbox.isChecked():
+            flag = flag | QTextDocument.FindBackward
+        if self.search_case_sensitive_checkbox.isChecked():
+            flag = flag | QTextDocument.FindCaseSensitively
+        self.text_browser.find(search_str, flag)
 
 
 class research_dialog(QDialog):
@@ -569,6 +629,8 @@ class app_menu(object):
         self.preferences_dialog = preferences_dialog(parent=self.app_window, force_redownload_yfinance_data=self.force_redownload_yfinance_data, download_today_data=self.download_today_data, data_root_dir=self.data_root_dir)
         self.download_all_data_dialog = download_all_data_dialog(parent=self.app_window)
         self.research_dialog = research_dialog(parent=self.app_window)
+        self.high_dividends_dialog = high_dividends_dialog(parent=self.app_window)
+        self.etf_db_dialog = etf_db_dialog(parent=self.app_window)
         # about
         aboutAct = QAction('&About', parent=self.app_window)
         aboutAct.setShortcut('Ctrl+A')
@@ -599,16 +661,24 @@ class app_menu(object):
         self.app_window.AppMenu.addAction(download_all_Act)
         self.app_window.AppMenu.addAction(exitAct)
         # view
-        RoWAct = QAction('&Useful websites', parent=self.app_window)
-        RoWAct.triggered.connect(self.research_dialog.exec)
+        webAct = QAction('&Useful websites', parent=self.app_window)
+        webAct.triggered.connect(self.research_dialog.exec)
+        #
+        high_dividendsAct = QAction('&High-dividend equities', parent=self.app_window)
+        high_dividendsAct.triggered.connect(self.high_dividends_dialog.exec)
+        #
+        etf_db_Act = QAction('&ETF database', parent=self.app_window)
+        etf_db_Act.triggered.connect(self.etf_db_dialog.exec)
         # 2. researchMenu
         self.app_window.ResearchMenu = self.app_window.menubar.addMenu('&Research')
-        self.app_window.ResearchMenu.addAction(RoWAct)
+        self.app_window.ResearchMenu.addAction(webAct)
+        self.app_window.ResearchMenu.addAction(high_dividendsAct)
+        self.app_window.ResearchMenu.addAction(etf_db_Act)
 
     def _default_preference_settings(self):
         self.force_redownload_yfinance_data = False
         self.download_today_data = True
-        self.data_root_dir = join(str(pathlib.Path.home()), ".investment")
+        self.data_root_dir = global_data_root_dir
 
 
 class app_window(QMainWindow):
@@ -918,7 +988,7 @@ def main():
     app.setStyleSheet(StyleSheet)
     window = app_window(app=app)
     window.show()
-    sys.exit(app.exec_())
+    app.exec_()
 
 
 def test():

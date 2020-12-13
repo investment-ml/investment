@@ -4,10 +4,9 @@
 #
 #  License: LGPL-3.0
 
-from .__about__ import (
-    __version__,
-    __license__,
-)
+import sys
 
+from .gui import main
 
-__all__ = ["data", "gui", "math_and_stats"]
+if __name__ == "__main__":
+    sys.exit(main())
