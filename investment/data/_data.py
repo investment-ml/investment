@@ -4,9 +4,6 @@
 #
 #  License: LGPL-3.0
 
-import re
-from selenium import webdriver
-
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -668,26 +665,36 @@ def test():
 
 
 class web_scrape(object):
+    def __init__(self):
+        self.web_scrape_enable = False
+        import pkg_resources
+        installed = {pkg.key for pkg in pkg_resources.working_set}
+        if 'selenium' in installed:
+            self.web_scrape_enable = True
+            
     def price_target(self, ticker='AAPL', host='yahoo_finance'):
-        assert host in ['yahoo_finance',], "unexpected host"
-        #print(f'web scraping [{ticker}] 1-yr price target on [{host}] ... ', end = '')
-        options = webdriver.ChromeOptions()
-        options.headless = True
-        browser = webdriver.Chrome(options=options)
-        if host == 'yahoo_finance':
-            browser.get('https://finance.yahoo.com/quote/' + ticker.upper() )
-        app = browser.find_element_by_id('app')
-        self.price_target = None
-        try:
+        if self.web_scrape_enable:
+            from selenium import webdriver
+            import re
+            assert host in ['yahoo_finance',], "unexpected host"
+            #print(f'web scraping [{ticker}] 1-yr price target on [{host}] ... ', end = '')
+            options = webdriver.ChromeOptions()
+            options.headless = True
+            browser = webdriver.Chrome(options=options)
             if host == 'yahoo_finance':
-                main = app.find_element_by_id('Main')
-                m = re.search('\n1y Target Est (.+?)\n', main.text)
-                if m is not None:
-                    self.price_target = float(m.group(1))
-            #print(f"{self.price_target:.2f}")
-        except:
-            #print("")
-            pass
-        browser.quit()
-        return self.price_target
+                browser.get('https://finance.yahoo.com/quote/' + ticker.upper() )
+            app = browser.find_element_by_id('app')
+            self.price_target = None
+            try:
+                if host == 'yahoo_finance':
+                    main = app.find_element_by_id('Main')
+                    m = re.search('\n1y Target Est (.+?)\n', main.text)
+                    if m is not None:
+                        self.price_target = float(m.group(1))
+                #print(f"{self.price_target:.2f}")
+            except:
+                #print("")
+                pass
+            browser.quit()
+            return self.price_target
 

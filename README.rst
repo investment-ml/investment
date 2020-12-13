@@ -38,13 +38,12 @@ Install and Execute
    $ source env/bin/activate   # for Linux and macOS
    $ env\Scripts\activate.bat  # for Windows 
    $ pip install investment    # this only needs to be done once
+   $ python -m investment      # after installation, execute within the virtual environment
 
-   # Note: A Chrome browser driver must also be installed on your computer first
+   # Note: to obtain price target, package 'selenium' and a Chrome browser driver must be installed on your computer first
    # see https://pypi.org/project/selenium/
 
-   $ python -m investment      # after installation, execute the app within the virtual environment
-
-
+   
 Sample Screenshot
 -----------------
 |image_App_UI|
