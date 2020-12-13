@@ -21,6 +21,13 @@
 A Python Library for Investment
 ===============================
 
+Features
+-------------------
+- 4000+ tickers as included in major indexes (DOW 30, NASDAQ 100, S&P 500, Russell 1000, etc.)
+- Breakdown by sectors and industries
+- An ETF database of 2290 tickers
+
+
 Install and Execute
 -------------------
 
@@ -35,7 +42,7 @@ Install and Execute
    # Note: A Chrome browser driver must also be installed on your computer first
    # see https://pypi.org/project/selenium/
 
-   $ python -c "from investment import gui; gui.main()" # after installation, execute the app within the virtual environment
+   $ python -m investment      # after installation, execute the app within the virtual environment
 
 
 Sample Screenshot
