@@ -381,7 +381,7 @@ class download_all_data_dialog(QDialog):
         self.n_tickers = len(ticker_group_dict['All'])
         self.setWindowTitle("Download all data and store as cache")
         self.label = QLabel(parent=self)
-        self.label.setText(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be 1G+ and the process will take about hours.")
+        self.label.setText(f"Ready to download the latest data of all {len(ticker_group_dict['All'])} tickers included in this App and store as cache?\nNote: the data will be ~2G and the process will take hours.")
         self.checkbox_smart_redownload = QCheckBox('Do not re-download if exsting data are already up-to-date (as of -7d ~ now).', parent=self)
         self.checkbox_smart_redownload.stateChanged.connect(self._checkbox_smart_redownload_state_changed)
         self.download_progressbar = QProgressBar(parent=self, objectName="ProgressBar")
@@ -450,12 +450,17 @@ class high_dividends_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.app_window = parent
-        self.resize(self.app_window.width*0.4, self.app_window.height*0.4)
+        self.resize(self.app_window.width*0.2, self.app_window.height*0.4)
         self.text_browser = QTextBrowser(parent=self)
         df = pd.DataFrame(columns=['ticker','recent 1-year dividends (%)'])
+        #tickers = ticker_group_dict['All']
         tickers = ['MSM', 'T', 'LUMN', 'CAT']
+        #tickers = ['HCHC', 'SPRT', 'NLOK', 'QRTEA', 'QRTEB', 'LORL', 'AIV', 'FF', 'VRS', 'IRCP', 'DHT', 'AM', 'OMP', 'FRO', 'ICMB', 'TRTX', 'BXG', 'CLWT', 'PATI', 'IVR', 'OMF', 'MFA', 'CSWC', 'ORC', 'IEP', 'VHC', 'MSM', 'ARI', 'NGVC', 'NHTC', 'RC', 'ACRE', 'GEO', 'CIM', 'NLY', 'EARN', 'STWD', 'EQC', 'MNDO', 'BKEP', 'RTLR', 'TLYS', 'TRMD', 'AFIN', 'DMLP', 'ANH', 'CHMI', 'NAT', 'HRZN', 'SSNT', 'OKE', 'AGNC', 'DX', 'EFC', 'ABR', 'HVT', 'OLP', 'CCAP', 'SFL', 'NBLX', 'MARPS', 'ETRN', 'GNL', 'SNDR', 'CMO', 'KREF', 'BXMT', 'CPLP', 'NEWT', 'MNRL', 'HT', 'BPY', 'EV', 'BPYU', 'ITIC', 'NCMI', 'GMLP', 'NMFC', 'APAM', 'TWO', 'XLE', 'AJX', 'PMT', 'AMRK', 'ARR', 'PKE', 'LOAN', 'BGS', 'WMB', 'MAC', 'HIHO', 'GOOD', 'VNO', 'GPP', 'BRG', 'AROC', 'PLYM', 'OPI', 'CNA', 'UNIT', 'FCAU', 'BRMK', 'VGR', 'HP', 'SBRA', 'BLX', 'SFE', 'UVV', 'MO', 'SOHO', 'HCAP', 'RGR', 'OHI', 'SPKE', 'CLNY', 'WDR', 'FHI', 'LMRK', 'NYMT', 'ISSC', 'APTS', 'SNR', 'DHIL', 'WSBF', 'FLMN', 'TOT', 'SYX', 'BRT', 'XOM', 'AMSF', 'FFG', 'CRWS', 'PK', 'PZN', 'QIWI', 'CIO', 'NPK', 'BKE', 'SRC', 'NRZ', 'CPLG', 'NVEC', 'WSR', 'LADR', 'KMI', 'NYCB', 'NHI', 'IIIN', 'GMRE', 'NAVI', 'SKT', 'NWBI', 'FSP', 'ATAX', 'NTB', 'BDN', 'ALX', 'HRB', 'CTO', 'T', ]
         for ticker in tickers:
             df = df.append({'ticker': ticker, 'recent 1-year dividends (%)': round(Ticker(ticker).last_1yr_dividends_pct,2)}, ignore_index=True)
+        df = df.sort_values(by=['recent 1-year dividends (%)'], ascending=False)
+        df = df[ df['recent 1-year dividends (%)'] > 0 ].reset_index().drop(['index'],axis=1)
+        #print(df)
         self.text_browser.setHtml(df.to_html(index=False))
         # layout
         self.layout = QGridLayout()

@@ -586,7 +586,7 @@ class Ticker(object):
             dividends_df['Date'] = pd.to_datetime(dividends_df['Date'], format='%Y-%m-%d', utc=True)
             last_1yr_dividends_df = dividends_df[ dividends_df['Date'] > (datetime.now(tz=timezone.utc) - timedelta(days=365.25)) ]
             date_close_df = self.ticker_data_dict['history'][['Date','Close']]
-            dividends_info_df = pd.DataFrame()
+            dividends_info_df = pd.DataFrame(columns=['date','dividends','yield_pct'])
             for idx, row in last_1yr_dividends_df.iterrows():
                 try:
                     close_price_on_this_date = float(date_close_df[date_close_df.Date == row['Date']].Close)
@@ -595,9 +595,9 @@ class Ticker(object):
                     dividends_yield_percent = 0
                 dividends_info_df = dividends_info_df.append({'date': row['Date'].date(), 'dividends': row['Dividends'], 'yield_pct': dividends_yield_percent}, ignore_index = True)
             #print(dividends_info_df)
-            return dividends_info_df['yield_pct'].sum()
-        else:
-            return 0
+            if len(dividends_info_df) > 0:
+                return dividends_info_df['yield_pct'].sum()
+        return 0
 
     @property
     def pay_dividends(self):
