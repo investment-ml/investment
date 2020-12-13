@@ -483,9 +483,11 @@ class download_data_dialog(QDialog):
 
     def _download_button_clicked(self):
         if self.n_tickers > 0:
+            #
             self.checkbox_smart_redownload.setEnabled(False)
             self.download_button.setEnabled(False)
             self.close_button.setEnabled(False)
+            #
             self.download_button.setDefault(False)
             self.download_button.repaint()
             self.close_button.repaint()
@@ -503,7 +505,11 @@ class download_data_dialog(QDialog):
         #time.sleep(0.003)
         if idx == self.n_tickers:
             self.close_button.setText('Download completed. Return to App')
+            #
+            self.checkbox_smart_redownload.setEnabled(True)
+            #self.download_button.setEnabled(True)
             self.close_button.setEnabled(True)
+            #
             self.download_button.setDefault(False)
             self.close_button.setDefault(True)
             self.download_button.repaint()
