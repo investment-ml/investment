@@ -505,6 +505,13 @@ class Ticker(object):
             raise ValueError("this question should be asked for non-NASDAQ-listed ticker only")
 
     @property
+    def is_etf(self):
+        if (self.ticker in ticker_group_dict['ETF']) or (self.ticker in ticker_group_dict['ETF database']):
+            return True
+        else:
+            return False
+        
+    @property
     def in_dow30(self):
         if self.ticker in ticker_group_dict['DOW 30']:
             return True

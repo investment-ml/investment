@@ -673,6 +673,9 @@ class web_scrape(object):
             self.web_scrape_enable = True
             
     def price_target(self, ticker='AAPL', host='yahoo_finance'):
+        from ._ticker import ticker_group_dict
+        if ticker in ticker_group_dict['ETF'] or ticker in ticker_group_dict['ETF database']:
+            return None
         if self.web_scrape_enable:
             from selenium import webdriver
             import re

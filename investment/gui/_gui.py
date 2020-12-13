@@ -363,6 +363,7 @@ class ticker_download_thread(QThread):
         self.app_window = app_window
         self.smart_redownload = smart_redownload
         self.tickers_to_download = tickers_to_download
+
     def run(self):
         for idx, ticker in enumerate(self.tickers_to_download):
             try:
@@ -408,8 +409,8 @@ class download_data_dialog(QDialog):
         self.comp_checkbox = QCheckBox('NASDAQ Composite', parent=self)
         self.etf_db_checkbox = QCheckBox('ETF database', parent=self)
         self.equity_db_checkbox = QCheckBox('Equity database', parent=self)
-        self.etf_db_checkbox.setEnabled(False)
-        self.equity_db_checkbox.setEnabled(False)
+        #self.etf_db_checkbox.setEnabled(False)
+        #self.equity_db_checkbox.setEnabled(False)
         #
         self.dow30_checkbox.setChecked(True)
         self.nasdaq100_checkbox.setChecked(True)
@@ -568,8 +569,8 @@ class high_dividends_dialog(QDialog):
         self.comp_checkbox.stateChanged.connect(self._update_checkbox_selection)
         self.etf_db_checkbox.stateChanged.connect(self._update_checkbox_selection)
         self.equity_db_checkbox.stateChanged.connect(self._update_checkbox_selection)
-        self.etf_db_checkbox.setEnabled(False)
-        self.equity_db_checkbox.setEnabled(False)
+        #self.etf_db_checkbox.setEnabled(False)
+        #self.equity_db_checkbox.setEnabled(False)
         #
         self.exec_pushbutton = QPushButton('Analyze', parent=self)
         self.exec_pushbutton.clicked.connect(self._analyze_button_clicked)
