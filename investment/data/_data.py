@@ -624,7 +624,7 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
     df = pd.DataFrame({'DOW 30': this_ticker.in_dow30, 'NASDAQ 100': this_ticker.in_nasdaq100, 'S&P 500': this_ticker.in_sandp500, 'Russell 1000': this_ticker.in_russell1000, 'Russell 2000': this_ticker.in_russell2000, 'NASDAQ Composite': this_ticker.in_nasdaq_composite}, index=[0])
     if use_html:
         html_str = df.to_html(index=False).replace('<table border="1" class="dataframe">', '<table>')
-        major_indexes_info = f"<br/><hr>In major indexes:<br/>{html_str}"
+        major_indexes_info = f"<br/><hr>In major indexes:<br/>{html_str}".replace('True', '<b><span style=\"color:blue;\">True</span></b>')
     else:
         major_indexes_info = f"\n\nIn major indexes:\n{df.to_string(index=False)}"
 

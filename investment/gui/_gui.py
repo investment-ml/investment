@@ -86,7 +86,7 @@ def qt_message_handler(mode, context, message):
 # https://stackoverflow.com/questions/4827207/how-do-i-filter-the-pyqt-qcombobox-items-based-on-the-text-input
 class ExtendedComboBox(QComboBox):
     def __init__(self, parent=None):
-        super(ExtendedComboBox, self).__init__(parent)
+        super().__init__(parent)
 
         self.setMaxVisibleItems(50)
         #self.setFocusPolicy(Qt.StrongFocus)
@@ -109,22 +109,27 @@ class ExtendedComboBox(QComboBox):
 
     # on selection of an item from the completer, select the corresponding item from combobox 
     def on_completer_activated(self, text):
+        print(f"debugging - completer activated: [{text}]")
         if text:
             index = self.findText(text)
             self.setCurrentIndex(index)
             self.activated[str].emit(self.itemText(index))
 
+    # not sure if this function is ever called
     # on model change, update the models of the filter and completer as well 
     def setModel(self, model):
-        super(ExtendedComboBox, self).setModel(model)
+        print(f"debugging - model change. model = {model}")
+        super().setModel(model)
         self.pFilterModel.setSourceModel(model)
         self.completer.setModel(self.pFilterModel)
 
+    # not sure if this function is ever called
     # on model column change, update the model column of the filter and completer as well
     def setModelColumn(self, column):
+        print(f"debugging - model col change. model col = {column}")
         self.completer.setCompletionColumn(column)
         self.pFilterModel.setFilterKeyColumn(column)
-        super(ExtendedComboBox, self).setModelColumn(column)  
+        super().setModelColumn(column)  
 
 
 
@@ -178,7 +183,7 @@ class ticker_selection(ExtendedComboBox):
     
     def reset(self):
         self.clear()
-        self.addItem("-- Select a ticker --")
+        self.addItem("-- Select or enter a ticker --")
         self.setFocusPolicy(Qt.ClickFocus)
 
 
@@ -959,6 +964,7 @@ class UI_control(object):
         self.timeframe_selection_index = list(self.timeframe_dict).index('1 year') + 1
         self.index_options_selection_index = 1
         self._group_selected = None
+        self._UI.group_selection.setCurrentIndex(1) # 'All'
 
     def _group_selection_change(self, index: int = None):
         if index > 0:
@@ -1020,7 +1026,7 @@ class UI_control(object):
         if index > 0:
             self.selected_ticker = self._UI.ticker_selection.itemText(index)
             if self.selected_ticker not in ticker_group_dict['All']:
-                return
+                print(f"Info: unrecognized ticker was entered: [{self.selected_ticker}]")
 
             self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, force_redownload = self._UI.app_window.app_menu.preferences_dialog.force_redownload_yfinance_data, download_today_data = self._UI.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir)
             self.ticker_data_dict_in_effect = copy.deepcopy(self.ticker_data_dict_original)
