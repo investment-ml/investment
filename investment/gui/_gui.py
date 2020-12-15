@@ -63,7 +63,7 @@ StyleSheet = '''
 }
 '''
 
-App_name = "Investment Library"
+App_name = "Investment"
 
 # https://stackoverflow.com/questions/35894171/redirect-qdebug-output-to-file-with-pyqt5
 def qt_message_handler(mode, context, message):

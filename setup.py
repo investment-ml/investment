@@ -19,7 +19,7 @@ setuptools.setup(
     version=investment.__version__,
     author="Investment Prediction Enthusiast",
     author_email="investment.ml.prediction@gmail.com",
-    description="A Python Library for Investment",
+    description="A Python App for Investment",
     license=investment.__license__,
     long_description=long_description,
     long_description_content_type="text/x-rst",
