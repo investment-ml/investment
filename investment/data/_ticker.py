@@ -33,6 +33,7 @@ import pathlib
 
 nasdaqlisted_df = pd.DataFrame()
 otherlisted_df = pd.DataFrame()
+options_df = pd.DataFrame()
 global_data_root_dir = join(str(pathlib.Path.home()), ".investment")
 
 ###########################################################################################
@@ -66,7 +67,8 @@ def download_nasdaqtrader_data(data_root_dir: str = None):
     ftp = ftplib.FTP(ftp_server)
     ftp.login(ftp_username, ftp_password)
     files = [('SymbolDirectory/nasdaqlisted.txt', join(data_dir, 'nasdaqlisted.txt')), 
-             ('SymbolDirectory/otherlisted.txt',  join(data_dir, 'otherlisted.txt' ))]
+             ('SymbolDirectory/otherlisted.txt',  join(data_dir, 'otherlisted.txt' )),
+             ('SymbolDirectory/options.txt',      join(data_dir, 'options.txt'     ))]
     for file_ in files:
         with open(file_[1], "wb") as f:
             ftp.retrbinary("RETR " + file_[0], f.write)
@@ -82,6 +84,7 @@ def load_nasdaqtrader_data(data_root_dir: str = None):
 
     file1 = pathlib.Path(join(data_root_dir, "ticker_data/nasdaqtrader/nasdaqlisted.txt"))
     file2 = pathlib.Path(join(data_root_dir, "ticker_data/nasdaqtrader/otherlisted.txt"))
+    file3 = pathlib.Path(join(data_root_dir, "ticker_data/nasdaqtrader/options.txt"))
 
     to_download = False
 
@@ -97,9 +100,15 @@ def load_nasdaqtrader_data(data_root_dir: str = None):
     else:
         to_download = True
 
+    if file3.exists():
+        if timedata().now.datetime - timedata(time_stamp=file3.stat().st_ctime).datetime > timedelta(days=1): # creation time
+            to_download = True
+    else:
+        to_download = True
+
     if not Internet_connection_available():
         to_download = False
-        if (not file1.exists()) and (not file2.exists()):
+        if (not file1.exists()) or (not file2.exists()) or (not file3.exists()):
             raise RuntimeError("Internet is unavailable but the system depends on certain nasdaqtrader files to run")
 
     if to_download:
@@ -107,13 +116,39 @@ def load_nasdaqtrader_data(data_root_dir: str = None):
 
     global nasdaqlisted_df
     global otherlisted_df
+    global options_df
 
-    nasdaqlisted_df = pd.read_csv(file1,sep='|',header=0,skipfooter=1,engine='python')
-    otherlisted_df = pd.read_csv(file2,sep='|',header=0,skipfooter=1,engine='python')
-    nasdaqlisted_df['ticker'] = nasdaqlisted_df['Symbol'].str.replace('\.','\-').str.replace('\\','')
-    otherlisted_df['ticker'] = otherlisted_df['NASDAQ Symbol'].str.replace('\.','\-').str.replace('\\','').str.replace('ACIC=','ACIC-UN').str.replace('AJAX=','AJAX-UN').str.replace('PRIF-A','PRIF-PA').str.replace('PRIF-B','PRIF-PB').str.replace('PRIF-C','PRIF-PC').str.replace('PRIF-D','PRIF-PD').str.replace('PRIF-E','PRIF-PE').str.replace('PRIF-F','PRIF-PF')
-    nasdaqlisted_df = nasdaqlisted_df[ (nasdaqlisted_df['Test Issue'] == 'N') & (nasdaqlisted_df['NextShares'] == 'N') ].drop(['Test Issue','Symbol','NextShares','Round Lot Size'], axis=1)
-    otherlisted_df = otherlisted_df[ otherlisted_df['Test Issue'] == 'N' ].drop(['Test Issue','NASDAQ Symbol','ACT Symbol','CQS Symbol','Round Lot Size'], axis=1)
+    #
+    preprocessed_file = pathlib.Path(join(data_root_dir, "ticker_data/nasdaqtrader/preprocessed.h5"))
+    if to_download or (not preprocessed_file.exists()):
+        #print('Creating preprocessed.h5 ...', end='')
+        #
+        nasdaqlisted_df = pd.read_csv(file1,sep='|',header=0,skipfooter=1,engine='python')
+        otherlisted_df = pd.read_csv(file2,sep='|',header=0,skipfooter=1,engine='python')
+        #options_df = pd.read_csv(file3,sep='|',header=0,skipfooter=1,engine='python')
+        #
+        nasdaqlisted_df['ticker'] = nasdaqlisted_df['Symbol'].str.replace('\.','\-').str.replace('\\','')
+        otherlisted_df['ticker'] = otherlisted_df['NASDAQ Symbol'].str.replace('\.','\-').str.replace('\\','').str.replace('ACIC=','ACIC-UN').str.replace('AJAX=','AJAX-UN').str.replace('PRIF-A','PRIF-PA').str.replace('PRIF-B','PRIF-PB').str.replace('PRIF-C','PRIF-PC').str.replace('PRIF-D','PRIF-PD').str.replace('PRIF-E','PRIF-PE').str.replace('PRIF-F','PRIF-PF')
+        #options_df['ticker'] = options_df['Underlying Symbol'].str.replace('\.','\-').str.replace('\\','')
+        #
+        nasdaqlisted_df = nasdaqlisted_df[ (nasdaqlisted_df['Test Issue'] == 'N') & (nasdaqlisted_df['NextShares'] == 'N') ].drop(['Test Issue','Symbol','NextShares','Round Lot Size'], axis=1)
+        otherlisted_df = otherlisted_df[ otherlisted_df['Test Issue'] == 'N' ].drop(['Test Issue','NASDAQ Symbol','ACT Symbol','CQS Symbol','Round Lot Size'], axis=1)
+        #options_df = options_df.drop(['Underlying Symbol'], axis=1)
+        #
+        data_store = pd.HDFStore(preprocessed_file)
+        data_store['nasdaqlisted_df'] = nasdaqlisted_df
+        data_store['otherlisted_df'] = otherlisted_df
+        #data_store['options_df'] = options_df
+        data_store.close()
+        #print('Done')
+    else:
+        #print('Reading preprocessed.h5 ... ', end='')
+        data_store = pd.HDFStore(preprocessed_file)
+        nasdaqlisted_df = data_store['nasdaqlisted_df']
+        otherlisted_df = data_store['otherlisted_df']
+        #options_df = data_store['options_df']
+        data_store.close()
+        #print('Done')
 
 load_nasdaqtrader_data(data_root_dir=global_data_root_dir)
    
@@ -148,7 +183,7 @@ ticker_group_dict = {'All': [],
                                       'INGN', 'INN', 'INO', 'INOV', 'INS', 'INSG', 'INSM', 'INSP', 'INSW', 'INT', 'INTL', 'INVA', 'IOSP', 'IPAR', 'IPI', 'IRBT', 'IRDM', 'IRET', 'IRMD', 'IRT', 'IRTC', 'IRWD', 'ISBC', 'ISEE', 'ISTR', 'ITCI', 'ITGR', 'ITI', 'ITIC', 'ITRI', 'IVAC', 'IVC', 'IVR', 'JACK', 'JBSS', 'JBT', 'JCAP', 'JCOM', 'JELD', 'JJSF', 'JNCE', 'JOE', 'JOUT', 'JRVR', 'JYNT', 'KAI', 'KALA', 'KALU', 'KALV', 'KAMN', 'KAR', 'KBAL', 'KBH', 'KBR', 'KDMN', 'KE', 'KELYA', 'KERN', 'KFRC', 'KFY', 'KIDS', 'KIN', 'KLDO', 'KMT', 'KN', 'KNL', 'KNSA', 'KNSL', 'KOD', 'KODK', 'KOP', 'KOS', 'KPTI', 'KRA', 'KREF', 'KRG', 'KRMD', 'KRNY', 'KRO', 'KROS', 'KRTX', 'KRUS', 'KRYS', 'KTB', 'KTOS', 'KURA', 'KVHI', 'KW', 'KWR', 'KZR', 'LAD', 'LADR', 'LAKE', 'LANC', 'LAND', 'LARK', 'LASR', 'LAUR', 'LAWS', 'LBAI', 'LBC', 'LBRT', 'LC', 'LCI', 'LCII', 'LCNB', 'LCUT', 'LDL', 'LE', 'LEGH', 'LEVL', 'LFVN', 'LGIH', 'LGND', 'LHCG', 'LILA', 'LILAK', 'LIND', 'LIVN', 'LIVX', 'LJPC', 'LKFN', 'LL', 'LLNW', 'LMAT', 'LMNR', 'LMNX', 'LMST', 'LNDC', 'LNN', 'LNTH', 'LOB', 'LOCO', 'LOGC', 'LORL', 'LOVE', 'LPG', 'LPSN', 'LPX', 'LQDA', 'LQDT', 'LRN', 'LSCC', 'LTC', 'LTHM', 'LTRPA', 'LUNA', 'LXFR', 'LXP', 'LXRX', 'LYRA', 'LYTS', 'LZB', 'M', 'MAC', 'MANT', 'MATW', 'MATX', 'MAXR', 'MBCN', 'MBI', 'MBII', 'MBIN', 'MBIO', 'MBUU', 'MBWM', 'MC', 'MCB', 'MCBC', 'MCBS', 'MCF', 'MCFT', 'MCRB', 'MCRI', 'MCS', 'MD', 'MDC', 'MDGL', 'MDP', 'MDRX', 'MEC', 'MED', 'MEDP', 'MEET', 'MEI', 'MEIP', 'MESA', 'MFA', 'MFNC', 'MG', 'MGEE', 'MGI', 'MGLN', 'MGNX', 'MGPI', 'MGRC', 'MGTA', 'MGTX', 'MGY', 'MHH', 'MHO', 'MIK', 'MIME', 'MINI', 'MIRM', 'MITK', 'MJCO', 'MLAB', 'MLHR', 'MLI', 'MLP', 'MLR', 'MLSS', 'MMAC', 'MMI', 'MMS', 'MMSI', 'MNK', 'MNKD', 'MNLO', 'MNOV', 'MNR', 'MNRL', 'MNRO', 'MNSB', 'MNTA', 'MOBL', 'MOD', 'MODN', 'MOFG', 'MOG-A', 'MORF', 'MOV', 'MPAA', 'MPB', 'MPX', 'MR', 'MRBK', 'MRC', 'MRKR', 'MRLN', 'MRNS', 'MRSN', 'MRTN', 'MRTX', 'MSBI', 'MSEX', 'MSGN', 'MSON', 'MSTR', 'MTDR', 'MTEM', 'MTH', 'MTOR', 'MTRN', 'MTRX', 'MTSC', 'MTSI', 'MTW', 'MTX', 'MTZ', 'MUSA', 'MVBF', 'MWA', 'MXL', 'MYE', 'MYFW', 'MYGN', 'MYOK', 'MYRG', 'NAT', 'NATH', 'NATR', 'NAV', 'NAVI', 'NBEV', 'NBHC', 'NBN', 'NBR', 'NBSE', 'NBTB', 'NC', 'NCBS', 'NCMI', 'NDLS', 'NEO', 'NEOG', 'NERV', 'NESR', 'NEX', 'NEXT', 'NFBK', 'NG', 'NGHC', 'NGM', 'NGVC', 'NGVT', 'NH', 'NHC', 'NHI', 'NJR', 'NK', 'NKSH', 'NL', 'NLS', 'NLTX', 'NMIH', 'NMRD', 'NMRK', 'NNBR', 'NNI', 'NODK', 'NOVA', 'NOVT', 'NP', 'NPK', 'NPO', 'NPTN', 'NR', 'NRBO', 'NRC', 'NRIM', 'NSA', 'NSCO', 'NSIT', 'NSP', 'NSSC', 'NSTG', 'NTB', 'NTCT', 'NTGR', 'NTLA', 'NTRA', 'NTUS', 'NUVA', 'NVAX', 'NVEC', 'NVEE', 'NVRO', 'NVTA', 'NWBI', 'NWE', 'NWFL', 'NWLI', 'NWN', 'NWPX', 'NX', 'NXGN', 'NXRT', 'NXTC', 'NYMT', 'NYMX', 'OBNK', 'OCFC', 'OCUL', 'OCX', 'ODC', 'ODP', 'ODT', 'OEC', 'OESX', 'OFED', 'OFG', 'OFIX', 'OFLX', 'OGS', 'OI', 'OII', 'OIS', 'OLP', 'OMCL', 'OMER', 'OMI', 'ONB', 'ONEM', 'ONEW', 'ONTO', 'OOMA', 'OPBK', 'OPCH', 'OPI', 'OPK', 'OPRT', 'OPRX', 'OPTN', 'OPY', 'ORA', 'ORBC', 'ORC', 'ORGO', 'ORGS', 'ORIC', 'ORRF', 'OSBC', 'OSG', 'OSIS', 'OSMT', 'OSPN', 'OSTK', 'OSUR', 'OSW', 'OTTR', 'OVBC', 'OVID', 'OVLY', 'OVV', 'OXM', 'OYST', 'PACB', 'PACK', 'PAE', 'PAHC', 'PANL', 'PAR', 'PARR', 'PASG', 'PATK', 'PAVM', 'PAYS', 'PBF', 'PBFS', 'PBH', 'PBI', 'PBIP', 'PBYI', 'PCB', 'PCH', 'PCRX', 'PCSB', 'PCTI', 'PCYG', 'PCYO', 'PDCE', 'PDCO', 'PDFS', 'PDLB', 'PDLI', 'PDM', 'PEB', 'PEBK', 'PEBO', 'PENN', 'PETQ', 'PETS', 'PFBC', 'PFBI', 'PFC', 'PFGC', 'PFHD', 'PFIS', 'PFNX', 'PFS', 'PFSI', 'PFSW', 'PGC', 'PGEN', 'PGNY', 'PGTI', 'PHAS', 'PHAT', 'PHR', 'PI', 'PICO', 'PINE', 'PING', 'PIPR', 'PIRS', 'PJT', 'PKBK', 'PKE', 'PKOH', 'PLAB', 'PLAY', 'PLBC', 'PLCE', 'PLMR', 'PLOW', 'PLPC', 'PLSE', 'PLT', 'PLUG', 'PLUS', 'PLXS', 'PLYM', 'PMT', 'PNM', 'PNRG', 'PNTG', 'POL', 'POR', 'POWI', 'POWL', 'PPBI', 'PQG', 'PRA', 'PRAA', 'PRDO', 'PRFT', 'PRGS', 'PRIM', 'PRK', 'PRLB', 'PRMW', 'PRNB', 'PRO', 'PROS', 'PROV', 'PRPL', 'PRSC', 'PRSP', 'PRTA', 'PRTH', 'PRTK', 'PRTS', 'PRVB', 'PRVL', 'PSB', 'PSMT', 'PSN', 'PSNL', 'PTCT', 'PTEN', 'PTGX', 'PTLA', 'PTSI', 'PTVCB', 'PUB', 'PUMP', 'PVAC', 'PVBC', 'PWFL', 'PWOD', 'PXLW', 'PZN', 'PZZA', 'QADA', 'QCRH', 'QLYS', 'QMCO', 'QNST', 'QTNT', 'QTRX', 'QTS', 'QTWO', 'QUAD', 'QUOT', 'RAD', 'RAMP', 'RAPT', 'RARE', 'RAVN', 'RBB', 'RBBN', 'RBCAA', 'RBNC', 'RC', 'RCII', 'RCKT', 'RCKY', 'RCM', 'RCUS', 'RDFN', 'RDN', 'RDNT', 'RDUS', 'RDVT', 'REAL', 'REFR', 'REGI', 'REPH', 'REPL', 'RES', 'RESI', 'RESN', 'REV', 'REVG', 'REX', 'REZI', 'RFL', 'RGCO', 'RGNX', 'RGP', 'RGR', 'RGS', 'RH', 'RHP', 'RICK', 'RIG', 'RIGL', 'RILY', 'RLGT', 'RLGY', 'RLI', 'RLJ', 'RLMD', 'RM', 'RMAX', 'RMBI', 'RMBS', 'RMNI', 'RMR', 'RMTI', 'RNST', 'ROAD', 'ROCK', 'ROG', 'ROIC', 'ROLL', 'RPAI', 'RPAY', 'RPD', 'RPT', 'RRBI', 'RRC', 'RRGB', 'RRR', 'RST', 'RTIX', 'RTRX', 'RUBI', 'RUBY', 'RUN', 'RUSHA', 'RUSHB', 'RUTH', 'RVI', 'RVMD', 'RVNC', 'RVP', 'RVSB', 'RWT', 'RXN', 'RYAM', 'RYI', 'RYTM', 'SAFE', 'SAFM', 'SAFT', 'SAH', 'SAIA', 'SAIL', 'SAL', 'SALT', 'SAMG', 'SANM', 'SASR', 'SAVA', 'SAVE', 'SB', 'SBBP', 'SBBX', 'SBCF', 'SBFG', 'SBGI', 'SBH', 'SBRA', 'SBSI', 'SBT', 'SCHL', 'SCHN', 'SCL', 'SCOR', 'SCPH', 'SCS', 'SCSC', 'SCU', 'SCVL', 'SCWX', 'SDGR', 'SEAC', 'SEAS', 'SELB', 'SEM', 'SENEA', 'SF', 'SFBS', 'SFE', 'SFIX', 'SFL', 'SFNC', 'SFST', 'SGA', 'SGC', 'SGH', 'SGMO', 'SGMS', 'SGRY', 'SHAK', 'SHBI', 'SHEN', 'SHO', 'SHOO', 'SHYF', 'SI', 'SIBN', 'SIEB', 'SIEN', 'SIG', 'SIGA', 'SIGI', 'SILK', 'SITC', 'SITE', 'SITM', 'SJI', 'SJW', 'SKT', 'SKY', 'SKYW', 'SLAB', 'SLCA', 'SLCT', 'SLDB', 'SLNO', 'SLP', 'SM', 'SMBC', 'SMBK', 'SMCI', 'SMED', 'SMMF', 'SMP', 'SMPL', 'SMSI', 'SMTC', 'SNBR', 'SNCR', 'SNDX', 'SNFCA', 'SNR', 'SOI', 'SOLY', 'SONA', 'SONO', 'SP', 'SPFI', 'SPKE', 'SPNE', 'SPNS', 'SPOK', 'SPPI', 'SPRO', 'SPSC', 'SPT', 'SPTN', 'SPWH', 'SPWR', 'SPXC', 'SR', 'SRCE', 'SRDX', 'SREV', 'SRG', 'SRI', 'SRNE', 'SRRK', 'SRT', 'SSB', 'SSD', 'SSP', 'SSTI', 'SSTK', 'STAA', 'STAG', 'STAR', 'STBA', 'STC', 'STFC', 'STMP', 'STND', 'STNG', 'STOK', 'STRA', 'STRL', 'STRO', 'STRS', 'STSA', 'STXB', 'STXS', 'SUM', 'SUPN', 'SVC', 'SVMK', 'SVRA', 'SWAV', 'SWBI', 'SWKH', 'SWM', 'SWN', 'SWTX', 'SWX', 'SXC', 'SXI', 'SXT', 'SYBT', 'SYKE', 'SYNA', 'SYRS', 'SYX', 'TACO', 'TALO', 'TARA', 'TAST', 'TBBK', 'TBI', 'TBIO', 'TBK', 'TBNK', 'TBPH', 'TCBI', 'TCBK', 'TCDA', 'TCFC', 'TCI', 'TCMD', 'TCRR', 'TCS', 'TCX', 'TDW', 'TELA', 'TELL', 'TEN', 'TENB', 'TERP', 'TEX', 'TG', 'TGH', 'TGI', 'TGNA', 'TGTX', 'TH', 'THC', 'THFF', 'THR', 'THRM', 'TILE', 'TIPT', 'TISI', 'TITN', 'TLYS', 'TMDX', 'TMHC', 'TMP', 'TMST', 'TNAV', 'TNC', 'TNET', 'TOWN', 'TPB', 'TPC', 'TPCO', 'TPH', 'TPIC', 'TPRE', 'TPTX', 'TR', 'TRC', 'TREC', 'TRHC', 'TRMK', 'TRNO', 'TRNS', 'TROX', 'TRS', 'TRST', 'TRTN', 'TRTX', 'TRUE', 'TRUP', 'TRWH', 'TSBK', 'TSC', 'TSE', 'TTEC', 'TTEK', 'TTGT', 'TTMI', 'TUP', 'TVTY', 'TWNK', 'TWO', 'TWST', 'TXMD', 'TXRH', 'TYME', 'UBA', 'UBFO', 'UBSI', 'UBX', 'UCBI', 'UCTT', 'UE', 'UEC', 'UEIC', 'UFCS', 'UFI', 'UFPI', 'UFPT', 'UFS', 'UHT', 'UIHC', 'UIS', 'ULBI', 'ULH', 'UMBF', 'UMH', 'UNF', 'UNFI', 'UNIT', 'UNTY', 'UPLD', 'UPWK', 'URBN', 'URGN', 'USCR', 'USLM', 'USNA', 'USPH', 'USX', 'UTI', 'UTL', 'UTMD', 'UUUU', 'UVE', 'UVSP', 'UVV', 'VAC', 'VALU', 'VAPO', 'VBIV', 'VBTX', 'VC', 'VCEL', 'VCRA', 'VCYT', 'VEC', 'VECO', 'VERI', 'VERO', 'VERU', 'VERY', 'VG', 'VGR', 'VHC', 'VIAV', 'VICR', 'VIE', 'VIR', 'VIVO', 'VKTX', 'VLGEA', 'VLY', 'VMD', 'VNDA', 'VNRX', 'VOXX', 'VPG', 'VRA', 'VRAY', 'VRCA', 'VREX', 'VRNS', 'VRNT', 'VRRM', 'VRS', 'VRTS', 'VRTU', 'VRTV', 'VSEC', 'VSH', 'VSLR', 'VSTM', 'VSTO', 'VTOL', 'VTVT', 'VVI', 'VVNT', 'VXRT', 'VYGR', 'WABC', 'WAFD', 'WASH', 'WBT', 'WCC', 'WD', 'WDFC', 'WDR', 'WERN', 'WETF', 'WEYS', 'WGO', 'WHD', 'WHG', 'WIFI', 'WINA', 'WING', 'WIRE', 'WK', 'WKHS', 'WLDN', 'WLFC', 'WLL', 'WMC', 'WMGI', 'WMK', 'WMS', 'WNC', 'WNEB', 'WOR', 'WOW', 'WRE', 'WRLD', 'WRTC', 'WSBC', 'WSBF', 'WSC', 'WSFS', 'WSR', 'WTBA', 'WTI', 'WTRE', 'WTRH', 'WTS', 'WTTR', 'WVE', 'WW', 'WWW', 'X', 'XAIR', 'XBIT', 'XCUR', 'XENT', 'XERS', 'XFOR', 'XGN', 'XHR', 'XNCR', 'XOMA', 'XONE', 'XPEL', 'XPER', 'YELP', 'YETI', 'YEXT', 'YMAB', 'YORW', 'ZEUS', 'ZGNX', 'ZIOP', 'ZIXI', 'ZNTL', 'ZUMZ', 'ZUO', 'ZYXI',],
                      'Russell 3000': [],
                      'Equity database': [],
-                     'Volatility': ['^VIX','VIXY','VXX'],
+                     'Volatility': ['^VIX','VIXY','VXX','^VOLQ'],
                      'Treasury Yield': ['^TNX','SHV','TIP','FLOT','VUT','BND'],
                      'Others': ['JWN','KSS','HMC','BRK-A','PROG','DS','OBSV']}
 
@@ -755,3 +790,8 @@ class Ticker(object):
         if self.Eps_change_pct is not None:
             return sigmoid(self.Eps_change_pct/100)
         return None
+
+    @property
+    def RSI(self):
+        from ._indicator import momentum_indicator
+        return momentum_indicator().RSI(close_price = self.ticker_history['Close'])

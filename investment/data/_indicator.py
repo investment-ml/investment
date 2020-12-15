@@ -7,8 +7,49 @@
 import pandas as pd
 import numpy as np
 
+class momentum_indicator(object):
+    def __init__(self, periods=14):
+        super().__init__()
+        self.periods = periods
+
+    def RSI(self, close_price: np.ndarray):
+        """
+        https://www.investopedia.com/terms/r/rsi.asp
+        """
+        if type(close_price) == pd.Series:
+            close_price = close_price.to_numpy()
+        n_periods = close_price.shape[0]
+        if n_periods == 0:
+            raise ValueError(f"n_periods cannot be zero")
+        up_periods = np.zeros(shape=n_periods, dtype=float)
+        down_periods = np.zeros(shape=n_periods, dtype=float)
+        RSI = np.zeros(shape=n_periods, dtype=float)
+        up_periods[0] = 0
+        down_periods[0] = 0
+        for i in range(1, n_periods):
+            if close_price[i]>close_price[i-1]:
+                up_periods[i] = close_price[i] - close_price[i-1]
+                down_periods[i] = 0
+            elif close_price[i]<close_price[i-1]:
+                up_periods[i] = 0
+                down_periods[i] = close_price[i-1] - close_price[i]
+            else:
+                up_periods[i] = 0
+                down_periods[i] = 0
+        up   = moving_average(periods=self.periods).smoothed(up_periods)
+        down = moving_average(periods=self.periods).smoothed(down_periods)
+        for i in range(n_periods):
+            if down[i] == 0:
+                RSI[i] = 100
+            elif up[i] == 0:
+                RSI[i] = 0
+            else:
+                RSI[i] = 100 - 100/(1+up[i]/down[i])
+        return RSI
+
+
 # https://www.investopedia.com/terms/v/volume-analysis.asp
-class Volume_Index(object):
+class volume_indicator(object):
     def __init__(self, short_periods=9, long_periods=255):
         super().__init__()
         self.short_periods = short_periods
@@ -28,7 +69,7 @@ class Volume_Index(object):
         NVI = np.empty(shape=n_periods, dtype=float)
         PVI[0] = 1.0
         NVI[0] = 1.0
-        EMA_short_period_volume = Moving_Average(periods=self.short_periods).Exponential(volume)
+        EMA_short_period_volume = moving_average(periods=self.short_periods).exponential(volume)
         use_EMA_short_period_volume = True # the reason to use EMA_short_periods not daily volume is to get a more even-keeled reference volume
         if use_EMA_short_period_volume:
             reference_volume = EMA_short_period_volume
@@ -43,17 +84,37 @@ class Volume_Index(object):
                 NVI[today_idx] = NVI[today_idx-1] + ((close_price[today_idx] - close_price[today_idx-1]) / close_price[today_idx-1] * NVI[today_idx-1])
         PVI *= 100/np.max(PVI)
         NVI *= 100/np.max(NVI)
-        return Moving_Average(periods=self.short_periods).Exponential(PVI), Moving_Average(periods=self.short_periods).Exponential(NVI), Moving_Average(periods=self.long_periods).Exponential(PVI), Moving_Average(periods=self.long_periods).Exponential(NVI)
+        return moving_average(periods=self.short_periods).exponential(PVI), moving_average(periods=self.short_periods).exponential(NVI), moving_average(periods=self.long_periods).exponential(PVI), moving_average(periods=self.long_periods).exponential(NVI)
 
 
-class Moving_Average(object):
+class moving_average(object):
     def __init__(self, periods = 30, smoothing = 2):
         super().__init__()
         self.periods = periods
         self.smoothing = smoothing
         self.multiplier = self.smoothing / (1+self.periods)
 
-    def Exponential(self, data_series: np.ndarray):
+    def smoothed(self, data_series: np.ndarray):
+        """
+        https://en.wikipedia.org/wiki/Moving_average
+        """
+        if type(data_series) == pd.Series:
+            data_series = data_series.to_numpy()
+        n_periods = data_series.shape[0]
+        if n_periods<self.periods:
+            return [None] * n_periods
+        elif n_periods == self.periods:
+            return [None] * (self.periods-1) + [data_series.mean()]
+        else:
+            SMMA = np.empty(shape=n_periods, dtype=float)
+            for i in range(self.periods-1):
+                SMMA[i] = None
+            SMMA[self.periods-1] = data_series[:self.periods].mean()
+            for idx in range(self.periods, n_periods):
+                SMMA[idx] = ((self.periods-1)*SMMA[idx-1] + data_series[idx])/self.periods
+            return SMMA
+
+    def exponential(self, data_series: np.ndarray):
         if type(data_series) == pd.Series:
             data_series = data_series.to_numpy()
         n_periods = data_series.shape[0]
@@ -63,7 +124,7 @@ class Moving_Average(object):
             EMA[idx] = (data_series[idx] * self.multiplier) + (EMA[idx-1] * (1-self.multiplier))
         return EMA
 
-    def Simple(self, data_series: np.ndarray):
+    def simple(self, data_series: np.ndarray):
         if type(data_series) == pd.Series:
             data_series = data_series.to_numpy()
         n_periods = data_series.shape[0]

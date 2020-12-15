@@ -372,7 +372,7 @@ def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownl
                 pickle.dump(ticker_info_dict, open(ticker_info_dict_file, "wb"))
 
     history_df = pd.read_csv(ticker_history_df_file, index_col=False)
-    if ticker in ['^VIX','^TNX']: # these have no volume
+    if ticker in ['^VIX','^TNX','^VOLQ']: # these have no volume
         history_df = history_df[(history_df['Close']>0)]
         history_df['Volume'] = 0
     else:

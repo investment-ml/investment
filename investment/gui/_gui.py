@@ -41,7 +41,7 @@ import matplotlib.pyplot as plt
 
 from datetime import date, datetime, timedelta, timezone
 
-from ..data import Ticker, get_ticker_data_dict, get_formatted_ticker_data, Volume_Index, Moving_Average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict, global_data_root_dir, nasdaqlisted_df, otherlisted_df
+from ..data import Ticker, get_ticker_data_dict, get_formatted_ticker_data, momentum_indicator, volume_indicator, moving_average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict, global_data_root_dir, nasdaqlisted_df, otherlisted_df
 
 import numpy as np
 import pandas as pd
@@ -109,7 +109,7 @@ class ExtendedComboBox(QComboBox):
 
     # on selection of an item from the completer, select the corresponding item from combobox 
     def on_completer_activated(self, text):
-        print(f"debugging - completer activated: [{text}]")
+        #print(f"debugging - completer activated: [{text}]")
         if text:
             index = self.findText(text)
             self.setCurrentIndex(index)
@@ -398,12 +398,11 @@ class ticker_analyze_for_dividends_thread(QThread):
         self._signal.emit(df)
 
 
-class fed_funds_rate_dialog(QDialog):
+class dialog_with_textbrowser(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.app_window = parent
         self.resize(self.app_window.width*0.3, self.app_window.height*0.5)
-        self.setWindowTitle("Federal Funds Rate")
         self.textbox = QTextBrowser(parent=self)
         self.layout = QGridLayout()
         self.layout.addWidget(self.textbox, 0, 0)
@@ -411,11 +410,19 @@ class fed_funds_rate_dialog(QDialog):
         self.textbox.setReadOnly(True)
         self.textbox.setAcceptRichText(True)
         self.textbox.setOpenExternalLinks(True)
+
+class fed_funds_rate_dialog(dialog_with_textbrowser):
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(parent=parent, *args, **kwargs)
+        self.setWindowTitle("Federal Funds Rate")
         self.textbox.setHtml("<a href='https://www.investopedia.com/terms/f/federalfundsrate.asp#citation-7'>Explanation</a><br/><br/><a href='https://www.federalreserve.gov/monetarypolicy/openmarket.htm'>FOMC's target federal funds rate or range, change (basis points) and level</a>")
+
+class options_dialog(dialog_with_textbrowser):
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(parent=parent, *args, **kwargs)
+        self.setWindowTitle("Options")
+        self.textbox.setHtml("<a href='https://www.investopedia.com/terms/o/option.asp'>https://www.investopedia.com/terms/o/option.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp'>https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp</a>")
         
-
-
-
 class download_data_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
@@ -830,6 +837,7 @@ class app_menu(object):
         self.etf_db_dialog = ticker_db_dialog(parent=self.app_window, etf=True)
         self.equity_db_dialog = ticker_db_dialog(parent=self.app_window, etf=False)
         self.fed_funds_rate_dialog = fed_funds_rate_dialog(parent=self.app_window)
+        self.options_dialog = options_dialog(parent=self.app_window)
         # about
         aboutAct = QAction('&About', parent=self.app_window)
         aboutAct.setShortcut('Ctrl+A')
@@ -875,6 +883,10 @@ class app_menu(object):
         fed_funds_rate_Act = QAction('&Federal funds rate', parent=self.app_window)
         fed_funds_rate_Act.setShortcut('Ctrl+F')
         fed_funds_rate_Act.triggered.connect(self.fed_funds_rate_dialog.exec)
+        #
+        options_Act = QAction('&Options trading', parent=self.app_window)
+        options_Act.setShortcut('Ctrl+O')
+        options_Act.triggered.connect(self.options_dialog.exec)
         # 2. researchMenu
         self.app_window.ResearchMenu = self.app_window.menubar.addMenu('&Research')
         self.app_window.ResearchMenu.addAction(webAct)
@@ -882,6 +894,7 @@ class app_menu(object):
         self.app_window.ResearchMenu.addAction(etf_db_Act)
         self.app_window.ResearchMenu.addAction(equity_db_Act)
         self.app_window.ResearchMenu.addAction(fed_funds_rate_Act)
+        self.app_window.ResearchMenu.addAction(options_Act)
 
     def _default_preference_settings(self):
         self.force_redownload_yfinance_data = False
@@ -977,6 +990,7 @@ class UI_control(object):
         self._UI.ticker_lastdate_calendar_dialog.ticker_lastdate_calendar_dialog_ok_button.clicked.connect(self._ticker_lastdate_dialog_ok_button_clicked)
         self._UI.ticker_download_latest_data_from_yfinance_pushbutton.clicked.connect(self._ticker_download_latest_data_from_yfinance)
         self._UI.message_dialog.textinfo_ok_button.clicked.connect(self._message_dialog_textinfo_ok_button_clicked)
+        self._UI.index_selection.currentIndexChanged.connect(self._index_selection_change)
         self._UI.index_canvas_options.currentIndexChanged.connect(self._index_canvas_options_change)
         self.timeframe_text = None
         self.ticker_data_dict_in_effect = None
@@ -989,7 +1003,30 @@ class UI_control(object):
         self.timeframe_selection_index = list(self.timeframe_dict).index('1 year') + 1
         self.index_options_selection_index = 1
         self._group_selected = None
-        #self._UI.group_selection.setCurrentIndex(1) # 'All'
+        self._index_selected = None
+        self._UI.group_selection.setCurrentIndex(1) # 'All'
+        #self._group_selection_change(1) # 'All'
+
+    def _index_selection_change(self, index: int = None):
+        if index > 0:
+            # index canvas selection
+            self._UI.index_canvas_options.reset()
+            #
+            self._index_selected = self._UI.index_selection.itemText(index)
+            if self._index_selected == 'PVI and NVI':
+                #self._UI.index_textinfo.setText(f"PVI (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd is optimistic (or turning pessimistic).\n\nNVI (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money') may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>PVI</b> (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd is optimistic (or turning pessimistic).<br/><br/><b>NVI</b> (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money') may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).</body>")
+                self._UI.index_canvas_options.addItem("PVI")
+                self._UI.index_canvas_options.addItem("NVI")
+                self.index_options_selection_index = 1
+                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
+            elif self._index_selected == 'RSI':
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>RSI</b> (Relative Strength Index) reflects a possible oversold (RSI &lt; 30) or overbought (RSI &gt; 70) condition.<br/><br/><a href='https://www.investopedia.com/terms/r/rsi.asp'>https://www.investopedia.com/terms/r/rsi.asp</a></body>")
+                self._UI.index_canvas_options.addItem("RSI14")
+                self.index_options_selection_index = 1
+                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
+            self._calc_index()
+            self._draw_index_canvas()
 
     def _group_selection_change(self, index: int = None):
         if index > 0:
@@ -1049,7 +1086,7 @@ class UI_control(object):
 
     def _ticker_selection_change(self, index: int = None):
         if index > 0:
-            self.selected_ticker = self._UI.ticker_selection.itemText(index)
+            self.selected_ticker = self._UI.ticker_selection.itemText(index).upper()
             if self.selected_ticker not in ticker_group_dict['All']:
                 print(f"Info: unrecognized ticker was entered: [{self.selected_ticker}]")
 
@@ -1076,16 +1113,8 @@ class UI_control(object):
 
             self._UI.index_selection.reset()
             self._UI.index_selection.addItem("PVI and NVI")
-            self._UI.index_selection.setCurrentIndex(1)
-            #self._UI.index_textinfo.setText(f"PVI (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd is optimistic (or turning pessimistic).\n\nNVI (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money') may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).")
-            self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>PVI</b> (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd is optimistic (or turning pessimistic).<br/><br/><b>NVI</b> (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money') may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).</body>")
-
-            # index canvas selection
-            self._UI.index_canvas_options.reset()
-            self._UI.index_canvas_options.addItem("PVI")
-            self._UI.index_canvas_options.addItem("NVI")
-            self.index_options_selection_index = 1
-            self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
+            self._UI.index_selection.addItem("RSI")
+            self._UI.index_selection.setCurrentIndex(2)
 
             self._UI.ticker_lastdate_pushbutton.setEnabled(True)
             self._UI.ticker_download_latest_data_from_yfinance_pushbutton.setEnabled(True)
@@ -1095,8 +1124,10 @@ class UI_control(object):
     def _draw_ticker_canvas(self):
         canvas = self._UI.ticker_canvas
         canvas.axes.clear()
-        ticker_plotline, = canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'], self.ticker_data_dict_in_effect['history']['Close_EMA9'],   'tab:blue',                     linewidth=1)
-        canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                    self.ticker_data_dict_in_effect['history']['Close_EMA255'], 'tab:blue', linestyle="dashed", linewidth=1)
+        x = self.ticker_data_dict_in_effect['history']['Date']
+        ticker_plotline, = canvas.axes.plot(x,                    self.ticker_data_dict_in_effect['history']['Close'],        'tab:green',                    linewidth=1)
+        canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA9'],   'tab:blue',                     linewidth=1)
+        canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA255'], 'tab:blue', linestyle="dashed", linewidth=1)
         canvas.axes.set_xlabel('Date', fontsize=10.0)
         canvas.axes.set_ylabel('Close Price (EMA9, 255)', fontsize=10.0)
         #################################################
@@ -1109,21 +1140,49 @@ class UI_control(object):
         canvas = self._UI.index_canvas
         canvas.axes.clear()
         canvas.axes.set_xlabel('Date', fontsize=10.0)
-        canvas.axes.set_ylabel('PVI (green) and NVI (orange) (EMA9, 255)', fontsize=10.0)
-        if all(v is None for v in self.ticker_data_dict_in_effect['history']['PVI_EMA9']):
+        #################################################
+        if self._index_selected is None:
+            canvas.axes.set_ylabel('Index to be selected', fontsize=10.0)
             canvas.draw()
             return
-        index_plotline_PVI_EMA9, = canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'], self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='tab:green',                      linewidth=1)
-        canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                            self.ticker_data_dict_in_effect['history']['PVI_EMA255'], color='tab:green',  linestyle="dashed", linewidth=1)
-        index_plotline_NVI_EMA9, = canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'], self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='tab:orange',                     linewidth=1)
-        canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                            self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='tab:orange', linestyle="dashed", linewidth=1)
-        #################################################
-        if self.index_options_selection_index == 1:
-            index_plotline = index_plotline_PVI_EMA9
-        elif self.index_options_selection_index == 2:
-            index_plotline = index_plotline_NVI_EMA9
+
+        elif self._index_selected == 'PVI and NVI':
+            canvas.axes.set_ylabel('PVI (green) and NVI (orange) (EMA9, 255)', fontsize=10.0)
+            if all(v is None for v in self.ticker_data_dict_in_effect['history']['PVI_EMA9']):
+                canvas.draw()
+                return
+            x = self.ticker_data_dict_in_effect['history']['Date']
+            index_plotline_PVI_EMA9, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='tab:green',                      linewidth=1)
+            canvas.axes.plot(x,                            self.ticker_data_dict_in_effect['history']['PVI_EMA255'], color='tab:green',  linestyle="dashed", linewidth=1)
+            index_plotline_NVI_EMA9, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='tab:orange',                     linewidth=1)
+            canvas.axes.plot(x,                            self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='tab:orange', linestyle="dashed", linewidth=1)
+            #################################################
+            if self.index_options_selection_index == 1:
+                index_plotline = index_plotline_PVI_EMA9
+            elif self.index_options_selection_index == 2:
+                index_plotline = index_plotline_NVI_EMA9
+            else:
+                raise ValueError("index options selection index not within range")
+
+        elif self._index_selected == 'RSI':
+            x = self.ticker_data_dict_in_effect['history']['Date']
+            n_ticks = len(x)
+            y70 = np.empty(n_ticks); y70.fill(70)
+            y30 = np.empty(n_ticks); y30.fill(30)
+            canvas.axes.set_ylabel('RSI14', fontsize=10.0)
+            canvas.axes.set_ylim(0, 100)
+            y = self.ticker_data_dict_in_effect['history']['RSI14']
+            canvas.axes.plot(x, y30, '--', color='black', linewidth=0.5)
+            canvas.axes.plot(x, y70, '--', color='black', linewidth=0.5)
+            canvas.axes.fill_between(x, y30, y70, where=(y30<y70), color='tab:blue',  alpha=0.05, interpolate=True)
+            canvas.axes.fill_between(x, y,   y70, where=(y>y70),   color='tab:green', alpha=0.3,  interpolate=True)
+            canvas.axes.fill_between(x, y,   y30, where=(y<y30),   color='tab:red',   alpha=0.3,  interpolate=True)
+            index_plotline, = canvas.axes.plot(x, y, color='tab:blue', linewidth=1)
+
         else:
-            raise ValueError("index options selection index not within range")
+            raise ValueError(f"Unexpected self._index_selected = [{self._index_selected}]")
+
+        #################################################
         self.index_canvas_cursor = SnappingCursor(plotline=index_plotline, ax=canvas.axes, useblit=True, color='black', linestyle='dashed', linewidth=1, name='index_canvas_cursor', UI=self._UI)
         canvas.mpl_connect('motion_notify_event', self.index_canvas_cursor.onmove)
         #################################################
@@ -1133,7 +1192,6 @@ class UI_control(object):
         if index > 0:
             self.index_options_text = self._UI.index_canvas_options.itemText(index)
             self.index_options_selection_index = index
-
             self._draw_index_canvas() 
 
     def _ticker_timeframe_selection_change(self, index: int = None):
@@ -1161,8 +1219,9 @@ class UI_control(object):
     def _calc_index(self):
         history_df = self.ticker_data_dict_in_effect['history']
         # positive volume index and negative volume index
-        history_df['PVI_EMA9'], history_df['NVI_EMA9'], history_df['PVI_EMA255'], history_df['NVI_EMA255'] = Volume_Index(short_periods=9, long_periods=255).PVI_NVI(history_df['Close'], history_df['Volume'])
-        history_df['Close_EMA9'], history_df['Close_EMA255'] = Moving_Average(periods=9).Exponential(history_df['Close']), Moving_Average(periods=255).Exponential(history_df['Close'])
+        history_df['PVI_EMA9'], history_df['NVI_EMA9'], history_df['PVI_EMA255'], history_df['NVI_EMA255'] = volume_indicator(short_periods=9, long_periods=255).PVI_NVI(history_df['Close'], history_df['Volume'])
+        history_df['RSI14'] = momentum_indicator(periods=14).RSI(history_df['Close'])
+        history_df['Close_EMA9'], history_df['Close_EMA255'] = moving_average(periods=9).exponential(history_df['Close']), moving_average(periods=255).exponential(history_df['Close'])
         self.ticker_data_dict_in_effect['history'] = history_df
 
     def _ticker_lastdate_pushbutton_clicked(self):
