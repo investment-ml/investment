@@ -5,6 +5,6 @@
 #  License: LGPL-3.0
 
 from ._math import probability
-from ._stats import sigmoid
+from ._stats import sigmoid, two_sample_proportion_z_test, one_sample_proportion_z_test, chisq_test
 
-__all__ = ["probability","sigmoid",]
+__all__ = ["probability","sigmoid","two_sample_proportion_z_test","one_sample_proportion_z_test","chisq_test"]

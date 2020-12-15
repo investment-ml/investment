@@ -372,7 +372,11 @@ def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownl
                 pickle.dump(ticker_info_dict, open(ticker_info_dict_file, "wb"))
 
     history_df = pd.read_csv(ticker_history_df_file, index_col=False)
-    history_df = history_df[(history_df['Volume']>0) & (history_df['Close']>0)]
+    if ticker in ['^VIX','^TNX']: # these have no volume
+        history_df = history_df[(history_df['Close']>0)]
+        history_df['Volume'] = 0
+    else:
+        history_df = history_df[(history_df['Close']>0) & (history_df['Volume']>0)]
     history_df['Date'] = pd.to_datetime(history_df['Date'], format='%Y-%m-%d', utc=True) # "utc=True" is to be consistent with yfinance datetimes, which are received as UTC.
     info_dict = pickle.load( open( ticker_info_dict_file, "rb" ) )
     if 'info' not in info_dict.keys():
@@ -408,11 +412,11 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
 
     ticker_info_keys = ticker_info.keys()
 
-    # long name
+    # name
     if use_html:
-        ticker_long_name = f"<b>{this_ticker.longName}</b>"
+        ticker_name = f"<b>{this_ticker.name}</b><br/><hr>Symbol: [{this_ticker.symbol}]"
     else:
-        ticker_long_name = f"{this_ticker.longName}"
+        ticker_name = f"{this_ticker.name}\n\nSymbol: [{this_ticker.symbol}]"
 
     # stock exchange listing info
     stock_exchange_info = ""
@@ -621,17 +625,17 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                         logo = f"\n\nLogo: {ticker_info['logo_url']}"
 
     # major index
-    df = pd.DataFrame({'DOW 30': this_ticker.in_dow30, 'NASDAQ 100': this_ticker.in_nasdaq100, 'S&P 500': this_ticker.in_sandp500, 'Russell 1000': this_ticker.in_russell1000, 'Russell 2000': this_ticker.in_russell2000, 'NASDAQ Composite': this_ticker.in_nasdaq_composite}, index=[0])
+    df = pd.DataFrame({'DOW 30': this_ticker.in_dow30, 'NASDAQ 100': this_ticker.in_nasdaq100, 'S&P 500': this_ticker.in_sandp500, 'NASDAQ Composite': this_ticker.in_nasdaq_composite, 'Russell 1000': this_ticker.in_russell1000, 'Russell 2000': this_ticker.in_russell2000}, index=[0])
     if use_html:
         html_str = df.to_html(index=False).replace('<table border="1" class="dataframe">', '<table>')
-        major_indexes_info = f"<br/><hr>In major indexes:<br/>{html_str}".replace('True', '<b><span style=\"color:blue;\">True</span></b>')
+        major_indexes_info = f"<br/><hr>In major indexes:<br/>{html_str}".replace('True', '<b><span style=\"color:blue;\">True</span></b>').replace('False', '<span style=\"color:#D3D3D3;\">False</span>')
     else:
         major_indexes_info = f"\n\nIn major indexes:\n{df.to_string(index=False)}"
 
     if use_html:
-        formatted_str += f"{ticker_long_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}{major_indexes_info}</body>"  
+        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}{major_indexes_info}</body>"  
     else:
-        formatted_str += f"{ticker_long_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}{major_indexes_info}"  
+        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}{major_indexes_info}"  
     
     return formatted_str
 

@@ -293,11 +293,12 @@ class index_canvas_options(QComboBox):
         self.addItem("-- Select an index canvas option --")
 
 
-class textinfo(QTextEdit):
+class textinfo(QTextBrowser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setReadOnly(True)
         self.setAcceptRichText(True)
+        self.setOpenExternalLinks(True)
         #self.setCurrentFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
 
 
@@ -397,6 +398,24 @@ class ticker_analyze_for_dividends_thread(QThread):
         self._signal.emit(df)
 
 
+class fed_funds_rate_dialog(QDialog):
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(parent=parent, *args, **kwargs)
+        self.app_window = parent
+        self.resize(self.app_window.width*0.3, self.app_window.height*0.5)
+        self.setWindowTitle("Federal Funds Rate")
+        self.textbox = QTextBrowser(parent=self)
+        self.layout = QGridLayout()
+        self.layout.addWidget(self.textbox, 0, 0)
+        self.setLayout(self.layout)
+        self.textbox.setReadOnly(True)
+        self.textbox.setAcceptRichText(True)
+        self.textbox.setOpenExternalLinks(True)
+        self.textbox.setHtml("<a href='https://www.investopedia.com/terms/f/federalfundsrate.asp#citation-7'>Explanation</a><br/><br/><a href='https://www.federalreserve.gov/monetarypolicy/openmarket.htm'>FOMC's target federal funds rate or range, change (basis points) and level</a>")
+        
+
+
+
 class download_data_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
@@ -408,10 +427,10 @@ class download_data_dialog(QDialog):
         self.dow30_checkbox = QCheckBox('DOW 30', parent=self)
         self.nasdaq100_checkbox = QCheckBox('NASDAQ 100', parent=self)
         self.sandp500_checkbox = QCheckBox('S&&P 500', parent=self)
+        self.comp_checkbox = QCheckBox('NASDAQ Composite', parent=self)
         self.russell1k_checkbox = QCheckBox('Russell 1000', parent=self)
         self.russell2k_checkbox = QCheckBox('Russell 2000', parent=self)
         self.russell3k_checkbox = QCheckBox('Russell 3000', parent=self)
-        self.comp_checkbox = QCheckBox('NASDAQ Composite', parent=self)
         self.etf_db_checkbox = QCheckBox('ETF database', parent=self)
         self.equity_db_checkbox = QCheckBox('Equity database', parent=self)
         #self.etf_db_checkbox.setEnabled(False)
@@ -424,10 +443,10 @@ class download_data_dialog(QDialog):
         self.dow30_checkbox.stateChanged.connect(self._update_download_selection)
         self.nasdaq100_checkbox.stateChanged.connect(self._update_download_selection)
         self.sandp500_checkbox.stateChanged.connect(self._update_download_selection)
+        self.comp_checkbox.stateChanged.connect(self._update_download_selection)
         self.russell1k_checkbox.stateChanged.connect(self._update_download_selection)
         self.russell2k_checkbox.stateChanged.connect(self._update_download_selection)
         self.russell3k_checkbox.stateChanged.connect(self._update_download_selection)
-        self.comp_checkbox.stateChanged.connect(self._update_download_selection)
         self.etf_db_checkbox.stateChanged.connect(self._update_download_selection)
         self.equity_db_checkbox.stateChanged.connect(self._update_download_selection)
         #
@@ -444,10 +463,10 @@ class download_data_dialog(QDialog):
         self.layout.addWidget(self.dow30_checkbox, 2, 0)
         self.layout.addWidget(self.nasdaq100_checkbox, 3, 0)
         self.layout.addWidget(self.sandp500_checkbox, 4, 0)
-        self.layout.addWidget(self.russell1k_checkbox, 5, 0)
-        self.layout.addWidget(self.russell2k_checkbox, 6, 0)
-        self.layout.addWidget(self.russell3k_checkbox, 7, 0)
-        self.layout.addWidget(self.comp_checkbox, 8, 0)
+        self.layout.addWidget(self.comp_checkbox, 5, 0)
+        self.layout.addWidget(self.russell1k_checkbox, 6, 0)
+        self.layout.addWidget(self.russell2k_checkbox, 7, 0)
+        self.layout.addWidget(self.russell3k_checkbox, 8, 0)
         self.layout.addWidget(self.etf_db_checkbox, 9, 0)
         self.layout.addWidget(self.equity_db_checkbox, 10, 0)
         self.layout.addWidget(self.options_label, 11, 0)
@@ -587,10 +606,10 @@ class high_dividends_dialog(QDialog):
         self.layout.addWidget(self.dow30_checkbox, 1, 0)
         self.layout.addWidget(self.nasdaq100_checkbox, 2, 0)
         self.layout.addWidget(self.sandp500_checkbox, 3, 0)
-        self.layout.addWidget(self.russell1k_checkbox, 4, 0)
-        self.layout.addWidget(self.russell2k_checkbox, 5, 0)
-        self.layout.addWidget(self.russell3k_checkbox, 6, 0)
-        self.layout.addWidget(self.comp_checkbox, 7, 0)
+        self.layout.addWidget(self.russell1k_checkbox, 5, 0)
+        self.layout.addWidget(self.russell2k_checkbox, 6, 0)
+        self.layout.addWidget(self.russell3k_checkbox, 7, 0)
+        self.layout.addWidget(self.comp_checkbox, 4, 0)
         self.layout.addWidget(self.etf_db_checkbox, 8, 0)
         self.layout.addWidget(self.equity_db_checkbox, 9, 0)
         self.layout.addWidget(self.exec_pushbutton, 10, 0)
@@ -810,6 +829,7 @@ class app_menu(object):
         self.high_dividends_dialog = high_dividends_dialog(parent=self.app_window)
         self.etf_db_dialog = ticker_db_dialog(parent=self.app_window, etf=True)
         self.equity_db_dialog = ticker_db_dialog(parent=self.app_window, etf=False)
+        self.fed_funds_rate_dialog = fed_funds_rate_dialog(parent=self.app_window)
         # about
         aboutAct = QAction('&About', parent=self.app_window)
         aboutAct.setShortcut('Ctrl+A')
@@ -851,12 +871,17 @@ class app_menu(object):
         #
         equity_db_Act = QAction('&Equity database', parent=self.app_window)
         equity_db_Act.triggered.connect(self.equity_db_dialog.exec)
+        #
+        fed_funds_rate_Act = QAction('&Federal funds rate', parent=self.app_window)
+        fed_funds_rate_Act.setShortcut('Ctrl+F')
+        fed_funds_rate_Act.triggered.connect(self.fed_funds_rate_dialog.exec)
         # 2. researchMenu
         self.app_window.ResearchMenu = self.app_window.menubar.addMenu('&Research')
         self.app_window.ResearchMenu.addAction(webAct)
         self.app_window.ResearchMenu.addAction(high_dividendsAct)
         self.app_window.ResearchMenu.addAction(etf_db_Act)
         self.app_window.ResearchMenu.addAction(equity_db_Act)
+        self.app_window.ResearchMenu.addAction(fed_funds_rate_Act)
 
     def _default_preference_settings(self):
         self.force_redownload_yfinance_data = False
@@ -959,12 +984,12 @@ class UI_control(object):
         self.selected_ticker = None
         self.ticker_canvas_cursor = None
         self.index_canvas_cursor = None
-        self.timeframe_dict = {"1 week": 1/52, "2 weeks": 1/26, "1 month": 1/12, "2 months": 1/6, "3 months": 1/4, "6 months": 1/2, "1 year": 1.0, "2 years": 2.0, "5 years": 5.0, "10 years": 10.0, "All time": float('inf')}
+        self.timeframe_dict = {"1 week": 1/52, "2 weeks": 1/26, "1 month": 1/12, "2 months": 1/6, "3 months": 1/4, "6 months": 1/2, "1 year": 1.0, "2 years": 2.0, "5 years": 5.0, "10 years": 10.0, "20 years": 20.0, "All time": float('inf')}
         self.time_last_date = pd.to_datetime(date.today(), utc=True)
         self.timeframe_selection_index = list(self.timeframe_dict).index('1 year') + 1
         self.index_options_selection_index = 1
         self._group_selected = None
-        self._UI.group_selection.setCurrentIndex(1) # 'All'
+        #self._UI.group_selection.setCurrentIndex(1) # 'All'
 
     def _group_selection_change(self, index: int = None):
         if index > 0:
@@ -1083,12 +1108,15 @@ class UI_control(object):
     def _draw_index_canvas(self):
         canvas = self._UI.index_canvas
         canvas.axes.clear()
+        canvas.axes.set_xlabel('Date', fontsize=10.0)
+        canvas.axes.set_ylabel('PVI (green) and NVI (orange) (EMA9, 255)', fontsize=10.0)
+        if all(v is None for v in self.ticker_data_dict_in_effect['history']['PVI_EMA9']):
+            canvas.draw()
+            return
         index_plotline_PVI_EMA9, = canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'], self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='tab:green',                      linewidth=1)
         canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                            self.ticker_data_dict_in_effect['history']['PVI_EMA255'], color='tab:green',  linestyle="dashed", linewidth=1)
         index_plotline_NVI_EMA9, = canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'], self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='tab:orange',                     linewidth=1)
         canvas.axes.plot(self.ticker_data_dict_in_effect['history']['Date'],                            self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='tab:orange', linestyle="dashed", linewidth=1)
-        canvas.axes.set_xlabel('Date', fontsize=10.0)
-        canvas.axes.set_ylabel('PVI (green) and NVI (orange) (EMA9, 255)', fontsize=10.0)
         #################################################
         if self.index_options_selection_index == 1:
             index_plotline = index_plotline_PVI_EMA9
