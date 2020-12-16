@@ -4,6 +4,6 @@
 #
 #  License: LGPL-3.0
 
-from ._gui import main, test
+from ._gui import main, test, app_menu, UI_control
 
-__all__ = ["main","test",]
+__all__ = ["main","test","app_menu","UI_control"]

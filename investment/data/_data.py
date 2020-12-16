@@ -272,7 +272,7 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
     return info_dict
 
 
-def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownload: bool = False, smart_redownload: bool = False, download_today_data: bool = False, data_root_dir: str = None, auto_retry: bool = False):
+def get_ticker_data_dict(ticker: str = None, last_date = None, verbose: bool = True, force_redownload: bool = False, smart_redownload: bool = False, download_today_data: bool = False, data_root_dir: str = None, auto_retry: bool = False):
 
     from ._ticker import global_data_root_dir
 
@@ -378,6 +378,8 @@ def get_ticker_data_dict(ticker: str = None, verbose: bool = True, force_redownl
     else:
         history_df = history_df[(history_df['Close']>0) & (history_df['Volume']>0)]
     history_df['Date'] = pd.to_datetime(history_df['Date'], format='%Y-%m-%d', utc=True) # "utc=True" is to be consistent with yfinance datetimes, which are received as UTC.
+    if last_date is not None:
+        history_df = history_df[history_df['Date']<=last_date]
     info_dict = pickle.load( open( ticker_info_dict_file, "rb" ) )
     if 'info' not in info_dict.keys():
         raise KeyError(f"for ticker = [{ticker}], 'info' is not in the info_dict keys")

@@ -457,8 +457,7 @@ class download_data_dialog(QDialog):
         self.etf_db_checkbox.stateChanged.connect(self._update_download_selection)
         self.equity_db_checkbox.stateChanged.connect(self._update_download_selection)
         #
-        self.options_label = QLabel(parent=self)
-        self.options_label.setText('Option:')
+        self.options_label = QLabel('Option:', parent=self)
         self.checkbox_smart_redownload = QCheckBox('Do not re-download if exsting data are already up-to-date (as of -7d ~ now).', parent=self)
         self.checkbox_smart_redownload.stateChanged.connect(self._checkbox_smart_redownload_state_changed)
         self.download_progressbar = QProgressBar(parent=self, objectName="ProgressBar")
@@ -670,8 +669,7 @@ class ticker_db_dialog(QDialog):
         super().__init__(parent=parent, *args, **kwargs)
         self.app_window = parent
         self.resize(self.app_window.width*0.4, self.app_window.height*0.6)
-        self.search_label = QLabel(parent=self)
-        self.search_label.setText('Search:')
+        self.search_label = QLabel('Search:', parent=self)
         self.search_lineedit = QLineEdit(parent=self)
         self.search_lineedit.returnPressed.connect(self._search_lineedit_return_pressed)
         self.search_backward_checkbox = QCheckBox('Backward', parent=self)
@@ -884,9 +882,9 @@ class app_menu(object):
         fed_funds_rate_Act.setShortcut('Ctrl+F')
         fed_funds_rate_Act.triggered.connect(self.fed_funds_rate_dialog.exec)
         #
-        options_Act = QAction('&Options trading', parent=self.app_window)
-        options_Act.setShortcut('Ctrl+O')
-        options_Act.triggered.connect(self.options_dialog.exec)
+        options_trading_Act = QAction('&Options trading', parent=self.app_window)
+        options_trading_Act.setShortcut('Ctrl+O')
+        options_trading_Act.triggered.connect(self.options_dialog.exec)
         # 2. researchMenu
         self.app_window.ResearchMenu = self.app_window.menubar.addMenu('&Research')
         self.app_window.ResearchMenu.addAction(webAct)
@@ -894,16 +892,25 @@ class app_menu(object):
         self.app_window.ResearchMenu.addAction(etf_db_Act)
         self.app_window.ResearchMenu.addAction(equity_db_Act)
         self.app_window.ResearchMenu.addAction(fed_funds_rate_Act)
-        self.app_window.ResearchMenu.addAction(options_Act)
+        self.app_window.ResearchMenu.addAction(options_trading_Act)
+        # 3. additional menu
+        if self.add_additional_menu():
+            self.build_additional_menu()
 
     def _default_preference_settings(self):
         self.force_redownload_yfinance_data = False
         self.download_today_data = True
         self.data_root_dir = global_data_root_dir
 
+    def add_additional_menu(self):
+        return False
+
+    def build_additional_menu(self):
+        pass
+
 
 class app_window(QMainWindow):
-    def __init__(self, app=None, *args, **kwargs):
+    def __init__(self, app=None, appmenu=None, UIcontrol=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app = app
 
@@ -912,20 +919,24 @@ class app_window(QMainWindow):
         dpi = 72/screen.devicePixelRatio()
         self.width = screen.availableGeometry().width() * 0.96
         self.height = screen.availableGeometry().height() * 0.75
-
-        # menuBar
-        self.app_menu = app_menu(app_window=self)
+            
         # central widget
-        self.UI = UI(parent=self, app_window=self, dpi=dpi)
+        self.UI = UI(parent=self, app_window=self, dpi=dpi, UIcontrol=UIcontrol)
         self.setCentralWidget(self.UI)
         # others
         self.setWindowTitle(f"{App_name}")
         self.resize(self.width, self.height)
         #self.setGeometry(300, 300, 300, 200)
 
+        # menuBar
+        if appmenu is None:
+            self.app_menu = app_menu(app_window=self)
+        else:
+            self.app_menu = appmenu(app_window=self)
+
 
 class UI(QWidget):
-    def __init__(self, app_window=None, dpi=72, *args, **kwargs):
+    def __init__(self, app_window=None, dpi=72, UIcontrol=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.app_window = app_window
@@ -944,11 +955,11 @@ class UI(QWidget):
         self.ticker_timeframe_selection = ticker_timeframe_selection(parent=self)
         self.ticker_lastdate_pushbutton = ticker_lastdate_pushbutton(parent=self)
         self.ticker_download_latest_data_from_yfinance_pushbutton = ticker_download_latest_data_from_yfinance_pushbutton(parent=self)
-        self.ticker_canvas_coord_label = QLabel(parent=self, text='')
+        self.ticker_canvas_coord_label = QLabel(text='', parent=self)
         self.ticker_lastdate_calendar_dialog = ticker_lastdate_calendar_dialog(parent=self)
         self.ticker_canvas = canvas(parent=self, dpi=dpi)
         self.index_canvas_options = index_canvas_options(parent=self)
-        self.index_canvas_coord_label = QLabel(parent=self, text='')
+        self.index_canvas_coord_label = QLabel(text='', parent=self)
         self.index_canvas = canvas(parent=self, dpi=dpi)
 
         self.message_dialog = message_dialog(parent=self)
@@ -972,7 +983,10 @@ class UI(QWidget):
         self.setLayout(self.layout)
 
         # control
-        self.control = UI_control(UI = self)
+        if UIcontrol is None:
+            self.control = UI_control(UI = self)
+        else:
+            self.control = UIcontrol(UI = self)
 
 
 class UI_control(object):
@@ -1243,7 +1257,7 @@ class UI_control(object):
         self._ticker_lastdate_dialog_any_button_clicked()
 
     def _ticker_lastdate_dialog_ok_button_clicked(self):
-        self.time_last_date = pd.to_datetime(self._UI.ticker_lastdate_calendar_dialog.ticker_lastdate_calendar.selectedDate().toPyDate(), utc=True)
+        self.time_last_date = pd.to_datetime(self._UI.ticker_lastdate_calendar_dialog.ticker_lastdate_calendar.selectedDate().toPython(), utc=True)
         self._ticker_lastdate_dialog_any_button_clicked()
 
     def _ticker_lastdate_dialog_any_button_clicked(self):
@@ -1256,10 +1270,10 @@ class UI_control(object):
         self._UI.message_dialog.hide()
 
 
-def main():
+def main(appmenu=None, UIcontrol=None):
     app = QApplication(sys.argv)
     app.setStyleSheet(StyleSheet)
-    window = app_window(app=app)
+    window = app_window(app=app, appmenu=appmenu, UIcontrol=UIcontrol)
     window.show()
     app.exec_()
 
