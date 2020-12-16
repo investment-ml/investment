@@ -9,6 +9,7 @@ from ..math_and_stats import sigmoid
 import pandas as pd
 
 from datetime import datetime, timedelta, timezone
+from calendar import day_name
 
 import socket
 
@@ -655,6 +656,10 @@ class Ticker(object):
     def last_date(self):
         return self.ticker_history['Date'].iloc[-1]
 
+    @property
+    def last_date_dayname(self):
+        return day_name[self.last_date.weekday()]
+        
     @property
     def last_close_price(self):
         return self.ticker_history['Close'].iloc[-1]
