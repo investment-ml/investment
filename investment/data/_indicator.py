@@ -67,10 +67,10 @@ class volume_indicator(object):
             return [None]*n_periods, [None]*n_periods, [None]*n_periods, [None]*n_periods
         PVI = np.empty(shape=n_periods, dtype=float)
         NVI = np.empty(shape=n_periods, dtype=float)
-        PVI[0] = 1.0
-        NVI[0] = 1.0
+        PVI[0] = 1000
+        NVI[0] = 1000
         EMA_short_period_volume = moving_average(periods=self.short_periods).exponential(volume)
-        use_EMA_short_period_volume = True # the reason to use EMA_short_periods not daily volume is to get a more even-keeled reference volume
+        use_EMA_short_period_volume = False # the reason to use EMA_short_periods not daily volume is to get a more even-keeled reference volume
         if use_EMA_short_period_volume:
             reference_volume = EMA_short_period_volume
         else:
@@ -84,7 +84,7 @@ class volume_indicator(object):
                 NVI[today_idx] = NVI[today_idx-1] + ((close_price[today_idx] - close_price[today_idx-1]) / close_price[today_idx-1] * NVI[today_idx-1])
         PVI *= 100/np.max(PVI)
         NVI *= 100/np.max(NVI)
-        return moving_average(periods=self.short_periods).exponential(PVI), moving_average(periods=self.short_periods).exponential(NVI), moving_average(periods=self.long_periods).exponential(PVI), moving_average(periods=self.long_periods).exponential(NVI)
+        return PVI, NVI, moving_average(periods=self.short_periods).exponential(PVI), moving_average(periods=self.short_periods).exponential(NVI), moving_average(periods=self.long_periods).exponential(PVI), moving_average(periods=self.long_periods).exponential(NVI)
 
 
 class moving_average(object):

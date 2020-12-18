@@ -1166,15 +1166,17 @@ class UI_control(object):
                 canvas.draw()
                 return
             x = self.ticker_data_dict_in_effect['history']['Date']
-            index_plotline_PVI_EMA9, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='tab:green',                      linewidth=1)
-            canvas.axes.plot(x,                            self.ticker_data_dict_in_effect['history']['PVI_EMA255'], color='tab:green',  linestyle="dashed", linewidth=1)
-            index_plotline_NVI_EMA9, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='tab:orange',                     linewidth=1)
-            canvas.axes.plot(x,                            self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='tab:orange', linestyle="dashed", linewidth=1)
+            index_plotline_PVI, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI'], color='tab:green',    linewidth=1.0)
+            index_plotline_NVI, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI'], color='tab:orange',   linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='#baf1b2',                     linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA255'], color='#baf1b2', linestyle="dashed", linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='#efb663',                     linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='#efb663', linestyle="dashed", linewidth=1.0)
             #################################################
             if self.index_options_selection_index == 1:
-                index_plotline = index_plotline_PVI_EMA9
+                index_plotline = index_plotline_PVI
             elif self.index_options_selection_index == 2:
-                index_plotline = index_plotline_NVI_EMA9
+                index_plotline = index_plotline_NVI
             else:
                 raise ValueError("index options selection index not within range")
 
@@ -1234,7 +1236,7 @@ class UI_control(object):
         history_df = self.ticker_data_dict_in_effect['history']
         history_all_df = self.ticker_data_dict_original['history']
         # positive volume index and negative volume index
-        history_df['PVI_EMA9'], history_df['NVI_EMA9'], history_df['PVI_EMA255'], history_df['NVI_EMA255'] = volume_indicator(short_periods=9, long_periods=255).PVI_NVI(history_df['Close'], history_df['Volume'])
+        history_df['PVI'], history_df['NVI'], history_df['PVI_EMA9'], history_df['NVI_EMA9'], history_df['PVI_EMA255'], history_df['NVI_EMA255'] = volume_indicator(short_periods=9, long_periods=255).PVI_NVI(history_df['Close'], history_df['Volume'])
         history_all_df['RSI14'] = momentum_indicator(periods=14).RSI(history_all_df['Close'])
         history_df['RSI14'] = history_all_df[history_all_df['Date'].isin(history_df['Date'])]['RSI14']
         history_df['Close_EMA9'], history_df['Close_EMA255'] = moving_average(periods=9).exponential(history_df['Close']), moving_average(periods=255).exponential(history_df['Close'])
