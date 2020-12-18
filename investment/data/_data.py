@@ -272,7 +272,19 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
     return info_dict
 
 
-def get_ticker_data_dict(ticker: str = None, last_date = None, verbose: bool = True, force_redownload: bool = False, smart_redownload: bool = False, download_today_data: bool = False, data_root_dir: str = None, auto_retry: bool = False):
+def get_ticker_data_dict(ticker: str = None, 
+                         last_date = None,
+                         verbose: bool = True, 
+                         force_redownload: bool = False, 
+                         smart_redownload: bool = False, 
+                         download_today_data: bool = False, 
+                         data_root_dir: str = None, 
+                         auto_retry: bool = False,
+                         keep_up_to_date: bool = False):
+
+    """
+    if keep_up_to_date is True, try to redownload if the last Date is not today
+    """
 
     from ._ticker import global_data_root_dir
 
@@ -319,7 +331,7 @@ def get_ticker_data_dict(ticker: str = None, last_date = None, verbose: bool = T
         ticker_history_df.to_csv(ticker_history_df_file, index=False)
         pickle.dump(ticker_info_dict, open(ticker_info_dict_file, "wb"))
 
-    elif force_redownload:
+    elif force_redownload or keep_up_to_date:
 
         curr_df = pd.read_csv(ticker_history_df_file, index_col=False)
         curr_info_dict = pickle.load( open( ticker_info_dict_file, "rb" ) )
@@ -330,6 +342,12 @@ def get_ticker_data_dict(ticker: str = None, last_date = None, verbose: bool = T
             if 'data_download_time' in curr_info_dict.keys():
                 curr_last_date = curr_info_dict['data_download_time']
                 if (datetime.now(tz=timezone.utc) - curr_last_date) <= timedelta(days=7):
+                    do_force_redownload = False
+
+        if keep_up_to_date:
+            if 'data_download_time' in curr_info_dict.keys():
+                curr_last_date = curr_info_dict['data_download_time']    
+                if (datetime.now(tz=timezone.utc).date() - curr_last_date.date()) == timedelta(days=0):
                     do_force_redownload = False
 
         if do_force_redownload:

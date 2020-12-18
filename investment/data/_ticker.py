@@ -426,7 +426,10 @@ ticker_preprocessing()
 ###########################################################################################
 
 class Ticker(object):
-    def __init__(self, ticker=None, ticker_data_dict=None, last_date=None):
+    def __init__(self, ticker=None, ticker_data_dict=None, last_date=None, keep_up_to_date=False):
+        """
+        if keep_up_to_date = True ==> try to download the lastest data so it's as new as today
+        """
         if ticker is None:
             if ticker_data_dict is None:
                 raise ValueError('error')
@@ -437,7 +440,7 @@ class Ticker(object):
             if ticker_data_dict is None:
                 from ._data import get_ticker_data_dict
                 self.ticker = ticker
-                self.ticker_data_dict = get_ticker_data_dict(ticker=self.ticker, last_date=last_date)
+                self.ticker_data_dict = get_ticker_data_dict(ticker=self.ticker, last_date=last_date, keep_up_to_date=keep_up_to_date, download_today_data=True)
             else:
                 self.ticker_data_dict = ticker_data_dict
                 self.ticker = ticker_data_dict['ticker']
