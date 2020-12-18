@@ -910,7 +910,7 @@ class app_menu(object):
 
 
 class app_window(QMainWindow):
-    def __init__(self, app=None, appmenu=None, UIcontrol=None, *args, **kwargs):
+    def __init__(self, app=None, appmenu=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app = app
 
@@ -921,7 +921,7 @@ class app_window(QMainWindow):
         self.height = screen.availableGeometry().height() * 0.75
             
         # central widget
-        self.UI = UI(parent=self, app_window=self, dpi=dpi, UIcontrol=UIcontrol)
+        self.UI = UI(parent=self, app_window=self, dpi=dpi)
         self.setCentralWidget(self.UI)
         # others
         self.setWindowTitle(f"{App_name}")
@@ -936,7 +936,7 @@ class app_window(QMainWindow):
 
 
 class UI(QWidget):
-    def __init__(self, app_window=None, dpi=72, UIcontrol=None, *args, **kwargs):
+    def __init__(self, app_window=None, dpi=72, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.app_window = app_window
@@ -983,10 +983,7 @@ class UI(QWidget):
         self.setLayout(self.layout)
 
         # control
-        if UIcontrol is None:
-            self.control = UI_control(UI = self)
-        else:
-            self.control = UIcontrol(UI = self)
+        self.control = UI_control(UI = self)
 
 
 class UI_control(object):
@@ -1104,7 +1101,10 @@ class UI_control(object):
             if self.selected_ticker not in ticker_group_dict['All']:
                 print(f"Info: unrecognized ticker was entered: [{self.selected_ticker}]")
 
-            self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, force_redownload = self._UI.app_window.app_menu.preferences_dialog.force_redownload_yfinance_data, download_today_data = self._UI.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir)
+            self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, 
+                                                                  force_redownload = self._UI.app_window.app_menu.preferences_dialog.force_redownload_yfinance_data, 
+                                                                  download_today_data = self._UI.app_window.app_menu.preferences_dialog.download_today_data, 
+                                                                  data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir)
             self.ticker_data_dict_in_effect = copy.deepcopy(self.ticker_data_dict_original)
             self._calc_index()
 
@@ -1118,7 +1118,7 @@ class UI_control(object):
             self._UI.ticker_lastdate_calendar_dialog.ticker_lastdate_calendar.setMaximumDate(self.time_last_date)
             self._UI.ticker_lastdate_calendar_dialog.ticker_lastdate_calendar.setSelectedDate(self.time_last_date)
             self._UI.ticker_lastdate_pushbutton.setText(f"Last Date: {str(self.time_last_date.date())}")
-            self._UI.ticker_timeframe_selection.setCurrentIndex(self.timeframe_selection_index)
+            self._UI.ticker_timeframe_selection.setCurrentIndex(self.timeframe_selection_index) # this changes self.ticker_data_dict_in_effect
 
             self._UI.ticker_canvas_coord_label.clear()
             self._UI.index_canvas_coord_label.clear()
@@ -1232,9 +1232,11 @@ class UI_control(object):
 
     def _calc_index(self):
         history_df = self.ticker_data_dict_in_effect['history']
+        history_all_df = self.ticker_data_dict_original['history']
         # positive volume index and negative volume index
         history_df['PVI_EMA9'], history_df['NVI_EMA9'], history_df['PVI_EMA255'], history_df['NVI_EMA255'] = volume_indicator(short_periods=9, long_periods=255).PVI_NVI(history_df['Close'], history_df['Volume'])
-        history_df['RSI14'] = momentum_indicator(periods=14).RSI(history_df['Close'])
+        history_all_df['RSI14'] = momentum_indicator(periods=14).RSI(history_all_df['Close'])
+        history_df['RSI14'] = history_all_df[history_all_df['Date'].isin(history_df['Date'])]['RSI14']
         history_df['Close_EMA9'], history_df['Close_EMA255'] = moving_average(periods=9).exponential(history_df['Close']), moving_average(periods=255).exponential(history_df['Close'])
         self.ticker_data_dict_in_effect['history'] = history_df
 
@@ -1270,10 +1272,10 @@ class UI_control(object):
         self._UI.message_dialog.hide()
 
 
-def main(appmenu=None, UIcontrol=None):
+def main(appmenu=None):
     app = QApplication(sys.argv)
     app.setStyleSheet(StyleSheet)
-    window = app_window(app=app, appmenu=appmenu, UIcontrol=UIcontrol)
+    window = app_window(app=app, appmenu=appmenu)
     window.show()
     app.exec_()
 

@@ -23,15 +23,16 @@ setuptools.setup(
     license=investment.__license__,
     long_description=long_description,
     long_description_content_type="text/x-rst",
-    #url="https://github.com/investment-ml/investment",
+    url="https://github.com/investment-ml/investment",
     packages=setuptools.find_packages(),
     # https://pypi.org/classifiers/
     classifiers=[
+        "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
-        "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
+        "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
         "Operating System :: OS Independent",
     ],
     install_requires=required,
