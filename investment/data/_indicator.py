@@ -82,8 +82,8 @@ class volume_indicator(object):
             else:
                 PVI[today_idx] = PVI[today_idx-1]
                 NVI[today_idx] = NVI[today_idx-1] + ((close_price[today_idx] - close_price[today_idx-1]) / close_price[today_idx-1] * NVI[today_idx-1])
-        PVI *= 100/np.max(PVI)
-        NVI *= 100/np.max(NVI)
+        PVI *= 1000/np.max(PVI)
+        NVI *= 1000/np.max(NVI)
         return PVI, NVI, moving_average(periods=self.short_periods).exponential(PVI), moving_average(periods=self.short_periods).exponential(NVI), moving_average(periods=self.long_periods).exponential(PVI), moving_average(periods=self.long_periods).exponential(NVI)
 
 

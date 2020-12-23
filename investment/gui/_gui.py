@@ -117,19 +117,19 @@ class ExtendedComboBox(QComboBox):
 
     # not sure if this function is ever called
     # on model change, update the models of the filter and completer as well 
-    def setModel(self, model):
-        print(f"debugging - model change. model = {model}")
-        super().setModel(model)
-        self.pFilterModel.setSourceModel(model)
-        self.completer.setModel(self.pFilterModel)
+    #def setModel(self, model):
+    #    print(f"debugging - model change. model = {model}")
+    #    super().setModel(model)
+    #    self.pFilterModel.setSourceModel(model)
+    #    self.completer.setModel(self.pFilterModel)
 
     # not sure if this function is ever called
     # on model column change, update the model column of the filter and completer as well
-    def setModelColumn(self, column):
-        print(f"debugging - model col change. model col = {column}")
-        self.completer.setCompletionColumn(column)
-        self.pFilterModel.setFilterKeyColumn(column)
-        super().setModelColumn(column)  
+    #def setModelColumn(self, column):
+    #    print(f"debugging - model col change. model col = {column}")
+    #    self.completer.setCompletionColumn(column)
+    #    self.pFilterModel.setFilterKeyColumn(column)
+    #    super().setModelColumn(column)  
 
 
 
@@ -167,13 +167,35 @@ class SnappingCursor(Cursor):
 
 # reference: https://matplotlib.org/faq/usage_faq.html
 class canvas(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width=6.0, height=3.0, dpi=72, tight_layout=True, *args, **kwargs):
+    def __init__(self, parent=None, width=6.0, height=3.0, dpi=72, UI=None, tight_layout=True, *args, **kwargs):
         self.figure = plt.figure(figsize=(width, height), dpi=dpi, tight_layout=tight_layout, *args, **kwargs)
         self.axes = self.figure.add_subplot(111)
         self.axes.tick_params(axis='both', which='major', labelsize=10.0)
         self.axes.tick_params(axis='both', which='minor', labelsize=8.0)
         super().__init__(self.figure)
-        
+        self.dragging = False
+        self._UI = UI
+
+    def button_pressed(self, event):
+        if event.inaxes:
+            if type(event.xdata) == np.float64:
+                self.dragging = True
+                self.original_x_datetime = datetime(1970,1,1,tzinfo=timezone.utc) + timedelta(days=event.xdata)
+                self.original_time_last_date = self._UI.control.time_last_date
+                self.time_diff = timedelta(0)
+
+    def button_released(self, event):
+        self.dragging = False
+        self._UI.control.time_last_date = self.original_time_last_date - self.time_diff
+        self._UI.control._ticker_lastdate_dialog_any_button_clicked()
+
+    def onmove(self, event):
+        if event.inaxes:
+            if self.dragging:
+                if type(event.xdata) == np.float64:
+                    self.time_diff = datetime(1970,1,1,tzinfo=timezone.utc) + timedelta(days=event.xdata) - self.original_x_datetime
+                    #self._UI.control.time_last_date = self.original_time_last_date - self.time_diff
+                    #self._UI.control._ticker_lastdate_dialog_any_button_clicked()
 
 class ticker_selection(ExtendedComboBox):
     def __init__(self, parent=None, *args, **kwargs):
@@ -255,6 +277,9 @@ class ticker_lastdate_calendar(QCalendarWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setSelectedDate(date.today())
+        self.currentPageChanged.connect(self._current_page_changed)
+    def _current_page_changed(self, year, month):
+        self.setCurrentPage(year, month)
 
 
 class ticker_lastdate_calendar_dialog(QDialog):
@@ -421,7 +446,7 @@ class options_dialog(dialog_with_textbrowser):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("Options")
-        self.textbox.setHtml("<a href='https://www.investopedia.com/terms/o/option.asp'>https://www.investopedia.com/terms/o/option.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp'>https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp</a>")
+        self.textbox.setHtml("<a href='https://www.investopedia.com/terms/o/option.asp'>https://www.investopedia.com/terms/o/option.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp'>https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp</a><br/>Options are derivatives/contracts (1 contract = 100 shares) that give the holder/bearer the right (but not the obligation) to buy (call option) or sell (put option) an amount of underlying asset at a set price (strike price) on or before the contract expiration date.<br/><br/>Call option is like a non-refundable down-payment for a future purchase, while put option is like insurance policy limiting downside risk.<br/><br/>Use case:<br/>1. buy calls: hedge against stock price going up.<br/>2. buy puts: hedge against stock price going down.<br/><Br/>https://www.fidelity.com/learning-center/investment-products/options/options-learning-path")
         
 class download_data_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
@@ -658,11 +683,11 @@ class high_dividends_dialog(QDialog):
             self.thread.start()
 
     def _analyze_completed(self, df: pd.DataFrame):
-        df = df
         self.text_browser.setHtml(df.to_html(index=False))
         self.text_browser.repaint()
         self.exec_pushbutton.setEnabled(True)
         self.exec_pushbutton.repaint()
+
 
 class ticker_db_dialog(QDialog):
     def __init__(self, parent=None, etf=True, *args, **kwargs):
@@ -939,6 +964,7 @@ class UI(QWidget):
     def __init__(self, app_window=None, dpi=72, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        #
         self.app_window = app_window
 
         self.group_selection = group_selection(parent=self)
@@ -957,10 +983,10 @@ class UI(QWidget):
         self.ticker_download_latest_data_from_yfinance_pushbutton = ticker_download_latest_data_from_yfinance_pushbutton(parent=self)
         self.ticker_canvas_coord_label = QLabel(text='', parent=self)
         self.ticker_lastdate_calendar_dialog = ticker_lastdate_calendar_dialog(parent=self)
-        self.ticker_canvas = canvas(parent=self, dpi=dpi)
+        self.ticker_canvas = canvas(parent=self, dpi=dpi, UI=self)
         self.index_canvas_options = index_canvas_options(parent=self)
         self.index_canvas_coord_label = QLabel(text='', parent=self)
-        self.index_canvas = canvas(parent=self, dpi=dpi)
+        self.index_canvas = canvas(parent=self, dpi=dpi, UI=self)
 
         self.message_dialog = message_dialog(parent=self)
 
@@ -1139,14 +1165,18 @@ class UI_control(object):
         canvas = self._UI.ticker_canvas
         canvas.axes.clear()
         x = self.ticker_data_dict_in_effect['history']['Date']
-        ticker_plotline, = canvas.axes.plot(x,                    self.ticker_data_dict_in_effect['history']['Close'],        'tab:green',                    linewidth=1)
-        canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA9'],   'tab:blue',                     linewidth=1)
-        canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA255'], 'tab:blue', linestyle="dashed", linewidth=1)
+        ticker_plotline, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close'], color='tab:blue',                    linewidth=1)
+        canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA9'],               color='#9ed5f7',                     linewidth=1)
+        canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA255'],             color='#9ed5f7', linestyle="dashed", linewidth=1)
         canvas.axes.set_xlabel('Date', fontsize=10.0)
         canvas.axes.set_ylabel('Close Price (EMA9, 255)', fontsize=10.0)
         #################################################
         self.ticker_canvas_cursor = SnappingCursor(plotline=ticker_plotline, ax=canvas.axes, useblit=True, color='black', linestyle='dashed', linewidth=1, name='ticker_canvas_cursor', UI=self._UI)
-        canvas.mpl_connect('motion_notify_event', self.ticker_canvas_cursor.onmove)
+        canvas.mpl_connect('motion_notify_event',  self.ticker_canvas_cursor.onmove) # mpl = matplotlib
+        #################################################
+        canvas.mpl_connect('button_press_event',   canvas.button_pressed)
+        canvas.mpl_connect('button_release_event', canvas.button_released)
+        canvas.mpl_connect('motion_notify_event',  canvas.onmove)
         #################################################
         canvas.draw()
 
@@ -1235,11 +1265,25 @@ class UI_control(object):
     def _calc_index(self):
         history_df = self.ticker_data_dict_in_effect['history']
         history_all_df = self.ticker_data_dict_original['history']
+        ######################
         # positive volume index and negative volume index
-        history_df['PVI'], history_df['NVI'], history_df['PVI_EMA9'], history_df['NVI_EMA9'], history_df['PVI_EMA255'], history_df['NVI_EMA255'] = volume_indicator(short_periods=9, long_periods=255).PVI_NVI(history_df['Close'], history_df['Volume'])
+        history_all_df['PVI'], history_all_df['NVI'], history_all_df['PVI_EMA9'], history_all_df['NVI_EMA9'], history_all_df['PVI_EMA255'], history_all_df['NVI_EMA255'] = volume_indicator(short_periods=9, long_periods=255).PVI_NVI(history_all_df['Close'], history_all_df['Volume'])
+        history_df[['PVI','NVI','PVI_EMA9','NVI_EMA9','PVI_EMA255','NVI_EMA255']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['PVI','NVI','PVI_EMA9','NVI_EMA9','PVI_EMA255','NVI_EMA255']]
+        PVI_max = max(history_df[['PVI','PVI_EMA9','PVI_EMA255']].max())
+        PVI_min = min(history_df[['PVI','PVI_EMA9','PVI_EMA255']].min())
+        NVI_max = max(history_df[['NVI','NVI_EMA9','NVI_EMA255']].max())
+        NVI_min = min(history_df[['NVI','NVI_EMA9','NVI_EMA255']].min())
+        # this is to keep PVI indexes between 0 and 1000
+        history_df[['PVI','PVI_EMA9','PVI_EMA255']] = (history_df[['PVI','PVI_EMA9','PVI_EMA255']] - PVI_min) / (PVI_max - PVI_min) * 1000
+        # this is to keep NVI indexes between 0 and 1000
+        history_df[['NVI','NVI_EMA9','NVI_EMA255']] = (history_df[['NVI','NVI_EMA9','NVI_EMA255']] - NVI_min) / (NVI_max - NVI_min) * 1000
+        ######################
         history_all_df['RSI14'] = momentum_indicator(periods=14).RSI(history_all_df['Close'])
         history_df['RSI14'] = history_all_df[history_all_df['Date'].isin(history_df['Date'])]['RSI14']
-        history_df['Close_EMA9'], history_df['Close_EMA255'] = moving_average(periods=9).exponential(history_df['Close']), moving_average(periods=255).exponential(history_df['Close'])
+        ######################
+        history_all_df['Close_EMA9'], history_all_df['Close_EMA255'] = moving_average(periods=9).exponential(history_all_df['Close']), moving_average(periods=255).exponential(history_all_df['Close'])
+        history_df[['Close_EMA9', 'Close_EMA255']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['Close_EMA9', 'Close_EMA255']]
+        ######################
         self.ticker_data_dict_in_effect['history'] = history_df
 
     def _ticker_lastdate_pushbutton_clicked(self):
