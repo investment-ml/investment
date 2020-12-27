@@ -236,9 +236,19 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
             info_dict['calendar']                  = this_ticker.calendar
             info_dict['isin']                      = this_ticker.isin
             try:
-                info_dict['options']               = this_ticker.options
+                info_dict['options']               = this_ticker.options # expiration dates
+                info_dict['option_chain_dict']     = {}
+                for this_expiration_date in this_ticker.options:
+                    opt = this_ticker.option_chain(this_expiration_date)
+                    opt_calls = opt.calls
+                    opt_puts = opt.puts
+                    opt_calls['type'] = 'calls'
+                    opt_puts['type'] = 'puts'
+                    opt_combined = pd.concat([opt_calls, opt_puts], axis=0)
+                    info_dict['option_chain_dict'][this_expiration_date] = opt_combined
             except:
                 info_dict['options']               = None
+                info_dict['option_chain_dict']     = {}
 
             successful_download = True
 
@@ -432,11 +442,18 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
 
     ticker_info_keys = ticker_info.keys()
 
-    # name
+    # name amd major indexes
+    # major index
+    df = pd.DataFrame({'DOW 30': this_ticker.in_dow30, 'NASDAQ 100': this_ticker.in_nasdaq100, 'S&P 500': this_ticker.in_sandp500, 'NASDAQ Composite': this_ticker.in_nasdaq_composite, 'Russell 1000': this_ticker.in_russell1000, 'Russell 2000': this_ticker.in_russell2000}, index=[0])
     if use_html:
-        ticker_name = f"<b>{this_ticker.name}</b><br/><hr>Symbol: [{this_ticker.symbol}]"
+        major_indexes_str = df.to_html(index=False).replace('<table border="1" class="dataframe">', '<table>').replace('True', '<b><span style=\"color:blue;\">True</span></b>').replace('False', '<span style=\"color:#D3D3D3;\">False</span>')
     else:
-        ticker_name = f"{this_ticker.name}\n\nSymbol: [{this_ticker.symbol}]"
+        major_indexes_str = df.to_string(index=False)
+    #
+    if use_html:
+        ticker_name = f"<b>{this_ticker.name}</b><br/><br/>Symbol: [{this_ticker.symbol}]<br/>{major_indexes_str}"
+    else:
+        ticker_name = f"{this_ticker.name}\n\nSymbol: [{this_ticker.symbol}]\n\n{major_indexes_str}"
 
     # stock exchange listing info
     stock_exchange_info = ""
@@ -659,6 +676,34 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
             if beta <= 1.00:
                 risk_info += f" (less volatile than the overall market)"
 
+    # options
+    if use_html:
+        options_info = f"<br/><hr>Options info unavailable"
+    else:
+        options_info = f"\n\nOptions info unavailable"
+    if this_ticker.options is not None:
+        if use_html:
+            options_info = f"<br/><hr>Options expirations: {this_ticker.options}"
+        else:
+            options_info = f"\n\nOptions expirations: {this_ticker.options}"
+        if this_ticker.option_chain(expiration_date = this_ticker.options[0]) is not None:
+            if use_html:
+                options_info += f"<br/><br/>The most recent one:{this_ticker.option_chain(expiration_date = this_ticker.options[0]).to_html(index=False)}"
+            else:
+                options_info += f"\n\nThe most recent one:{this_ticker.option_chain(expiration_date = this_ticker.options[0]).to_string(index=False)}"
+
+    # recommendations
+    if use_html:
+        recommendations_info = f"<br/><hr>Recommendations info unavailable"
+    else:
+        recommendations_info = f"\n\nRecommendations info unavailable"
+    if this_ticker.recommendations is not None:
+        recommend_n = 5
+        if use_html:
+            recommendations_info = f"<br/><hr>Recommendations (last {recommend_n}):<br\>" + this_ticker.recommendations.tail(recommend_n).to_html(index=False)
+        else:
+            recommendations_info = f"\n\nRecommendations (last {recommend_n}):\n" + this_ticker.recommendations.tail(recommend_n).to_string(index=False)
+
     # summary
     if 'longBusinessSummary' in ticker_info_keys:
         if use_html:
@@ -680,18 +725,10 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                     if 'logo_url' in ticker_info_keys:
                         logo = f"\n\nLogo: {ticker_info['logo_url']}"
 
-    # major index
-    df = pd.DataFrame({'DOW 30': this_ticker.in_dow30, 'NASDAQ 100': this_ticker.in_nasdaq100, 'S&P 500': this_ticker.in_sandp500, 'NASDAQ Composite': this_ticker.in_nasdaq_composite, 'Russell 1000': this_ticker.in_russell1000, 'Russell 2000': this_ticker.in_russell2000}, index=[0])
     if use_html:
-        html_str = df.to_html(index=False).replace('<table border="1" class="dataframe">', '<table>')
-        major_indexes_info = f"<br/><hr>In major indexes:<br/>{html_str}".replace('True', '<b><span style=\"color:blue;\">True</span></b>').replace('False', '<span style=\"color:#D3D3D3;\">False</span>')
+        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{shares_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{logo}</body>"  
     else:
-        major_indexes_info = f"\n\nIn major indexes:\n{df.to_string(index=False)}"
-
-    if use_html:
-        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{shares_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}{major_indexes_info}</body>"  
-    else:
-        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{shares_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}{major_indexes_info}"  
+        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{shares_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{logo}"  
     
     return formatted_str
 

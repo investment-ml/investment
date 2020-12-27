@@ -452,6 +452,12 @@ class options_dialog(dialog_with_textbrowser):
         super().__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("Options")
         self.textbox.setHtml("<a href='https://www.investopedia.com/terms/o/option.asp'>https://www.investopedia.com/terms/o/option.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp'>https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp</a><br/>Options are derivatives/contracts (1 contract = 100 shares) that give the holder/bearer the right (but not the obligation) to buy (call option) or sell (put option) an amount of underlying asset at a set price (strike price) on or before the contract expiration date.<br/><br/>Call option is like a non-refundable down-payment for a future purchase, while put option is like insurance policy limiting downside risk.<br/><br/>Use case:<br/>1. buy calls: hedge against stock price going up.<br/>2. buy puts: hedge against stock price going down.<br/><Br/>https://www.fidelity.com/learning-center/investment-products/options/options-learning-path")
+
+class screener_dialog(dialog_with_textbrowser):
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(parent=parent, *args, **kwargs)
+        self.setWindowTitle("Screener")
+        self.textbox.setHtml("<a href='https://finance.yahoo.com/options/highest-open-interest/'>Highest open interest</a>")
         
 class download_data_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
@@ -867,6 +873,7 @@ class app_menu(object):
         self.equity_db_dialog = ticker_db_dialog(parent=self.app_window, etf=False)
         self.fed_funds_rate_dialog = fed_funds_rate_dialog(parent=self.app_window)
         self.options_dialog = options_dialog(parent=self.app_window)
+        self.screener_dialog = screener_dialog(parent=self.app_window)
         # about
         aboutAct = QAction('&About', parent=self.app_window)
         aboutAct.setShortcut('Ctrl+A')
@@ -916,6 +923,10 @@ class app_menu(object):
         options_trading_Act = QAction('&Options trading', parent=self.app_window)
         options_trading_Act.setShortcut('Ctrl+O')
         options_trading_Act.triggered.connect(self.options_dialog.exec)
+        #
+        screener_Act = QAction('&Screener', parent=self.app_window)
+        screener_Act.setShortcut('Ctrl+S')
+        screener_Act.triggered.connect(self.screener_dialog.exec)
         # 2. researchMenu
         self.app_window.ResearchMenu = self.app_window.menubar.addMenu('&Research')
         self.app_window.ResearchMenu.addAction(webAct)
@@ -924,6 +935,7 @@ class app_menu(object):
         self.app_window.ResearchMenu.addAction(equity_db_Act)
         self.app_window.ResearchMenu.addAction(fed_funds_rate_Act)
         self.app_window.ResearchMenu.addAction(options_trading_Act)
+        self.app_window.ResearchMenu.addAction(screener_Act)
         # 3. additional menu
         if self.add_additional_menu():
             self.build_additional_menu()

@@ -660,6 +660,23 @@ class Ticker(object):
             return None
 
     @property
+    def options(self):
+        return self.ticker_data_dict['options']
+
+    def option_chain(self, expiration_date = None):
+        if 'option_chain_dict' in self.ticker_data_dict.keys():
+            return self.ticker_data_dict['option_chain_dict'][expiration_date]
+        else:
+            return None
+
+    @property
+    def recommendations(self):
+        if self.ticker_data_dict['recommendations'] is not None:
+            return self.ticker_data_dict['recommendations'].reset_index(level=0)
+        else:
+            return None
+
+    @property
     def ticker_info(self):
         return self.ticker_data_dict['info']
 
