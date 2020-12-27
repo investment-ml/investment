@@ -392,7 +392,7 @@ def get_ticker_data_dict(ticker: str = None,
     history_df = pd.read_csv(ticker_history_df_file, index_col=False)
     if ticker in ['^VIX','^TNX','^VOLQ']: # these have no volume
         history_df = history_df[(history_df['Close']>0)]
-        history_df['Volume'] = 0
+        history_df['Volume'] = None
     else:
         history_df = history_df[(history_df['Close']>0) & (history_df['Volume']>0)]
     history_df['Date'] = pd.to_datetime(history_df['Date'], format='%Y-%m-%d', utc=True) # "utc=True" is to be consistent with yfinance datetimes, which are received as UTC.
@@ -519,6 +519,31 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
         else:
             company_to_company_comparison_info += f"\n\nThe Price/Earnings-to-Growth (PEG) ratio is {this_ticker.PEG_ratio} (which is over-valued if > 1.0, or under-valued if < 1.0; in theory, the lower the PEG ratio the better, which implies paying less for future earnings growth.)"
 
+    # shares info
+    if use_html:
+        shares_info = f"<br/><hr>Share info unavailable"
+    else:
+        shares_info = f"\n\nShare info unavailable"
+    if 'floatShares' in ticker_info_keys and 'sharesOutstanding' in ticker_info_keys and 'marketCap' in ticker_info_keys:
+        floatShares = ticker_info['floatShares']
+        sharesOutstanding = ticker_info['sharesOutstanding']
+        marketCap = ticker_info['marketCap']
+        if floatShares is not None and sharesOutstanding is not None and marketCap is not None:
+            if sharesOutstanding > 1e9:
+                sharesOutstanding_info = f"{sharesOutstanding/1e9:.0f} billions"
+            else:
+                sharesOutstanding_info = f"{sharesOutstanding/1e6:.0f} millions"
+            if marketCap > 1e12:
+                marketCap_info = f"${marketCap/1e12:.2f} trillions"
+            elif marketCap > 1e9:
+                marketCap_info = f"${marketCap/1e9:.0f} billions"
+            else:
+                marketCap_info = f"${marketCap/1e6:.0f} millions"
+            if use_html:
+                shares_info = f"<br/><hr>Total number of shares issued: {sharesOutstanding_info} ({floatShares/sharesOutstanding*100:.2f}% freely tradable), and marketCap is {marketCap_info}."
+            else:
+                shares_info = f"\n\nTotal number of shares issued: {sharesOutstanding_info} ({floatShares/sharesOutstanding*100:.2f}% freely tradable), and marketCap is {marketCap_info}."
+
     # profitability
     if use_html:
         profitability_info = f"<br/><hr>Profitability info unavailable"
@@ -542,9 +567,9 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
     # method2: multiple of performance (relative valuation)
     if this_ticker.EV_to_EBITDA is not None:
         if use_html:
-            valuation_info = f"<br/><hr>Valuation info. How much to buy a company? The firm's total value to its earnings before interest, taxes, depreciation, and amortization: <b><span style=\"color:blue;\">{this_ticker.EV_to_EBITDA:.2f}</span></b> (tends to be between 11-14, while below 10 is considered healthy; the lower, the better)"
+            valuation_info = f"<br/><hr>Valuation info. How much to buy a company? The firm's total value to its EBITDA (earnings before interest, taxes, depreciation, and amortization): <b><span style=\"color:blue;\">{this_ticker.EV_to_EBITDA:.2f}</span></b> (tends to be between 11-14, while below 10 is considered healthy; the lower, the better)"
         else:
-            valuation_info = f"\n\nValuation info. How much to buy a company? The firm's total value to its earnings before interest, taxes, depreciation, and amortization: {this_ticker.EV_to_EBITDA:.2f} (which tends to be between 11-14, while below 10 is considered healthy; the lower, the better)"
+            valuation_info = f"\n\nValuation info. How much to buy a company? The firm's total value to its EBITDA (earnings before interest, taxes, depreciation, and amortization): {this_ticker.EV_to_EBITDA:.2f} (which tends to be between 11-14, while below 10 is considered healthy; the lower, the better)"
 
     # institutions
     if use_html:
@@ -604,6 +629,17 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                     dividends_info += f"\n{row['Date'].date()}\t${row['Dividends']:.2f}\t{dividends_yield_percent}"
             if use_html:
                 dividends_info += dividends_info_df.to_html(index=False)
+            if use_html:
+                dividends_info += f"<br/><br/>Dividends yield in the past 12 mo: {this_ticker.last_1yr_dividends_pct:.2f}%"
+            else:
+                dividends_info += f"\n\nDividends yield in the past 12 mo: {this_ticker.last_1yr_dividends_pct:.2f}%"
+            if 'payoutRatio' in ticker_info_keys:
+                payoutRatio = ticker_info['payoutRatio']
+                if payoutRatio is not None:
+                    if use_html:
+                        dividends_info += f"<br/><br/>As an evaluation of the dividend payment system, {payoutRatio*100:.2f}% of the earnings is paid out to shareholders."
+                    else:
+                        dividends_info += f"\n\nAs an evaluation of the dividend payment system, {payoutRatio*100:.2f}% of the earnings is paid out to shareholders."
 
     # measures
     if use_html:
@@ -653,9 +689,9 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
         major_indexes_info = f"\n\nIn major indexes:\n{df.to_string(index=False)}"
 
     if use_html:
-        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}{major_indexes_info}</body>"  
+        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{shares_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}{major_indexes_info}</body>"  
     else:
-        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}{major_indexes_info}"  
+        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{shares_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{long_business_summary}{logo}{major_indexes_info}"  
     
     return formatted_str
 

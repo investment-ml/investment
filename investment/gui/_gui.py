@@ -389,14 +389,19 @@ class preferences_dialog(QDialog):
 # reference: https://pythonpyqt.com/pyqt-progressbar/
 class ticker_download_thread(QThread):
     _signal = Signal(int, str)
-    def __init__(self, app_window=None, smart_redownload=None, tickers_to_download=[]):
+    def __init__(self, app_window=None, smart_redownload=None, tickers_to_download=[], ascending=True):
         super().__init__()
         self.app_window = app_window
         self.smart_redownload = smart_redownload
         self.tickers_to_download = tickers_to_download
+        self.ascending = ascending
 
     def run(self):
-        for idx, ticker in enumerate(self.tickers_to_download):
+        if self.ascending:
+            tickers_to_download = self.tickers_to_download
+        else:
+            tickers_to_download = self.tickers_to_download[::-1]
+        for idx, ticker in enumerate(tickers_to_download):
             try:
                 #time.sleep(0.001)
                 get_ticker_data_dict(ticker = ticker, force_redownload = True, smart_redownload = self.smart_redownload, download_today_data = self.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir = self.app_window.app_menu.preferences_dialog.data_root_dir, auto_retry = True)
@@ -574,9 +579,9 @@ class download_data_dialog(QDialog):
             # then the download_progressbar update won't show.
             # it is like we need to remove any external function call in self.download_progressbar.setValue(idx) in the signal.connect(), in MacOS
             # to see the effect, try to uncomment the # time.sleep(0.003) statement below; you will see how unsmooth it is.
-            self.thread=ticker_download_thread(app_window=self.app_window, smart_redownload=self.smart_redownload, tickers_to_download=self.tickers_to_download)
-            self.thread._signal.connect(self._download_this_ticker)
-            self.thread.start()
+            self.thread1=ticker_download_thread(app_window=self.app_window, smart_redownload=self.smart_redownload, tickers_to_download=self.tickers_to_download, ascending=True)
+            self.thread1._signal.connect(self._download_this_ticker)
+            self.thread1.start()
 
     def _download_this_ticker(self, idx: int = None, ticker: str = None):
         self.download_progressbar.setValue(idx)
@@ -840,6 +845,7 @@ class web_view(QWebEngineView):
         self.ref_website1 = "Investopedia"
         self.ref_website2 = "Nasdaq"
         self.ref_website3 = "Yahoo Finance"
+        #self.ref_website4 = "Finviz"
     def reload_website1(self):
         self.load(QUrl.fromUserInput("https://investopedia.com"))
     def reload_website2(self):
@@ -1035,7 +1041,7 @@ class UI_control(object):
         self.selected_ticker = None
         self.ticker_canvas_cursor = None
         self.index_canvas_cursor = None
-        self.timeframe_dict = {"1 week": 1/52, "2 weeks": 1/26, "1 month": 1/12, "2 months": 1/6, "3 months": 1/4, "6 months": 1/2, "1 year": 1.0, "2 years": 2.0, "5 years": 5.0, "10 years": 10.0, "20 years": 20.0, "All time": float('inf')}
+        self.timeframe_dict = {"1 week": 1/52, "2 weeks": 1/26, "1 month": 1/12, "2 months": 1/6, "3 months": 1/4, "6 months": 1/2, "1 year": 1.0, "2 years": 2.0, "5 years": 5.0, "10 years": 10.0, "15 years": 15.0, "20 years": 20.0, "30 years": 30.0, "All time": float('inf')}
         self.time_last_date = pd.to_datetime(date.today(), utc=True)
         self.timeframe_selection_index = list(self.timeframe_dict).index('1 year') + 1
         self.index_options_selection_index = 1

@@ -63,8 +63,8 @@ class volume_indicator(object):
         n_periods = close_price.shape[0]
         if n_periods == 0:
             raise ValueError(f"n_periods cannot be zero")
-        if all(volume==0):
-            return [None]*n_periods, [None]*n_periods, [None]*n_periods, [None]*n_periods
+        if all(volume==None):
+            return [None]*n_periods, [None]*n_periods, [None]*n_periods, [None]*n_periods, [None]*n_periods, [None]*n_periods
         PVI = np.empty(shape=n_periods, dtype=float)
         NVI = np.empty(shape=n_periods, dtype=float)
         PVI[0] = 1000
