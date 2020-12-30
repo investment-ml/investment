@@ -48,7 +48,8 @@ Install and Execute
 Sample Screenshot
 -----------------
 |image_TSLA|
+|image_AAPL|
 
 
 .. |image_TSLA| image:: https://github.com/investment-ml/investment/raw/master/examples/gui/images/TSLA.png
-.. |image_App_UI| image:: https://github.com/investment-ml/investment/raw/master/examples/gui/images/App_UI.png
+.. |image_AAPL| image:: https://github.com/investment-ml/investment/raw/master/examples/gui/images/AAPL.png
