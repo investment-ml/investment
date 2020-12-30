@@ -1360,7 +1360,7 @@ class UI_control(object):
             color_cross_below_and_decrease = '#EF5350'
             MACD_increase = (MACD_histogram > MACD_histogram.shift(1)).values
             MACD_hist_color = [((color_cross_above_and_increase if MACD_increase[idx] else color_cross_above_and_decrease) if cross>=0 else (color_cross_below_and_increase if MACD_increase[idx] else color_cross_below_and_decrease)) for idx, cross in enumerate(MACD_histogram)]
-            #
+            # 
             n_ticks = len(x)
             y0 = np.empty(n_ticks); y0.fill(0)
             canvas.axes.plot(x, y0, '--', color='black', linewidth=0.5)
