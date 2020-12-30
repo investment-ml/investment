@@ -83,6 +83,22 @@ def qt_message_handler(mode, context, message):
 #QtCore.qInstallMessageHandler(qt_message_handler)
 #QtCore.qDebug('<<qDebug init>>')
 
+from matplotlib.dates import num2date
+from matplotlib.ticker import Formatter
+# https://matplotlib.org/gallery/ticks_and_spines/date_index_formatter.html
+class DateFormatter(Formatter):
+    def __init__(self, dates):
+        self.dates = dates
+
+    def __call__(self, x, pos=0):
+        ind = int(np.round(x))
+        if ind >= len(self.dates) or ind < 0:
+            return None
+        #print(f"x = {x}, ind = {ind}")#" date = {num2date(self.dates[ind]).strftime(self.fmt)}")
+        np_datetime64 = self.dates[ind]
+        return np.datetime_as_string(np_datetime64, unit='M') # if unit='D' -> '2020-12-30'
+        #return num2date(self.dates[ind]).strftime(self.fmt)
+
 # https://stackoverflow.com/questions/4827207/how-do-i-filter-the-pyqt-qcombobox-items-based-on-the-text-input
 class ExtendedComboBox(QComboBox):
     def __init__(self, parent=None):
@@ -138,9 +154,16 @@ class ExtendedComboBox(QComboBox):
 # https://matplotlib.org/3.3.0/gallery/misc/cursor_demo.html
 # https://matplotlib.org/users/event_handling.html
 class SnappingCursor(Cursor):
-    def __init__(self, plotline, name=None, UI=None, *args, **kwargs):
+    def __init__(self, plotline=None, actual_x_data=None, x_index=None, y_data=None, name=None, UI=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.x, self.y = plotline.get_data()
+        if plotline is None:
+            self.x, self.y = x_index, y_data
+            self.actual_x_data = actual_x_data
+            self.use_x_index = True
+        else:
+            self.x, self.y = plotline.get_data()
+            self.actual_x_data = None
+            self.use_x_index = False
         dy = (self.y.max() - self.y.min()) / self.y.size
         self.y_grad = np.gradient(self.y, dy, edge_order=2)
         self._last_index = None
@@ -150,18 +173,31 @@ class SnappingCursor(Cursor):
     def onmove(self, event):
         if event.inaxes:
             if type(event.xdata) == np.float64:
-                x_datetime = datetime(1970,1,1,tzinfo=timezone.utc) + timedelta(days=event.xdata)
-                index = min(np.searchsorted(self.x, pd.to_datetime(x_datetime, utc=True)), len(self.x)-1) # np.datetime64() is used to be congruent with self.x
+
+                if self.use_x_index:
+                    index = min(np.searchsorted(self.x, event.xdata), len(self.x)-1)
+                else:
+                    x_datetime = datetime(1970,1,1,tzinfo=timezone.utc) + timedelta(days=event.xdata)
+                    index = min(np.searchsorted(self.x, pd.to_datetime(x_datetime, utc=True)), len(self.x)-1) # np.datetime64() is used to be congruent with self.x
+                    
                 if index == self._last_index:
                     return  # still on the same data point. Nothing to do.
+
                 self._last_index = index
                 event.xdata = self.x[index]
                 event.ydata = self.y[index]
                 event.ydata_grad = self.y_grad[index]
+
+                if self.use_x_index:
+                    text_str = f"{pd.to_datetime(self.actual_x_data[index], utc=True).date()}, {event.ydata:.2f}, slope={event.ydata_grad:.2f}"
+                else:
+                    text_str = f"{pd.to_datetime(event.xdata, utc=True).date()}, {event.ydata:.2f}, slope={event.ydata_grad:.2f}"
+
                 if self.name == 'ticker_canvas_cursor':
-                    self.UI.ticker_canvas_coord_label.setText(f"{pd.to_datetime(event.xdata, utc=True).date()}, ${event.ydata:.2f}, slope={event.ydata_grad:.2f}")
+                    self.UI.ticker_canvas_coord_label.setText(text_str)
                 if self.name == 'index_canvas_cursor':
-                    self.UI.index_canvas_coord_label.setText(f"{pd.to_datetime(event.xdata, utc=True).date()}, {event.ydata:.2f}, slope={event.ydata_grad:.2f}")
+                    self.UI.index_canvas_coord_label.setText(text_str)
+
             super().onmove(event)
 
 
@@ -451,13 +487,13 @@ class options_dialog(dialog_with_textbrowser):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("Options")
-        self.textbox.setHtml("<a href='https://www.investopedia.com/terms/o/option.asp'>https://www.investopedia.com/terms/o/option.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp'>https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp</a><br/>Options are derivatives/contracts (1 contract = 100 shares) that give the holder/bearer the right (but not the obligation) to buy (call option) or sell (put option) an amount of underlying asset at a set price (strike price) on or before the contract expiration date.<br/><br/>Call option is like a non-refundable down-payment for a future purchase, while put option is like insurance policy limiting downside risk.<br/><br/>Use case:<br/>1. buy calls: hedge against stock price going up.<br/>2. buy puts: hedge against stock price going down.<br/><Br/>https://www.fidelity.com/learning-center/investment-products/options/options-learning-path")
+        self.textbox.setHtml("https://www.investopedia.com/terms/o/openinterest.asp<br/>https://www.investopedia.com/articles/optioninvestor/10/sell-puts-benefit-any-market.asp<br/><a href='https://www.investopedia.com/terms/o/option.asp'>https://www.investopedia.com/terms/o/option.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp'>https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp</a><br/>Options are derivatives/contracts (1 contract = 100 shares) that give the holder/bearer the right (but not the obligation) to buy (call option) or sell (put option) an amount of underlying asset at a set price (strike price) on or before the contract expiration date.<br/><br/>Call option is like a non-refundable down-payment for a future purchase, while put option is like insurance policy limiting downside risk.<br/><br/>Use case:<br/>1. buy calls: hedge against stock price going up.<br/>2. buy puts: hedge against stock price going down.<br/><Br/>https://www.fidelity.com/learning-center/investment-products/options/options-learning-path")
 
 class screener_dialog(dialog_with_textbrowser):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("Screener")
-        self.textbox.setHtml("<a href='https://finance.yahoo.com/options/highest-open-interest/'>Highest open interest</a>")
+        self.textbox.setHtml("<a href='https://finance.yahoo.com/options/highest-open-interest/'>Highest open interest</a><br/><br/><a href='https://www.sectorspdr.com/sectorspdr/tools/correlation-tracker/multiple-securities'>Correlation tracker</a><br/><br/><a href='https://www.marketwatch.com/story/this-year-end-stock-selling-strategy-offsets-capital-gains-taxes-and-sidesteps-the-wash-sale-rule-2020-12-04'>tax-loss selling</a>")
         
 class download_data_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
@@ -1080,6 +1116,11 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("RSI14")
                 self.index_options_selection_index = 1
                 self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
+            elif self._index_selected == 'MACD':
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>MACD</b> (Moving Average Convergence Divergence) is a lagging momentum indicator. When <b><span style='color:blue'>MACD</span></b> crosses <b>above</b> (or below) its 9-day EMA <b><span style='color:orange'>signal</span></b> line, it's a <b>buy</b> (or sell).<br/><br/>Common interpretations: crossovers, divergences, and rapid rises/falls.<br/><br/><a href='https://www.investopedia.com/terms/m/macd.asp'>https://www.investopedia.com/terms/m/macd.asp</a></body>")
+                self._UI.index_canvas_options.addItem("MACD: EMA12 vs. EMA26")
+                self.index_options_selection_index = 1
+                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)                
             self._calc_index()
             self._draw_index_canvas()
 
@@ -1172,6 +1213,7 @@ class UI_control(object):
             self._UI.index_selection.reset()
             self._UI.index_selection.addItem("PVI and NVI")
             self._UI.index_selection.addItem("RSI")
+            self._UI.index_selection.addItem("MACD")
             self._UI.index_selection.setCurrentIndex(2)
 
             self._UI.ticker_lastdate_pushbutton.setEnabled(True)
@@ -1182,14 +1224,37 @@ class UI_control(object):
     def _draw_ticker_canvas(self):
         canvas = self._UI.ticker_canvas
         canvas.axes.clear()
-        x = self.ticker_data_dict_in_effect['history']['Date']
-        ticker_plotline, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close'], color='tab:blue',                    linewidth=1)
-        canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA9'],               color='#9ed5f7',                     linewidth=1)
+        # to skip non-existent dates on the plot
+        # x = self.ticker_data_dict_in_effect['history']['Date']
+        dates = self.ticker_data_dict_in_effect['history']['Date'].values
+        formatter = DateFormatter(dates)
+        canvas.axes.xaxis.set_major_formatter(formatter)
+        x = np.arange(len(dates))
+        # volume bar
+        volumes = self.ticker_data_dict_in_effect['history']['Volume'].values
+        if volumes[0] is not None:
+            close = self.ticker_data_dict_in_effect['history']['Close']
+            scale_factor = (max(close.values) * 0.35) / max(volumes)
+            volumes = volumes * scale_factor
+            close_prev = self.ticker_data_dict_in_effect['history']['Close'].shift(1)
+            close_increase = (close >= close_prev).values
+            volume_color = ['#86cbc5' if chg else '#f69f9d' for chg in close_increase]
+            canvas.axes.bar(x, volumes, color=volume_color)
+        #
+        #ticker_plotline, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close'], color='tab:blue',                    linewidth=1)
         canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA255'],             color='#9ed5f7', linestyle="dashed", linewidth=1)
+        canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA9'],               color='#9ed5f7',                     linewidth=1)
+        canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close'],                    color='tab:blue',                    linewidth=1)
         canvas.axes.set_xlabel('Date', fontsize=10.0)
         canvas.axes.set_ylabel('Close Price (EMA9, 255)', fontsize=10.0)
+        #
+        canvas.figure.autofmt_xdate()
+        ticker_plotline = None
+        actual_x_data = dates
+        x_index = x
+        y_data = self.ticker_data_dict_in_effect['history']['Close'].values
         #################################################
-        self.ticker_canvas_cursor = SnappingCursor(plotline=ticker_plotline, ax=canvas.axes, useblit=True, color='black', linestyle='dashed', linewidth=1, name='ticker_canvas_cursor', UI=self._UI)
+        self.ticker_canvas_cursor = SnappingCursor(plotline=ticker_plotline, actual_x_data=actual_x_data, x_index=x_index, y_data=y_data, ax=canvas.axes, useblit=True, color='black', linestyle='dashed', linewidth=1, name='ticker_canvas_cursor', UI=self._UI)
         canvas.mpl_connect('motion_notify_event',  self.ticker_canvas_cursor.onmove) # mpl = matplotlib
         #################################################
         canvas.mpl_connect('button_press_event',   canvas.button_pressed)
@@ -1199,6 +1264,10 @@ class UI_control(object):
         canvas.draw()
 
     def _draw_index_canvas(self):
+        actual_x_data = None
+        x_index = None
+        y_data = None
+
         canvas = self._UI.index_canvas
         canvas.axes.clear()
         canvas.axes.set_xlabel('Date', fontsize=10.0)
@@ -1213,23 +1282,44 @@ class UI_control(object):
             if all(v is None for v in self.ticker_data_dict_in_effect['history']['PVI_EMA9']):
                 canvas.draw()
                 return
-            x = self.ticker_data_dict_in_effect['history']['Date']
-            index_plotline_PVI, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI'], color='tab:green',    linewidth=1.0)
-            index_plotline_NVI, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI'], color='tab:orange',   linewidth=1.0)
-            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='#baf1b2',                     linewidth=1.0)
+            # to skip non-existent dates on the plot
+            dates = self.ticker_data_dict_in_effect['history']['Date'].values
+            formatter = DateFormatter(dates)
+            canvas.axes.xaxis.set_major_formatter(formatter)
+            x = np.arange(len(dates))
+            #
+            #index_plotline_PVI, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI'], color='tab:green',    linewidth=1.0)
+            #index_plotline_NVI, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI'], color='tab:orange',   linewidth=1.0)
             canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA255'], color='#baf1b2', linestyle="dashed", linewidth=1.0)
-            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='#efb663',                     linewidth=1.0)
             canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='#efb663', linestyle="dashed", linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='#baf1b2',                     linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='#efb663',                     linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI'], color='tab:green',    linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI'], color='tab:orange',   linewidth=1.0)
             #################################################
+            canvas.figure.autofmt_xdate()
             if self.index_options_selection_index == 1:
-                index_plotline = index_plotline_PVI
+                #index_plotline = index_plotline_PVI
+                index_plotline = None
+                actual_x_data = dates
+                x_index = x
+                y_data = self.ticker_data_dict_in_effect['history']['PVI'].values
             elif self.index_options_selection_index == 2:
-                index_plotline = index_plotline_NVI
+                #index_plotline = index_plotline_NVI
+                index_plotline = None
+                actual_x_data = dates
+                x_index = x
+                y_data = self.ticker_data_dict_in_effect['history']['NVI'].values
             else:
                 raise ValueError("index options selection index not within range")
 
         elif self._index_selected == 'RSI':
-            x = self.ticker_data_dict_in_effect['history']['Date']
+            # to skip non-existent dates on the plot
+            dates = self.ticker_data_dict_in_effect['history']['Date'].values
+            formatter = DateFormatter(dates)
+            canvas.axes.xaxis.set_major_formatter(formatter)
+            x = np.arange(len(dates))
+            #
             n_ticks = len(x)
             y70 = np.empty(n_ticks); y70.fill(70)
             y30 = np.empty(n_ticks); y30.fill(30)
@@ -1241,13 +1331,55 @@ class UI_control(object):
             canvas.axes.fill_between(x, y30, y70, where=(y30<y70), color='tab:blue',  alpha=0.05, interpolate=True)
             canvas.axes.fill_between(x, y,   y70, where=(y>y70),   color='tab:green', alpha=0.3,  interpolate=True)
             canvas.axes.fill_between(x, y,   y30, where=(y<y30),   color='tab:red',   alpha=0.3,  interpolate=True)
-            index_plotline, = canvas.axes.plot(x, y, color='tab:blue', linewidth=1)
+            #index_plotline, = canvas.axes.plot(x, y, color='tab:blue', linewidth=1)
+            canvas.axes.plot(x, y, color='tab:blue', linewidth=1)
+            #
+            canvas.figure.autofmt_xdate()
+            index_plotline = None
+            actual_x_data = dates
+            x_index = x
+            y_data = y.values
+
+        elif self._index_selected == 'MACD':
+            # https://stackoverflow.com/questions/43029895/python-matlabplot-with-datetime-numpy-array-how-to-skip-days-in-plot
+            # to skip non-existent dates on the plot
+            dates = self.ticker_data_dict_in_effect['history']['Date'].values
+            formatter = DateFormatter(dates)
+            canvas.axes.xaxis.set_major_formatter(formatter)
+            x = np.arange(len(dates))
+            #
+            canvas.axes.set_ylabel('MACD', fontsize=10.0)
+            MACD_macd = self.ticker_data_dict_in_effect['history']['MACD_macd']
+            MACD_signal = self.ticker_data_dict_in_effect['history']['MACD_signal']
+            MACD_histogram = self.ticker_data_dict_in_effect['history']['MACD_histogram']
+            # The ternary operator has the same syntax:
+            # [(token if emoticon_re.search(token) else token.lower()) for token in tokens]
+            color_cross_above_and_increase = '#26A69A'
+            color_cross_above_and_decrease = '#B2DFDB'
+            color_cross_below_and_increase = '#FFCDD2'
+            color_cross_below_and_decrease = '#EF5350'
+            MACD_increase = (MACD_histogram > MACD_histogram.shift(1)).values
+            MACD_hist_color = [((color_cross_above_and_increase if MACD_increase[idx] else color_cross_above_and_decrease) if cross>=0 else (color_cross_below_and_increase if MACD_increase[idx] else color_cross_below_and_decrease)) for idx, cross in enumerate(MACD_histogram)]
+            #
+            n_ticks = len(x)
+            y0 = np.empty(n_ticks); y0.fill(0)
+            canvas.axes.plot(x, y0, '--', color='black', linewidth=0.5)
+            #
+            canvas.axes.bar(x, MACD_histogram, color=MACD_hist_color)
+            canvas.axes.plot(x, MACD_macd, color='tab:blue', linewidth=1)
+            canvas.axes.plot(x, MACD_signal, color='tab:orange', linewidth=1)
+            #
+            canvas.figure.autofmt_xdate()
+            index_plotline = None
+            actual_x_data = dates
+            x_index = x
+            y_data = MACD_macd.values
 
         else:
             raise ValueError(f"Unexpected self._index_selected = [{self._index_selected}]")
 
         #################################################
-        self.index_canvas_cursor = SnappingCursor(plotline=index_plotline, ax=canvas.axes, useblit=True, color='black', linestyle='dashed', linewidth=1, name='index_canvas_cursor', UI=self._UI)
+        self.index_canvas_cursor = SnappingCursor(plotline=index_plotline, actual_x_data=actual_x_data, x_index=x_index, y_data=y_data, ax=canvas.axes, useblit=True, color='black', linestyle='dashed', linewidth=1, name='index_canvas_cursor', UI=self._UI)
         canvas.mpl_connect('motion_notify_event', self.index_canvas_cursor.onmove)
         #################################################
         canvas.draw()
@@ -1296,8 +1428,11 @@ class UI_control(object):
         # this is to keep NVI indexes between 0 and 1000
         history_df[['NVI','NVI_EMA9','NVI_EMA255']] = (history_df[['NVI','NVI_EMA9','NVI_EMA255']] - NVI_min) / (NVI_max - NVI_min) * 1000
         ######################
-        history_all_df['RSI14'] = momentum_indicator(periods=14).RSI(history_all_df['Close'])
+        history_all_df['RSI14'] = momentum_indicator().RSI(close_price=history_all_df['Close'], RSI_periods=14)
         history_df['RSI14'] = history_all_df[history_all_df['Date'].isin(history_df['Date'])]['RSI14']
+        ######################
+        history_all_df['MACD_macd'], history_all_df['MACD_signal'], history_all_df['MACD_histogram'] = momentum_indicator().MACD(close_price=history_all_df['Close'], fast_period=12, slow_period=26, signal_period=9)
+        history_df[['MACD_macd','MACD_signal','MACD_histogram']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['MACD_macd','MACD_signal','MACD_histogram']]
         ######################
         history_all_df['Close_EMA9'], history_all_df['Close_EMA255'] = moving_average(periods=9).exponential(history_all_df['Close']), moving_average(periods=255).exponential(history_all_df['Close'])
         history_df[['Close_EMA9', 'Close_EMA255']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['Close_EMA9', 'Close_EMA255']]

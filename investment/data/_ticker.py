@@ -172,7 +172,7 @@ ticker_group_dict = {'All': [],
                      'Real Estate': ['AMT','CCI','PLD','BPYU','BDN','CSGP','XLRE'],
                      'Dividend Stocks (11/2020)': ['BMY','WMT','HD','AAPL','MSFT'],
                      'Growth Stocks (11/2020)': ['ALGN','FIVE','LGIH','MELI','PTON'],
-                     'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','ZM'],
+                     'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','ZM','AZN','ARCT','QDEL','ABT','HOLX','DGX'],
                      'Cyber Security': ['SWI','CYBR','CHKP','PANW','ZS','CRWD','FEYE','SCWX','VMW','MSFT','FTNT','MIME','HACK','PFPT','QLYS','RPD','TENB','VRNS'],
                      '5G': ['AAPL','TMUS','VZ','T','QCOM','QRVO','ERIC','TSM','NVDA','SWKS','ADI','MRVL','AVGO','XLNX'],
                      'Innovation': ['ARKK','ARKQ','ARKW','ARKG','ARKF','EDIT','CRSP','NTLA'],
@@ -384,7 +384,7 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Real Estate': f"Companies that allow individual investors to buy shares in real estate portfolios that receive income from a variety of properties.",
                    'Dividend Stocks (11/2020)': f"Dividend Stocks (11/2020)",
                    'Growth Stocks (11/2020)': f"Growth Stocks (11/2020)",
-                   'COVID-19': f"Vaccines: 'ALT','MRNA','INO','GILD','JNJ','PFE'<br/><br/>Cruises: 'RCL','CCL','NCLH'",
+                   'COVID-19': f"Vaccines: 'ALT','MRNA','INO','GILD','JNJ','PFE','AZN','ARCT'<br/><br/>COVID-19 testing: 'QDEL','ABT','HOLX','DGX'<br/><br/>Cruises: 'RCL','CCL','NCLH'",
                    'Cyber Security': f"One of the largest recent <a href='https://en.wikipedia.org/wiki/2020_United_States_federal_government_data_breach'>hacks</a>:<br/>On 12/14/2020, the news that SWI was used by Russia to back the U.S. governments went public.<br/>SWI tumbled and other cyber security firms soared because of the heightened need for years to come.<br/><br/>CRWD, CYBR, FEYE, PANW, ZS ... all jumped big within 2 weeks.",
                    '5G': f"5G wireless networks",
                    'Innovation': "https://ark-invest.com/",
@@ -663,7 +663,7 @@ class Ticker(object):
     def options(self):
         return self.ticker_data_dict['options']
 
-    def option_chain(self, expiration_date = None):
+    def option_chain(self, expiration_date: str = None):
         if 'option_chain_dict' in self.ticker_data_dict.keys():
             return self.ticker_data_dict['option_chain_dict'][expiration_date]
         else:

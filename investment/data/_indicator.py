@@ -8,11 +8,10 @@ import pandas as pd
 import numpy as np
 
 class momentum_indicator(object):
-    def __init__(self, periods=14):
+    def __init__(self):
         super().__init__()
-        self.periods = periods
 
-    def RSI(self, close_price: np.ndarray):
+    def RSI(self, close_price: np.ndarray, RSI_periods: int = 14):
         """
         https://www.investopedia.com/terms/r/rsi.asp
         """
@@ -36,8 +35,8 @@ class momentum_indicator(object):
             else:
                 up_periods[i] = 0
                 down_periods[i] = 0
-        up   = moving_average(periods=self.periods).smoothed(up_periods)
-        down = moving_average(periods=self.periods).smoothed(down_periods)
+        up   = moving_average(periods=RSI_periods).smoothed(up_periods)
+        down = moving_average(periods=RSI_periods).smoothed(down_periods)
         for i in range(n_periods):
             if down[i] == 0:
                 RSI[i] = 100
@@ -46,6 +45,17 @@ class momentum_indicator(object):
             else:
                 RSI[i] = 100 - 100/(1+up[i]/down[i])
         return RSI
+
+    def MACD(self, close_price: np.ndarray, fast_period: int = 12, slow_period: int = 26, signal_period: int = 9):
+        """
+        https://www.investopedia.com/terms/m/macd.asp
+        """
+        fast_EMA = moving_average(periods=fast_period).exponential(close_price)
+        slow_EMA = moving_average(periods=slow_period).exponential(close_price)
+        macd = fast_EMA - slow_EMA # when fast > slow, it's positive
+        signal = moving_average(periods=signal_period).exponential(macd)
+        histogram = macd - signal
+        return macd, signal, histogram
 
 
 # https://www.investopedia.com/terms/v/volume-analysis.asp

@@ -547,19 +547,19 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
         marketCap = ticker_info['marketCap']
         if floatShares is not None and sharesOutstanding is not None and marketCap is not None:
             if sharesOutstanding > 1e9:
-                sharesOutstanding_info = f"{sharesOutstanding/1e9:.0f} billions"
+                sharesOutstanding_info = f"{sharesOutstanding/1e9:.2f} billions"
             else:
-                sharesOutstanding_info = f"{sharesOutstanding/1e6:.0f} millions"
+                sharesOutstanding_info = f"{sharesOutstanding/1e6:.2f} millions"
             if marketCap > 1e12:
                 marketCap_info = f"${marketCap/1e12:.2f} trillions"
             elif marketCap > 1e9:
-                marketCap_info = f"${marketCap/1e9:.0f} billions"
+                marketCap_info = f"${marketCap/1e9:.2f} billions"
             else:
-                marketCap_info = f"${marketCap/1e6:.0f} millions"
+                marketCap_info = f"${marketCap/1e6:.2f} millions"
             if use_html:
-                shares_info = f"<br/><hr>Total number of shares issued: {sharesOutstanding_info} ({floatShares/sharesOutstanding*100:.2f}% freely tradable), and marketCap is {marketCap_info}."
+                shares_info = f"<br/><hr>Total number of shares issued: {sharesOutstanding_info} (<b><span style=\"color:blue;\">{floatShares/sharesOutstanding*100:.2f}%</span></b> freely tradable, which largely determines liquidity, while the other {100-floatShares/sharesOutstanding*100:.2f}% are held by institutions and insiders), and marketCap is {marketCap_info}."
             else:
-                shares_info = f"\n\nTotal number of shares issued: {sharesOutstanding_info} ({floatShares/sharesOutstanding*100:.2f}% freely tradable), and marketCap is {marketCap_info}."
+                shares_info = f"\n\nTotal number of shares issued: {sharesOutstanding_info} ({floatShares/sharesOutstanding*100:.2f}% freely tradable, which largely determines liquidity, while the other {100-floatShares/sharesOutstanding*100:.2f}% are held by institutions and insiders), and marketCap is {marketCap_info}."
 
     # profitability
     if use_html:
@@ -609,6 +609,13 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                             sharesOutstanding = ticker_info['sharesOutstanding']
                             if sharesOutstanding is not None:
                                 tmp_df['% Out'] = tmp_df['Shares'].apply(lambda x: f"{x/sharesOutstanding * 100:.2f}%")
+                                tmp_df['Shares (mil.)'] = round(tmp_df['Shares'] / 1e6, 2)
+                                if tmp_df['Shares'].max() * this_ticker.last_close_price / 1e9 < 1:
+                                    tmp_df['Curr Value(mil.$)'] = round(tmp_df['Shares'] * this_ticker.last_close_price / 1e6, 2)
+                                    tmp_df = tmp_df[['Holder','Shares (mil.)','Date Reported','% Out','Curr Value(mil.$)']]
+                                else:
+                                    tmp_df['Curr Value(bil.$)'] = round(tmp_df['Shares'] * this_ticker.last_close_price / 1e9, 2)
+                                    tmp_df = tmp_df[['Holder','Shares (mil.)','Date Reported','% Out','Curr Value(bil.$)']]                                   
                         if use_html:
                             institutions_holding_info += f"<br/><br/>Institutional Holders:{tmp_df.to_html(index=False)}"
                         else:

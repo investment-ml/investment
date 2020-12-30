@@ -25,7 +25,7 @@ A Python App for Investment
 Features
 -------------------
 - 9300+ tickers as included in major indexes and exchanges (DOW 30, NASDAQ 100, S&P 500, Russell 2000, etc.)
-- Breakdown by 11 sectors and 145 industries, key info highlighted for each ticker, RSI and PVI/NVI index
+- Breakdown by 11 sectors and 145 industries, key info highlighted for each ticker, MACD, RSI14, and PVI/NVI index
 - An ETF database of 2200+ tickers, and an equity database of 7100+ tickers
 
 
@@ -39,7 +39,7 @@ Install and Execute
    $ source env/bin/activate   # for Linux and macOS
    $ env\Scripts\activate.bat  # for Windows 
    $ pip install investment    # this only needs to be done once
-   $ python -m investment      # after installation, execute within the virtual environment
+   $ python -m investment      # after installation, execute within the virtual environment (recommended)
 
    # Note: to obtain price target, package 'selenium' and a Chrome browser driver must be installed on your computer first
    # see https://pypi.org/project/selenium/
