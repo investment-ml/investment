@@ -1106,7 +1106,7 @@ class UI_control(object):
             self._index_selected = self._UI.index_selection.itemText(index)
             if self._index_selected == 'PVI and NVI':
                 #self._UI.index_textinfo.setText(f"PVI (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd is optimistic (or turning pessimistic).\n\nNVI (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money') may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).")
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>PVI</b> (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd is optimistic (or turning pessimistic).<br/><br/><b>NVI</b> (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money') may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).</body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>PVI</b> (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd (the less sophisticated retail investors) is optimistic (or turning pessimistic).<br/><br/><b>NVI</b> (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money', namely, institutional investors) may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).</body>")
                 self._UI.index_canvas_options.addItem("PVI")
                 self._UI.index_canvas_options.addItem("NVI")
                 self.index_options_selection_index = 1
@@ -1119,6 +1119,11 @@ class UI_control(object):
             elif self._index_selected == 'MACD':
                 self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>MACD</b> (Moving Average Convergence Divergence) is a lagging momentum indicator. When <b><span style='color:blue'>MACD</span></b> crosses <b>above</b> (or below) its 9-day EMA <b><span style='color:orange'>signal</span></b> line, it's a <b>buy</b> (or sell).<br/><br/>Common interpretations: crossovers, divergences, and rapid rises/falls.<br/><br/><a href='https://www.investopedia.com/terms/m/macd.asp'>https://www.investopedia.com/terms/m/macd.asp</a></body>")
                 self._UI.index_canvas_options.addItem("MACD: EMA12 vs. EMA26")
+                self.index_options_selection_index = 1
+                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
+            elif self._index_selected == 'OBV':
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>OBV</b> (On-Balance Volume) is a leading (as opposed to lagging) momentum indicator to predict changes in stock price.<br/><br/>The author viewed OBV as \"a spring being wound tightly.\" and believed that when volume increases sharply without a significant change in the stock's price, the price will eventually jump upward or fall downward.<br/><br/><a href='https://www.investopedia.com/terms/o/onbalancevolume.asp'>https://www.investopedia.com/terms/o/onbalancevolume.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp'>https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp</a></body>")
+                self._UI.index_canvas_options.addItem("OBV")
                 self.index_options_selection_index = 1
                 self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)                
             self._calc_index()
@@ -1214,6 +1219,7 @@ class UI_control(object):
             self._UI.index_selection.addItem("PVI and NVI")
             self._UI.index_selection.addItem("RSI")
             self._UI.index_selection.addItem("MACD")
+            self._UI.index_selection.addItem("OBV")
             self._UI.index_selection.setCurrentIndex(2)
 
             self._UI.ticker_lastdate_pushbutton.setEnabled(True)
@@ -1234,7 +1240,7 @@ class UI_control(object):
         volumes = self.ticker_data_dict_in_effect['history']['Volume'].values
         if volumes[0] is not None:
             close = self.ticker_data_dict_in_effect['history']['Close']
-            scale_factor = (max(close.values) * 0.35) / max(volumes)
+            scale_factor = (max(close.values) * 0.40) / max(volumes)
             volumes = volumes * scale_factor
             close_prev = self.ticker_data_dict_in_effect['history']['Close'].shift(1)
             close_increase = (close >= close_prev).values
@@ -1375,6 +1381,24 @@ class UI_control(object):
             x_index = x
             y_data = MACD_macd.values
 
+        elif self._index_selected == 'OBV':
+            # to skip non-existent dates on the plot
+            dates = self.ticker_data_dict_in_effect['history']['Date'].values
+            formatter = DateFormatter(dates)
+            canvas.axes.xaxis.set_major_formatter(formatter)
+            x = np.arange(len(dates))
+            #
+            canvas.axes.set_ylabel('On-Balance Volume', fontsize=10.0)
+            obv = self.ticker_data_dict_in_effect['history']['OBV']
+            color_obv = '#3A6CA8'
+            canvas.axes.plot(x, obv, color=color_obv, linewidth=1)
+            #
+            canvas.figure.autofmt_xdate()
+            index_plotline = None
+            actual_x_data = dates
+            x_index = x
+            y_data = obv.values
+
         else:
             raise ValueError(f"Unexpected self._index_selected = [{self._index_selected}]")
 
@@ -1433,6 +1457,9 @@ class UI_control(object):
         ######################
         history_all_df['MACD_macd'], history_all_df['MACD_signal'], history_all_df['MACD_histogram'] = momentum_indicator().MACD(close_price=history_all_df['Close'], fast_period=12, slow_period=26, signal_period=9)
         history_df[['MACD_macd','MACD_signal','MACD_histogram']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['MACD_macd','MACD_signal','MACD_histogram']]
+        ######################
+        history_all_df['OBV'] = momentum_indicator().OBV(close_price=history_all_df['Close'], volume=history_all_df['Volume'])
+        history_df['OBV'] = history_all_df[history_all_df['Date'].isin(history_df['Date'])]['OBV']
         ######################
         history_all_df['Close_EMA9'], history_all_df['Close_EMA255'] = moving_average(periods=9).exponential(history_all_df['Close']), moving_average(periods=255).exponential(history_all_df['Close'])
         history_df[['Close_EMA9', 'Close_EMA255']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['Close_EMA9', 'Close_EMA255']]

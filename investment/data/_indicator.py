@@ -50,13 +50,36 @@ class momentum_indicator(object):
         """
         https://www.investopedia.com/terms/m/macd.asp
         """
+        if type(close_price) == pd.Series:
+            close_price = close_price.to_numpy()
         fast_EMA = moving_average(periods=fast_period).exponential(close_price)
         slow_EMA = moving_average(periods=slow_period).exponential(close_price)
         macd = fast_EMA - slow_EMA # when fast > slow, it's positive
         signal = moving_average(periods=signal_period).exponential(macd)
         histogram = macd - signal
         return macd, signal, histogram
-
+    
+    def OBV(self, close_price: np.ndarray, volume: np.ndarray):
+        """
+        https://www.investopedia.com/terms/o/onbalancevolume.asp
+        """
+        if type(close_price) == pd.Series:
+            close_price = close_price.to_numpy()
+        if type(volume) == pd.Series:
+            volume = volume.to_numpy()
+        n_periods = close_price.shape[0]
+        if all(volume==None):
+            return [None]*n_periods
+        obv = np.empty(shape=n_periods, dtype=float)
+        obv[0] = 0
+        for idx in range(1, n_periods):
+            if close_price[idx] > close_price[idx-1]:
+                obv[idx] = obv[idx-1] + volume[idx]
+            elif close_price[idx] < close_price[idx-1]:
+                obv[idx] = obv[idx-1] - volume[idx]
+            else:
+                obv[idx] = obv[idx-1]
+        return obv
 
 # https://www.investopedia.com/terms/v/volume-analysis.asp
 class volume_indicator(object):

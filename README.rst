@@ -25,7 +25,7 @@ A Python App for Investment
 Features
 -------------------
 - 9300+ tickers as included in major indexes and exchanges (DOW 30, NASDAQ 100, S&P 500, Russell 2000, etc.)
-- Breakdown by 11 sectors and 145 industries, key info highlighted for each ticker, MACD, RSI14, and PVI/NVI index
+- Breakdown by 11 sectors and 145 industries, key info highlighted for each ticker, MACD, RSI, OBV, and PVI/NVI index
 - An ETF database of 2200+ tickers, and an equity database of 7100+ tickers
 
 
@@ -47,9 +47,7 @@ Install and Execute
    
 Sample Screenshot
 -----------------
-|image_TSLA|
-|image_AAPL|
+|image_UBER|
 
 
-.. |image_TSLA| image:: https://github.com/investment-ml/investment/raw/master/examples/gui/images/TSLA.png
-.. |image_AAPL| image:: https://github.com/investment-ml/investment/raw/master/examples/gui/images/AAPL.png
+.. |image_UBER| image:: https://github.com/investment-ml/investment/raw/master/examples/gui/images/UBER.png
