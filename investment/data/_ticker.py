@@ -172,8 +172,8 @@ ticker_group_dict = {'All': [],
                      'Real Estate': ['AMT','CCI','PLD','BPYU','BDN','CSGP','XLRE'],
                      'Dividend Stocks (11/2020)': ['BMY','WMT','HD','AAPL','MSFT'],
                      'Growth Stocks (11/2020)': ['ALGN','FIVE','LGIH','MELI','PTON'],
-                     'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','ZM','AZN','ARCT','QDEL','ABT','HOLX','DGX'],
-                     'Cyber Security': ['SWI','CYBR','CHKP','PANW','ZS','CRWD','FEYE','SCWX','VMW','MSFT','FTNT','MIME','HACK','PFPT','QLYS','RPD','TENB','VRNS'],
+                     'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','ZM','AZN','ARCT','QDEL','ABT','HOLX','DGX','GME','CHWY','AMC'],
+                     'Cyber Security': ['SWI','CYBR','CHKP','PANW','ZS','CRWD','FEYE','SCWX','VMW','MSFT','FTNT','MIME','HACK','PFPT','QLYS','RPD','TENB','VRNS','CIBR'],
                      '5G': ['AAPL','TMUS','VZ','T','QCOM','QRVO','ERIC','TSM','NVDA','SWKS','ADI','MRVL','AVGO','XLNX'],
                      'Innovation': ['ARKK','ARKQ','ARKW','ARKG','ARKF','EDIT','CRSP','NTLA'],
                      'ETF': ['JETS', 'ONEQ', 'IEMG', 'VTHR', 'IWB', 'IWM', 'IWV', 'IWF', 'VTV', 'SCHD', 'USMV', 'VEA', 'VWO', 'AGG', 'LQD', 'GLD', 'VTI', 'DIA', 'OILU', 'OILD', 'TQQQ', 'SQQQ', 'UDOW', 'SDOW', 'UVXY', 'SVXY', 'KORU', 'YANG', 'YINN', 'QQQ', 'VOO','SPY','IVV','TMF','TMV','TBF','TLT','ESPO','GDX','XLC','XLI','XLF','XLE','XLV','XLB','XLK','XLU','XLP','XLY','XLRE'],
@@ -193,6 +193,7 @@ ticker_group_dict = {'All': [],
                      'Equity database': [],
                      'Volatility': ['^VIX','VIXY','VXX','^VOLQ'],
                      'Treasury Yield': ['^TNX','SHV','TIP','FLOT','VUT','BND'],
+                     'OTC Market': ['JCPNQ',],
                      'Others': ['JWN','KSS','HMC','BRK-A','PROG','DS','OBSV']}
 
 ticker_group_dict['Russell 3000'] = sorted(ticker_group_dict['Russell 1000'] + ticker_group_dict['Russell 2000'])
@@ -384,7 +385,7 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Real Estate': f"Companies that allow individual investors to buy shares in real estate portfolios that receive income from a variety of properties.",
                    'Dividend Stocks (11/2020)': f"Dividend Stocks (11/2020)",
                    'Growth Stocks (11/2020)': f"Growth Stocks (11/2020)",
-                   'COVID-19': f"Vaccines: 'ALT','MRNA','INO','GILD','JNJ','PFE','AZN','ARCT'<br/><br/>COVID-19 testing: 'QDEL','ABT','HOLX','DGX'<br/><br/>Cruises: 'RCL','CCL','NCLH'",
+                   'COVID-19': f"Vaccines: 'ALT','MRNA','INO','GILD','JNJ','PFE','AZN','ARCT'<br/><br/>COVID-19 testing: 'QDEL','ABT','HOLX','DGX'<br/><br/>Cruises: 'RCL','CCL','NCLH'<br/><br/>Pet food: 'CHWY'<br/><br/>Game: 'GME'",
                    'Cyber Security': f"One of the largest recent <a href='https://en.wikipedia.org/wiki/2020_United_States_federal_government_data_breach'>hacks</a>:<br/>On 12/14/2020, the news that SWI was used by Russia to back the U.S. governments went public.<br/>SWI tumbled and other cyber security firms soared because of the heightened need for years to come.<br/><br/>CRWD, CYBR, FEYE, PANW, ZS ... all jumped big within 2 weeks.",
                    '5G': f"5G wireless networks",
                    'Innovation': "https://ark-invest.com/",
@@ -402,6 +403,7 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Equity database': f"https://nasdaqtrader.com/",
                    'Volatility': f"<a href='https://www.investopedia.com/articles/active-trading/070213/tracking-volatility-how-vix-calculated.asp'>https://www.investopedia.com/articles/active-trading/070213/tracking-volatility-how-vix-calculated.asp</a>",
                    'Treasury Yield': f"<a href='https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield'>https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield</a>",
+                   'OTC Market': f"Over-the-counter Market",
                    'Others': f"Others"}
 
 def ticker_preprocessing():
@@ -804,7 +806,8 @@ class Ticker(object):
         https://www.nasdaq.com/market-activity/stocks/aapl/price-earnings-peg-ratios
         """
         if self.PEG_ratio is not None and self.forwardPE is not None:
-            return round(self.forwardPE / self.PEG_ratio, 7)
+            if self.PEG_ratio != 0:
+                return round(self.forwardPE / self.PEG_ratio, 7)
         return None
 
     @property

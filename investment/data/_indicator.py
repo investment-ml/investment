@@ -74,12 +74,24 @@ class momentum_indicator(object):
         obv[0] = 0
         for idx in range(1, n_periods):
             if close_price[idx] > close_price[idx-1]:
-                obv[idx] = obv[idx-1] + volume[idx]
+                obv[idx] = obv[idx-1] + volume[idx] # *close_price[idx]*(close_price[idx]-close_price[idx-1])
             elif close_price[idx] < close_price[idx-1]:
-                obv[idx] = obv[idx-1] - volume[idx]
+                obv[idx] = obv[idx-1] - volume[idx] # *close_price[idx]*(close_price[idx-1]-close_price[idx])
             else:
                 obv[idx] = obv[idx-1]
         return obv
+
+    def Z_price_vol(self, close_price: np.ndarray, volume: np.ndarray):
+        if type(close_price) == pd.Series:
+            close_price = close_price.to_numpy()
+        if type(volume) == pd.Series:
+            volume = volume.to_numpy()
+        n_periods = volume.shape[0]
+        if all(volume==None):
+            return [None]*n_periods
+        price_vol = close_price * volume
+        Z_price_vol = (price_vol - price_vol.mean())/(price_vol.std())
+        return Z_price_vol
 
 # https://www.investopedia.com/terms/v/volume-analysis.asp
 class volume_indicator(object):

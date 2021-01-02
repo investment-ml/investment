@@ -393,6 +393,7 @@ class preferences_dialog(QDialog):
         self.setWindowTitle("Preference Settings")
         self.checkbox_force_redownload_yfinance_data = QCheckBox("When viewing an individual ticker's history data, do not use any existing cache but download latest data from the Internet ?", parent=self)
         self.checkbox_download_today_data = QCheckBox("When downloading latest data from the Internet, include today's data (which may be incomplete if market still opens) ?", parent=self)
+        self.checkbox_overlap_fear_green_index_data = QCheckBox("Overlap the ticker plot on top of CNN's Fear && Greed Index", parent=self)
         self.label_data_root_dir = QLabel(parent=self)
         self.data_root_dir = data_root_dir
         self.label_data_root_dir.setText(f"Directory to store cache data: <span style=\"color:blue\">{data_root_dir}</span>")
@@ -402,13 +403,15 @@ class preferences_dialog(QDialog):
         self.checkbox_force_redownload_yfinance_data.setChecked(self.force_redownload_yfinance_data)            
         self.checkbox_force_redownload_yfinance_data.stateChanged.connect(self._checkbox_force_redownload_yfinance_data_state_changed)
         self.checkbox_download_today_data.setChecked(self.download_today_data)
+        self.checkbox_overlap_fear_green_index_data.setChecked(True)
         self.checkbox_download_today_data.stateChanged.connect(self._checkbox_download_today_data_state_changed)
         self.close_button = QPushButton('Close', parent=self)
         self.layout = QGridLayout()
         self.layout.addWidget(self.checkbox_force_redownload_yfinance_data, 0, 0)
         self.layout.addWidget(self.checkbox_download_today_data, 1, 0)
-        self.layout.addWidget(self.label_data_root_dir, 2, 0)
-        self.layout.addWidget(self.close_button, 3, 0)
+        self.layout.addWidget(self.checkbox_overlap_fear_green_index_data, 2, 0)
+        self.layout.addWidget(self.label_data_root_dir, 3, 0)
+        self.layout.addWidget(self.close_button, 4, 0)
         self.setLayout(self.layout)
         self.close_button.clicked.connect(self._close_button_clicked)
 
@@ -1093,6 +1096,7 @@ class UI_control(object):
         self.time_last_date = pd.to_datetime(date.today(), utc=True)
         self.timeframe_selection_index = list(self.timeframe_dict).index('1 year') + 1
         self.index_options_selection_index = 1
+        self.index_selection_index = 2
         self._group_selected = None
         self._index_selected = None
         self._UI.group_selection.setCurrentIndex(1) # 'All'
@@ -1100,13 +1104,14 @@ class UI_control(object):
 
     def _index_selection_change(self, index: int = None):
         if index > 0:
+            self.index_selection_index = index
             # index canvas selection
             self._UI.index_canvas_options.reset()
             #
             self._index_selected = self._UI.index_selection.itemText(index)
             if self._index_selected == 'PVI and NVI':
                 #self._UI.index_textinfo.setText(f"PVI (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd is optimistic (or turning pessimistic).\n\nNVI (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money') may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).")
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>PVI</b> (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd (the less sophisticated retail investors) is optimistic (or turning pessimistic).<br/><br/><b>NVI</b> (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money', namely, institutional investors) may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).</body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>PVI</b> (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd (the retail investors) is optimistic (or turning pessimistic).<br/><br/><b>NVI</b> (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money', namely, institutional investors) may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).</body>")
                 self._UI.index_canvas_options.addItem("PVI")
                 self._UI.index_canvas_options.addItem("NVI")
                 self.index_options_selection_index = 1
@@ -1122,10 +1127,21 @@ class UI_control(object):
                 self.index_options_selection_index = 1
                 self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
             elif self._index_selected == 'OBV':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>OBV</b> (On-Balance Volume) is a leading (as opposed to lagging) momentum indicator to predict changes in stock price.<br/><br/>The author viewed OBV as \"a spring being wound tightly.\" and believed that when volume increases sharply without a significant change in the stock's price, the price will eventually jump upward or fall downward.<br/><br/><a href='https://www.investopedia.com/terms/o/onbalancevolume.asp'>https://www.investopedia.com/terms/o/onbalancevolume.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp'>https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp</a></body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>OBV</b> (On-Balance Volume) is a leading (as opposed to lagging) momentum indicator to predict changes in stock price.<br/><br/>The author viewed OBV as \"a spring being wound tightly.\" and believed that when volume increases sharply (<b>positive OBV slope</b>) without a significant change in the stock's price (<b>relatively flat price slope</b>), the price will eventually jump upward or fall downward.<br/><br/><a href='https://www.investopedia.com/terms/o/onbalancevolume.asp'>https://www.investopedia.com/terms/o/onbalancevolume.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp'>https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp</a></body>")
                 self._UI.index_canvas_options.addItem("OBV")
                 self.index_options_selection_index = 1
-                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)                
+                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
+            elif self._index_selected == 'Heat':
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Market heat, defined as <b>standardized score of price*volume</b>, reflecting how hot the symbol was or how much active attention was drawn to the symbol at that moment.</body>")
+                self._UI.index_canvas_options.addItem("Heat")
+                self.index_options_selection_index = 1
+                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
+            elif self._index_selected == 'Supply & Demand':
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Support and demand (related support/resistance, inflation point).</body>")
+                self._UI.index_canvas_options.addItem("Supply & Demand")
+                self.index_options_selection_index = 1
+                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index) 
+
             self._calc_index()
             self._draw_index_canvas()
 
@@ -1220,7 +1236,9 @@ class UI_control(object):
             self._UI.index_selection.addItem("RSI")
             self._UI.index_selection.addItem("MACD")
             self._UI.index_selection.addItem("OBV")
-            self._UI.index_selection.setCurrentIndex(2)
+            self._UI.index_selection.addItem("Heat")
+            self._UI.index_selection.addItem("Supply & Demand")
+            self._UI.index_selection.setCurrentIndex(self.index_selection_index)
 
             self._UI.ticker_lastdate_pushbutton.setEnabled(True)
             self._UI.ticker_download_latest_data_from_yfinance_pushbutton.setEnabled(True)
@@ -1387,17 +1405,72 @@ class UI_control(object):
             formatter = DateFormatter(dates)
             canvas.axes.xaxis.set_major_formatter(formatter)
             x = np.arange(len(dates))
-            #
-            canvas.axes.set_ylabel('On-Balance Volume', fontsize=10.0)
+            canvas.axes.set_ylabel('On-Balance Volume (EMA9, EMA255)', fontsize=10.0)
             obv = self.ticker_data_dict_in_effect['history']['OBV']
+            obv_255 = self.ticker_data_dict_in_effect['history']['OBV_EMA255']
+            obv_9 = self.ticker_data_dict_in_effect['history']['OBV_EMA9']
             color_obv = '#3A6CA8'
-            canvas.axes.plot(x, obv, color=color_obv, linewidth=1)
+            canvas.axes.plot(x, obv_255, color='#9ed5f7', linestyle="dashed", linewidth=1)
+            canvas.axes.plot(x, obv_9,   color='#9ed5f7',                     linewidth=1)
+            canvas.axes.plot(x, obv,     color=color_obv, linewidth=1)
             #
             canvas.figure.autofmt_xdate()
             index_plotline = None
             actual_x_data = dates
             x_index = x
             y_data = obv.values
+
+        elif self._index_selected == 'Heat':
+            # to skip non-existent dates on the plot
+            dates = self.ticker_data_dict_in_effect['history']['Date'].values
+            formatter = DateFormatter(dates)
+            canvas.axes.xaxis.set_major_formatter(formatter)
+            x = np.arange(len(dates))
+            #
+            n_ticks = len(x)
+            y0 = np.empty(n_ticks); y0.fill(0)
+            canvas.axes.plot(x, y0, '--', color='#0e6b0e', linewidth=0.5)
+            #
+            canvas.axes.set_ylabel('Standardized Price * Volume (EMA9, EMA255)', fontsize=10.0)
+            Z_price_vol = self.ticker_data_dict_in_effect['history']['Z_price_vol']
+            Z_price_vol_EMA9 = self.ticker_data_dict_in_effect['history']['Z_price_vol_EMA9']
+            Z_price_vol_EMA255 = self.ticker_data_dict_in_effect['history']['Z_price_vol_EMA255']
+            color_Z_price_vol = '#3A6CA8'
+            canvas.axes.plot(x, Z_price_vol_EMA255, color='#9ed5f7', linestyle="dashed", linewidth=1)
+            canvas.axes.plot(x, Z_price_vol_EMA9,   color='tab:red',                     linewidth=1)
+            canvas.axes.plot(x, Z_price_vol,        color=color_Z_price_vol,             linewidth=1)
+            #
+            canvas.figure.autofmt_xdate()
+            index_plotline = None
+            actual_x_data = dates
+            x_index = x
+            y_data = Z_price_vol.values
+
+        elif self._index_selected == 'Supply & Demand':
+            # to skip non-existent dates on the plot
+            dates = self.ticker_data_dict_in_effect['history']['Date'].values
+            formatter = DateFormatter(dates)
+            canvas.axes.xaxis.set_major_formatter(formatter)
+            x = np.arange(len(dates))
+            #
+            n_ticks = len(x)
+            y0 = np.empty(n_ticks); y0.fill(0)
+            canvas.axes.plot(x, y0, '--', color='#0e6b0e', linewidth=0.5)
+            #
+            canvas.axes.set_ylabel('Standardized Price * Volume (EMA9, EMA255)', fontsize=10.0)
+            Z_price_vol = self.ticker_data_dict_in_effect['history']['Z_price_vol']
+            Z_price_vol_EMA9 = self.ticker_data_dict_in_effect['history']['Z_price_vol_EMA9']
+            Z_price_vol_EMA255 = self.ticker_data_dict_in_effect['history']['Z_price_vol_EMA255']
+            color_Z_price_vol = '#3A6CA8'
+            canvas.axes.plot(x, Z_price_vol_EMA255, color='#9ed5f7', linestyle="dashed", linewidth=1)
+            canvas.axes.plot(x, Z_price_vol_EMA9,   color='tab:red',                     linewidth=1)
+            canvas.axes.plot(x, Z_price_vol,        color=color_Z_price_vol,             linewidth=1)
+            #
+            canvas.figure.autofmt_xdate()
+            index_plotline = None
+            actual_x_data = dates
+            x_index = x
+            y_data = Z_price_vol.values
 
         else:
             raise ValueError(f"Unexpected self._index_selected = [{self._index_selected}]")
@@ -1459,7 +1532,14 @@ class UI_control(object):
         history_df[['MACD_macd','MACD_signal','MACD_histogram']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['MACD_macd','MACD_signal','MACD_histogram']]
         ######################
         history_all_df['OBV'] = momentum_indicator().OBV(close_price=history_all_df['Close'], volume=history_all_df['Volume'])
-        history_df['OBV'] = history_all_df[history_all_df['Date'].isin(history_df['Date'])]['OBV']
+        history_all_df['OBV_EMA9'] = moving_average(periods=9).exponential(history_all_df['OBV'])
+        history_all_df['OBV_EMA255'] = moving_average(periods=255).exponential(history_all_df['OBV'])
+        history_df[['OBV', 'OBV_EMA9', 'OBV_EMA255']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['OBV', 'OBV_EMA9', 'OBV_EMA255']]
+        ######################
+        history_all_df['Z_price_vol'] = momentum_indicator().Z_price_vol(close_price=history_all_df['Close'], volume=history_all_df['Volume'])
+        history_all_df['Z_price_vol_EMA9'] = moving_average(periods=9).exponential(history_all_df['Z_price_vol'])
+        history_all_df['Z_price_vol_EMA255'] = moving_average(periods=255).exponential(history_all_df['Z_price_vol'])
+        history_df[['Z_price_vol','Z_price_vol_EMA9','Z_price_vol_EMA255']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['Z_price_vol','Z_price_vol_EMA9','Z_price_vol_EMA255']]  
         ######################
         history_all_df['Close_EMA9'], history_all_df['Close_EMA255'] = moving_average(periods=9).exponential(history_all_df['Close']), moving_average(periods=255).exponential(history_all_df['Close'])
         history_df[['Close_EMA9', 'Close_EMA255']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['Close_EMA9', 'Close_EMA255']]

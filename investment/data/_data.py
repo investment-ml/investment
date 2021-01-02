@@ -597,9 +597,9 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
         percent_held_by_institutions = ticker_info['heldPercentInstitutions']
         if percent_held_by_institutions is not None:
             if use_html:
-                institutions_holding_info = f"<br/><hr>Shares held by institutions: {100*percent_held_by_institutions:.2f}%"
+                institutions_holding_info = f"<br/><hr>Shares held by institutions: {100*percent_held_by_institutions:.2f}%<br/><br/>- Large % could be risky: when there is bad news, the price may plunge.<br/>- Low % could have more upside.<br/>- Increase in % is a good sign."
             else:
-                institutions_holding_info = f"\n\nShares held by institutions: {100*percent_held_by_institutions:.2f}%"
+                institutions_holding_info = f"\n\nShares held by institutions: {100*percent_held_by_institutions:.2f}%\n\n- Large % could be risky: when there is bad news, the price may plunge.\n- Low % could have more upside.\n- Increase in % is a good sign."
             if 'institutional_holders' in ticker_data_dict.keys():
                 institutional_holders_df = ticker_data_dict['institutional_holders']
                 if institutional_holders_df is not None:
@@ -733,9 +733,9 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                         logo = f"\n\nLogo: {ticker_info['logo_url']}"
 
     if use_html:
-        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{shares_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{logo}</body>"  
+        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{company_to_company_comparison_info}{shares_info}{institutions_holding_info}{profitability_info}{valuation_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{price_target_info}{logo}</body>"  
     else:
-        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{price_target_info}{company_to_company_comparison_info}{shares_info}{profitability_info}{valuation_info}{institutions_holding_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{logo}"  
+        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{company_to_company_comparison_info}{shares_info}{institutions_holding_info}{profitability_info}{valuation_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{price_target_info}{logo}"  
     
     return formatted_str
 
