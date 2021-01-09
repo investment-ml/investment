@@ -176,6 +176,7 @@ ticker_group_dict = {'All': [],
                      'Cyber Security': ['SWI','CYBR','CHKP','PANW','ZS','CRWD','FEYE','SCWX','VMW','MSFT','FTNT','MIME','HACK','PFPT','QLYS','RPD','TENB','VRNS','CIBR'],
                      '5G': ['AAPL','TMUS','VZ','T','QCOM','QRVO','ERIC','TSM','NVDA','SWKS','ADI','MRVL','AVGO','XLNX'],
                      'Innovation': ['ARKK','ARKQ','ARKW','ARKG','ARKF','EDIT','CRSP','NTLA'],
+                     'ASD': ['BNGO','ZYNE',],
                      'ETF': ['JETS', 'ONEQ', 'IEMG', 'VTHR', 'IWB', 'IWM', 'IWV', 'IWF', 'VTV', 'SCHD', 'USMV', 'VEA', 'VWO', 'AGG', 'LQD', 'GLD', 'VTI', 'DIA', 'OILU', 'OILD', 'TQQQ', 'SQQQ', 'UDOW', 'SDOW', 'UVXY', 'SVXY', 'KORU', 'YANG', 'YINN', 'QQQ', 'VOO','SPY','IVV','TMF','TMV','TBF','TLT','ESPO','GDX','XLC','XLI','XLF','XLE','XLV','XLB','XLK','XLU','XLP','XLY','XLRE'],
                      'ETF database': [],
                      'Major Market Indexes': ['^DJI','^NDX','^GSPC','^IXIC','^RUT','^VIX','DIA','SPLG','IVV','VOO','SPY','QQQ','ONEQ','IWM','VTWO','VXX'],
@@ -389,6 +390,7 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Cyber Security': f"One of the largest recent <a href='https://en.wikipedia.org/wiki/2020_United_States_federal_government_data_breach'>hacks</a>:<br/>On 12/14/2020, the news that SWI was used by Russia to back the U.S. governments went public.<br/>SWI tumbled and other cyber security firms soared because of the heightened need for years to come.<br/><br/>CRWD, CYBR, FEYE, PANW, ZS ... all jumped big within 2 weeks.",
                    '5G': f"5G wireless networks",
                    'Innovation': "https://ark-invest.com/",
+                   'ASD': f"Autism Spectrum Disorder stocks",
                    'ETF': f"Exchange-traded fund (ETF) is a basket of securities that trade on an exchange. Unlike mutual funds (which only trade once a day after the market closes), ETF is just like a stock and share prices fluctuate all day as the ETF is bought and sold.\n\nExchange-traded note (ETN) is a basket of unsecured debt securities that track an underlying index of securities and trade on a major exchange like a stock.\n\nDifference: Investing ETF is investing in a fund that holds the asset it tracks. That asset may be stocks, bonds, gold or other commodities, or futures contracts. In contrast, ETN is more like a bond. It's an unsecured debt note issued by an institution. If the underwriter (usually a bank) were to go bankrupt, the investor would risk a total default.",
                    'ETF database': f"https://nasdaqtrader.com/",
                    'Major Market Indexes': f"https://www.investing.com/indices/major-indices",
@@ -716,6 +718,72 @@ class Ticker(object):
                 if this_key in self.ticker_info.keys():
                     if self.ticker_info[this_key] is not None:
                         return round(self.ticker_info[this_key],7)
+        return None
+
+    @property
+    def floatShares(self):
+        if 'floatShares' in self.ticker_info.keys():
+            if self.ticker_info['floatShares'] is not None:
+                return self.ticker_info['floatShares']
+        return None
+
+    @property
+    def sharesOutstanding(self):
+        if 'sharesOutstanding' in self.ticker_info.keys():
+            if self.ticker_info['sharesOutstanding'] is not None:
+                return self.ticker_info['sharesOutstanding']
+        return None
+    
+    @property
+    def short_interest(self):
+        if 'short_interest' in self.ticker_data_dict.keys():
+            if self.ticker_data_dict['short_interest'] is not None:
+                return self.ticker_data_dict['short_interest']
+        return None
+
+    @property
+    def short_interest_prior(self):
+        if 'short_interest_prior' in self.ticker_data_dict.keys():
+            if self.ticker_data_dict['short_interest_prior'] is not None:
+                return self.ticker_data_dict['short_interest_prior']
+        return None
+
+    @property
+    def shares_float(self):
+        if 'shares_float' in self.ticker_data_dict.keys():
+            if self.ticker_data_dict['shares_float'] is not None:
+                if self.ticker_data_dict['shares_float'] != self.floatShares:
+                    print(f"Warning: for ticker = [{self.ticker}], there is shares float info conflict: shortsqueeze.com (public float)= {self.ticker_data_dict['shares_float']:.0f} vs. yahoo.com = {self.floatShares}")
+                return self.ticker_data_dict['shares_float']
+            elif self.floatShares is not None:
+                return self.floatShares
+        return None
+
+    @property
+    def short_interest_of_float(self):
+        if self.short_interest is not None and self.shares_float is not None:
+            return self.short_interest / self.shares_float
+        else:
+            return None
+
+    @property
+    def days_to_cover(self):
+        if self.short_interest is not None and self.vol_avg is not None:
+            return self.short_interest / self.vol_avg
+        elif 'days_to_cover' in self.ticker_data_dict.keys():
+            if self.ticker_data_dict['days_to_cover'] is not None:
+                return self.ticker_data_dict['days_to_cover']
+        return None            
+
+    @property
+    def volume(self):
+        return self.ticker_data_dict['history'][['Volume']].to_numpy()
+
+    @property
+    def vol_avg(self):
+        if 'trading_vol_avg' in self.ticker_data_dict.keys():
+            if self.ticker_data_dict['trading_vol_avg'] is not None:
+                return self.ticker_data_dict['trading_vol_avg']
         return None
 
     @property

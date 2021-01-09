@@ -179,7 +179,7 @@ def download_ticker_history_df(ticker: str = None, verbose: bool = True, downloa
     return df
 
 
-def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_retry: bool = False):
+def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_retry: bool = False, web_scraper = False):
 
     if ticker is None:
         raise ValueError("Error: ticker cannot be None")
@@ -277,7 +277,12 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
 
     ####################################################################
 
-    info_dict['price_target'] = web_scrape().price_target(ticker=ticker)
+    if web_scraper is not None:
+        info_dict['price_target'] = web_scraper().price_target(ticker=ticker)
+        info_dict['short_interest'], info_dict['short_interest_prior'], info_dict['days_to_cover'], info_dict['trading_vol_avg'], info_dict['shares_float'] = web_scraper().short_interest(ticker=ticker)
+    else:
+        info_dict['price_target'] = web_scrape().price_target(ticker=ticker)
+        info_dict['short_interest'], info_dict['short_interest_prior'], info_dict['days_to_cover'], info_dict['trading_vol_avg'], info_dict['shares_float'] = None, None, None, None, None
 
     return info_dict
 
@@ -290,7 +295,8 @@ def get_ticker_data_dict(ticker: str = None,
                          download_today_data: bool = False, 
                          data_root_dir: str = None, 
                          auto_retry: bool = False,
-                         keep_up_to_date: bool = False):
+                         keep_up_to_date: bool = False,
+                         web_scraper = None):
 
     """
     if keep_up_to_date is True, try to redownload if the last Date is not today
@@ -334,7 +340,7 @@ def get_ticker_data_dict(ticker: str = None,
             raise SystemError("cannot download ticker history")
 
         try:
-            ticker_info_dict = download_ticker_info_dict(ticker, verbose = verbose, auto_retry = auto_retry)
+            ticker_info_dict = download_ticker_info_dict(ticker, verbose = verbose, auto_retry = auto_retry, web_scraper = web_scraper)
         except:
             raise SystemError("cannot download ticker info dict")
 
@@ -391,7 +397,7 @@ def get_ticker_data_dict(ticker: str = None,
                 print("*** The redownloaded df has an older end date, compared to the current one --> the current one will be used instead")
             else:
                 try:
-                    ticker_info_dict = download_ticker_info_dict(ticker, verbose = verbose, auto_retry = auto_retry)
+                    ticker_info_dict = download_ticker_info_dict(ticker, verbose = verbose, auto_retry = auto_retry, web_scraper = web_scraper)
                 except:
                     raise SystemError("cannot download ticker info dict")
                 shutil.copy2( ticker_history_df_file, data_backup_dir )
@@ -401,10 +407,10 @@ def get_ticker_data_dict(ticker: str = None,
 
     history_df = pd.read_csv(ticker_history_df_file, index_col=False)
     if ticker in ['^VIX','^TNX','^VOLQ']: # these have no volume
-        history_df = history_df[(history_df['Close']>0)]
+        history_df = history_df[(history_df['Close']>0) & (history_df['High']>0) & (history_df['Low']>0) & (history_df['Open']>0)]
         history_df['Volume'] = None
     else:
-        history_df = history_df[(history_df['Close']>0) & (history_df['Volume']>0)]
+        history_df = history_df[(history_df['Close']>0) & (history_df['High']>0) & (history_df['Low']>0) & (history_df['Open']>0) & (history_df['Volume']>0)]
     history_df['Date'] = pd.to_datetime(history_df['Date'], format='%Y-%m-%d', utc=True) # "utc=True" is to be consistent with yfinance datetimes, which are received as UTC.
     if last_date is not None:
         history_df = history_df[history_df['Date']<=last_date]
@@ -481,6 +487,18 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
         if 'industry' in ticker_info_keys:
             sector_info += f", Industry: [{ticker_info['industry']}]"
 
+    # short interest
+    # indicator of bullish vs. bearish
+    if use_html:
+        short_info = f"<br/><hr>Short info unavailable"
+    else:
+        short_info = f"\n\nShort info unavailable"
+    if this_ticker.short_interest_of_float is not None:
+        if use_html:
+            short_info = f"<br/><hr>Short percent of float: <b><span style='color:blue'>{this_ticker.short_interest_of_float*100:.2f}%</span></b>"
+        else:
+            short_info = f"\n\nShort percent of float: {this_ticker.short_interest_of_float*100:.2f}%"
+
     # earnings
     if use_html:
         earnings_info = f"<br/><hr>Earnings info unavailable"
@@ -542,8 +560,8 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
     else:
         shares_info = f"\n\nShare info unavailable"
     if 'floatShares' in ticker_info_keys and 'sharesOutstanding' in ticker_info_keys and 'marketCap' in ticker_info_keys:
-        floatShares = ticker_info['floatShares']
-        sharesOutstanding = ticker_info['sharesOutstanding']
+        floatShares = this_ticker.floatShares
+        sharesOutstanding = this_ticker.sharesOutstanding
         marketCap = ticker_info['marketCap']
         if floatShares is not None and sharesOutstanding is not None and marketCap is not None:
             if sharesOutstanding > 1e9:
@@ -733,9 +751,9 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                         logo = f"\n\nLogo: {ticker_info['logo_url']}"
 
     if use_html:
-        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{company_to_company_comparison_info}{shares_info}{institutions_holding_info}{profitability_info}{valuation_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{price_target_info}{logo}</body>"  
+        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{short_info}{earnings_info}{company_to_company_comparison_info}{shares_info}{institutions_holding_info}{profitability_info}{valuation_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{price_target_info}{logo}</body>"  
     else:
-        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{earnings_info}{company_to_company_comparison_info}{shares_info}{institutions_holding_info}{profitability_info}{valuation_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{price_target_info}{logo}"  
+        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{short_info}{earnings_info}{company_to_company_comparison_info}{shares_info}{institutions_holding_info}{profitability_info}{valuation_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{price_target_info}{logo}"  
     
     return formatted_str
 

@@ -165,7 +165,10 @@ class SnappingCursor(Cursor):
             self.actual_x_data = None
             self.use_x_index = False
         dy = (self.y.max() - self.y.min()) / self.y.size
-        self.y_grad = np.gradient(self.y, dy, edge_order=2)
+        if self.y.size >= 3: # to calculate a numerical gradient, at least (edge_order + 1) elements are required.
+            self.y_grad = np.gradient(self.y, dy, edge_order=2)
+        else:
+            self.y_grad = None
         self._last_index = None
         self.name = name
         self.UI = UI
@@ -179,9 +182,10 @@ class SnappingCursor(Cursor):
                 else:
                     x_datetime = datetime(1970,1,1,tzinfo=timezone.utc) + timedelta(days=event.xdata)
                     index = min(np.searchsorted(self.x, pd.to_datetime(x_datetime, utc=True)), len(self.x)-1) # np.datetime64() is used to be congruent with self.x
-                    
-                if index == self._last_index:
-                    return  # still on the same data point. Nothing to do.
+
+                if self._last_index is not None: 
+                    if index == self._last_index:
+                        return  # still on the same data point. Nothing to do.
 
                 self._last_index = index
                 event.xdata = self.x[index]
@@ -443,7 +447,7 @@ class ticker_download_thread(QThread):
         for idx, ticker in enumerate(tickers_to_download):
             try:
                 #time.sleep(0.001)
-                get_ticker_data_dict(ticker = ticker, force_redownload = True, smart_redownload = self.smart_redownload, download_today_data = self.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir = self.app_window.app_menu.preferences_dialog.data_root_dir, auto_retry = True)
+                get_ticker_data_dict(ticker = ticker, force_redownload = True, smart_redownload = self.smart_redownload, download_today_data = self.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir = self.app_window.app_menu.preferences_dialog.data_root_dir, auto_retry = True, web_scraper = self.app_window.web_scraper)
             except:
                 print(f"Warning: Unable to download this ticker = {ticker}")
             self._signal.emit(idx+1, ticker)
@@ -992,7 +996,7 @@ class app_menu(object):
 
 
 class app_window(QMainWindow):
-    def __init__(self, app=None, appmenu=None, *args, **kwargs):
+    def __init__(self, app=None, appmenu=None, web_scraper=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app = app
 
@@ -1015,6 +1019,8 @@ class app_window(QMainWindow):
             self.app_menu = app_menu(app_window=self)
         else:
             self.app_menu = appmenu(app_window=self)
+        
+        self.web_scraper = web_scraper
 
 
 class UI(QWidget):
@@ -1088,8 +1094,9 @@ class UI_control(object):
         self._UI.index_canvas_options.currentIndexChanged.connect(self._index_canvas_options_change)
         self.timeframe_text = None
         self.ticker_data_dict_in_effect = None
-        self._ticker_selected = False
-        self.selected_ticker = None
+        self._ticker_selected = False # True or False
+        self.selected_ticker = None # ticker name
+        self.selected_ticker_index = None # ticker index
         self.ticker_canvas_cursor = None
         self.index_canvas_cursor = None
         self.timeframe_dict = {"1 week": 1/52, "2 weeks": 1/26, "1 month": 1/12, "2 months": 1/6, "3 months": 1/4, "6 months": 1/2, "1 year": 1.0, "2 years": 2.0, "5 years": 5.0, "10 years": 10.0, "15 years": 15.0, "20 years": 20.0, "30 years": 30.0, "All time": float('inf')}
@@ -1115,33 +1122,33 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("PVI")
                 self._UI.index_canvas_options.addItem("NVI")
                 self.index_options_selection_index = 1
-                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
             elif self._index_selected == 'RSI':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>RSI</b> (Relative Strength Index) reflects a possible oversold (RSI &lt; 30) or overbought (RSI &gt; 70) condition.<br/><br/><a href='https://www.investopedia.com/terms/r/rsi.asp'>https://www.investopedia.com/terms/r/rsi.asp</a></body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>RSI</b> (Relative Strength Index) is a <b>momentum</b> indicator reflecting a possible oversold (RSI &lt; 30) or overbought (RSI &gt; 70) trend.<br/><br/><a href='https://www.investopedia.com/terms/r/rsi.asp'>https://www.investopedia.com/terms/r/rsi.asp</a></body>")
                 self._UI.index_canvas_options.addItem("RSI14")
                 self.index_options_selection_index = 1
-                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
             elif self._index_selected == 'MACD':
                 self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>MACD</b> (Moving Average Convergence Divergence) is a lagging momentum indicator. When <b><span style='color:blue'>MACD</span></b> crosses <b>above</b> (or below) its 9-day EMA <b><span style='color:orange'>signal</span></b> line, it's a <b>buy</b> (or sell).<br/><br/>Common interpretations: crossovers, divergences, and rapid rises/falls.<br/><br/><a href='https://www.investopedia.com/terms/m/macd.asp'>https://www.investopedia.com/terms/m/macd.asp</a></body>")
                 self._UI.index_canvas_options.addItem("MACD: EMA12 vs. EMA26")
                 self.index_options_selection_index = 1
-                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
             elif self._index_selected == 'OBV':
                 self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>OBV</b> (On-Balance Volume) is a leading (as opposed to lagging) momentum indicator to predict changes in stock price.<br/><br/>The author viewed OBV as \"a spring being wound tightly.\" and believed that when volume increases sharply (<b>positive OBV slope</b>) without a significant change in the stock's price (<b>relatively flat price slope</b>), the price will eventually jump upward or fall downward.<br/><br/><a href='https://www.investopedia.com/terms/o/onbalancevolume.asp'>https://www.investopedia.com/terms/o/onbalancevolume.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp'>https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp</a></body>")
                 self._UI.index_canvas_options.addItem("OBV")
                 self.index_options_selection_index = 1
-                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
             elif self._index_selected == 'Heat':
                 self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Market heat, defined as <b>standardized score of price*volume</b>, reflecting how hot the symbol was or how much active attention was drawn to the symbol at that moment.</body>")
                 self._UI.index_canvas_options.addItem("Heat")
                 self.index_options_selection_index = 1
-                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index)
-            elif self._index_selected == 'Supply & Demand':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Support and demand (related support/resistance, inflation point).</body>")
-                self._UI.index_canvas_options.addItem("Supply & Demand")
+            elif self._index_selected == 'A/D':
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Accumulation/Distribution indicator.<br/><br/>It is a <a href='https://en.wikipedia.org/wiki/Accumulation/distribution_index'>leading</a> indicator of price movements, which gauges supply and demand.<br/><br/><a href='https://www.investopedia.com/terms/a/accumulationdistribution.asp'>https://www.investopedia.com/terms/a/accumulationdistribution.asp</a>; <a href='https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/accumulation-distribution'>https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/accumulation-distribution</a><br/><br/>Rising (or falling) A/D means high (or low) underlying <b>demand</b> (strength), while the price level is the <b>supply</b>.<br/><br/>Thus, if rising price but falling A/D, it signals a potential decline is upcoming. Conversely, if falling price but rising A/D, it signals a reversal is upcoming.<br/><br/>If the movement of price and A/D are in the same direction, further uptrend or downtrend is likely.</body>")
+                self._UI.index_canvas_options.addItem("A/D (raw-score)")
+                self._UI.index_canvas_options.addItem("A/D (Z-score)")
+                self.index_options_selection_index = 2
+            elif self._index_selected == 'Money Flow':
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Money flow indicator, known as the volume-weighted RSI, is a <b>momentum</b> indicator that measures the flow of money into and out of a security over a specified period of time.<br/><br/>Oversold / overbought levels are those below 20 / above 80, which may change depending on market conditions.<br/><br/>Oversold/Overbought levels are generally not reason enough to buy/sell; additional research should be considered to confirm the security's turning point.</body>")
+                self._UI.index_canvas_options.addItem("Money Flow 14")
                 self.index_options_selection_index = 1
-                self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index) 
 
+            self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index) 
             self._calc_index()
             self._draw_index_canvas()
 
@@ -1203,14 +1210,16 @@ class UI_control(object):
 
     def _ticker_selection_change(self, index: int = None):
         if index > 0:
-            self.selected_ticker = self._UI.ticker_selection.itemText(index).upper()
+            self.selected_ticker_index = index
+            self.selected_ticker = self._UI.ticker_selection.itemText(self.selected_ticker_index).upper()
             if self.selected_ticker not in ticker_group_dict['All']:
                 print(f"Info: unrecognized ticker was entered: [{self.selected_ticker}]")
 
             self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, 
                                                                   force_redownload = self._UI.app_window.app_menu.preferences_dialog.force_redownload_yfinance_data, 
                                                                   download_today_data = self._UI.app_window.app_menu.preferences_dialog.download_today_data, 
-                                                                  data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir)
+                                                                  data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir,
+                                                                  web_scraper = self._UI.app_window.web_scraper)
             self.ticker_data_dict_in_effect = copy.deepcopy(self.ticker_data_dict_original)
             self._calc_index()
 
@@ -1234,10 +1243,11 @@ class UI_control(object):
             self._UI.index_selection.reset()
             self._UI.index_selection.addItem("PVI and NVI")
             self._UI.index_selection.addItem("RSI")
+            self._UI.index_selection.addItem("Money Flow")
             self._UI.index_selection.addItem("MACD")
             self._UI.index_selection.addItem("OBV")
+            self._UI.index_selection.addItem("A/D")
             self._UI.index_selection.addItem("Heat")
-            self._UI.index_selection.addItem("Supply & Demand")
             self._UI.index_selection.setCurrentIndex(self.index_selection_index)
 
             self._UI.ticker_lastdate_pushbutton.setEnabled(True)
@@ -1446,31 +1456,53 @@ class UI_control(object):
             x_index = x
             y_data = Z_price_vol.values
 
-        elif self._index_selected == 'Supply & Demand':
+        elif self._index_selected == 'A/D':
             # to skip non-existent dates on the plot
             dates = self.ticker_data_dict_in_effect['history']['Date'].values
             formatter = DateFormatter(dates)
             canvas.axes.xaxis.set_major_formatter(formatter)
             x = np.arange(len(dates))
             #
-            n_ticks = len(x)
-            y0 = np.empty(n_ticks); y0.fill(0)
-            canvas.axes.plot(x, y0, '--', color='#0e6b0e', linewidth=0.5)
-            #
-            canvas.axes.set_ylabel('Standardized Price * Volume (EMA9, EMA255)', fontsize=10.0)
-            Z_price_vol = self.ticker_data_dict_in_effect['history']['Z_price_vol']
-            Z_price_vol_EMA9 = self.ticker_data_dict_in_effect['history']['Z_price_vol_EMA9']
-            Z_price_vol_EMA255 = self.ticker_data_dict_in_effect['history']['Z_price_vol_EMA255']
-            color_Z_price_vol = '#3A6CA8'
-            canvas.axes.plot(x, Z_price_vol_EMA255, color='#9ed5f7', linestyle="dashed", linewidth=1)
-            canvas.axes.plot(x, Z_price_vol_EMA9,   color='tab:red',                     linewidth=1)
-            canvas.axes.plot(x, Z_price_vol,        color=color_Z_price_vol,             linewidth=1)
+            canvas.axes.set_ylabel('Accumulation/Distribution', fontsize=10.0)
+            if self.index_options_selection_index == 1:
+                ad = self.ticker_data_dict_in_effect['history']['Accumulation_Distribution']
+            elif self.index_options_selection_index == 2:
+                ad = self.ticker_data_dict_in_effect['history']['Accumulation_Distribution_Zscore']
+            color_ad = '#B4B469'
+            canvas.axes.plot(x, ad, color=color_ad, linewidth=1)
             #
             canvas.figure.autofmt_xdate()
             index_plotline = None
             actual_x_data = dates
             x_index = x
-            y_data = Z_price_vol.values
+            y_data = ad.values
+
+        elif self._index_selected == 'Money Flow':
+            # to skip non-existent dates on the plot
+            dates = self.ticker_data_dict_in_effect['history']['Date'].values
+            formatter = DateFormatter(dates)
+            canvas.axes.xaxis.set_major_formatter(formatter)
+            x = np.arange(len(dates))
+            #
+            canvas.axes.set_ylabel('Money Flow', fontsize=10.0)
+            canvas.axes.set_ylim(0, 100)
+            y= self.ticker_data_dict_in_effect['history']['Money_Flow']
+            color_y = 'tab:blue'
+            n_ticks = len(x)
+            y80 = np.empty(n_ticks); y80.fill(80)
+            y20 = np.empty(n_ticks); y20.fill(20)
+            canvas.axes.plot(x, y20, '--', color='black', linewidth=0.5)
+            canvas.axes.plot(x, y80, '--', color='black', linewidth=0.5)
+            canvas.axes.fill_between(x, y20, y80, where=(y20<y80), color='tab:blue',  alpha=0.05, interpolate=True)
+            canvas.axes.fill_between(x, y,   y80, where=(y>y80),   color='tab:green', alpha=0.3,  interpolate=True)
+            canvas.axes.fill_between(x, y,   y20, where=(y<y20),   color='tab:red',   alpha=0.3,  interpolate=True)
+            canvas.axes.plot(x, y, color=color_y, linewidth=1)
+            #
+            canvas.figure.autofmt_xdate()
+            index_plotline = None
+            actual_x_data = dates
+            x_index = x
+            y_data = y.values
 
         else:
             raise ValueError(f"Unexpected self._index_selected = [{self._index_selected}]")
@@ -1539,7 +1571,13 @@ class UI_control(object):
         history_all_df['Z_price_vol'] = momentum_indicator().Z_price_vol(close_price=history_all_df['Close'], volume=history_all_df['Volume'])
         history_all_df['Z_price_vol_EMA9'] = moving_average(periods=9).exponential(history_all_df['Z_price_vol'])
         history_all_df['Z_price_vol_EMA255'] = moving_average(periods=255).exponential(history_all_df['Z_price_vol'])
-        history_df[['Z_price_vol','Z_price_vol_EMA9','Z_price_vol_EMA255']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['Z_price_vol','Z_price_vol_EMA9','Z_price_vol_EMA255']]  
+        history_df[['Z_price_vol','Z_price_vol_EMA9','Z_price_vol_EMA255']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['Z_price_vol','Z_price_vol_EMA9','Z_price_vol_EMA255']]
+        ######################
+        history_all_df['Accumulation_Distribution'], history_all_df['Accumulation_Distribution_Zscore'] = volume_indicator().accumulation_distribution(high_price=history_all_df['High'],low_price=history_all_df['Low'],close_price=history_all_df['Close'],volume=history_all_df['Volume'])
+        history_df[['Accumulation_Distribution', 'Accumulation_Distribution_Zscore']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['Accumulation_Distribution', 'Accumulation_Distribution_Zscore']]
+        ######################
+        history_all_df['Money_Flow'] = momentum_indicator().money_flow(high_price=history_all_df['High'],low_price=history_all_df['Low'],close_price=history_all_df['Close'],volume=history_all_df['Volume'])
+        history_df['Money_Flow'] = history_all_df[history_all_df['Date'].isin(history_df['Date'])]['Money_Flow']
         ######################
         history_all_df['Close_EMA9'], history_all_df['Close_EMA255'] = moving_average(periods=9).exponential(history_all_df['Close']), moving_average(periods=255).exponential(history_all_df['Close'])
         history_df[['Close_EMA9', 'Close_EMA255']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['Close_EMA9', 'Close_EMA255']]
@@ -1552,11 +1590,10 @@ class UI_control(object):
 
     def _ticker_download_latest_data_from_yfinance(self):
         if self._ticker_selected:
-            self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, force_redownload = True, download_today_data=self._UI.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir)
+            self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, force_redownload = True, download_today_data=self._UI.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir, web_scraper = self._UI.app_window.web_scraper)
             self._ticker_lastdate_dialog_use_last_available_date_button_clicked()
-            self.ticker_data_dict_in_effect['info'] = copy.deepcopy(self.ticker_data_dict_original['info'])
-            self._UI.ticker_textinfo.setHtml(get_formatted_ticker_data(self.ticker_data_dict_in_effect, use_html=True))
-            self._UI.repaint() # to cope with a bug in PyQt5
+            self._ticker_selection_change(self.selected_ticker_index)
+            self._UI.repaint()
 
     def _ticker_lastdate_dialog_use_last_available_date_button_clicked(self):
         self.time_last_date = self.ticker_data_dict_original['history']['Date'].iloc[-1]
@@ -1578,10 +1615,10 @@ class UI_control(object):
         self._UI.message_dialog.hide()
 
 
-def main(appmenu=None):
+def main(appmenu=None, web_scraper=None):
     app = QApplication(sys.argv)
     app.setStyleSheet(StyleSheet)
-    window = app_window(app=app, appmenu=appmenu)
+    window = app_window(app=app, appmenu=appmenu, web_scraper=web_scraper)
     window.show()
     app.exec_()
 

@@ -46,6 +46,39 @@ class momentum_indicator(object):
                 RSI[i] = 100 - 100/(1+up[i]/down[i])
         return RSI
 
+    def money_flow(self, high_price: np.ndarray, low_price: np.ndarray, close_price: np.ndarray, volume: np.ndarray, periods = 14):
+        """
+        https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/MFI
+        """
+        if type(high_price) == pd.Series:
+            high_price = high_price.to_numpy()       
+        if type(low_price) == pd.Series:
+            low_price = low_price.to_numpy()       
+        if type(close_price) == pd.Series:
+            close_price = close_price.to_numpy()        
+        if type(volume) == pd.Series:
+            volume = volume.to_numpy()
+        n_periods = close_price.shape[0]
+        if n_periods == 0:
+            raise ValueError(f"n_periods cannot be zero")
+        if all(volume==None):
+            return [None]*n_periods, [None]*n_periods
+        typical_price = (high_price + low_price + close_price)/3
+        money_flow = typical_price * volume
+        positive_money_flow = np.zeros(shape=n_periods, dtype=float)
+        negative_money_flow = np.zeros(shape=n_periods, dtype=float)
+        MFI = np.zeros(shape=n_periods, dtype=float) # https://en.wikipedia.org/wiki/Money_flow_index
+        for today_idx in range(periods):
+            MFI[today_idx] = None
+        for today_idx in range(periods, n_periods):
+            for idx in range(periods):
+                if typical_price[today_idx-idx] > typical_price[today_idx-idx-1]:
+                    positive_money_flow[today_idx] += money_flow[today_idx-idx]
+                elif typical_price[today_idx-idx] < typical_price[today_idx-idx-1]:
+                    negative_money_flow[today_idx] += money_flow[today_idx-idx]
+            MFI[today_idx] = 100 * positive_money_flow[today_idx] / (positive_money_flow[today_idx]+negative_money_flow[today_idx])
+        return MFI
+        
     def MACD(self, close_price: np.ndarray, fast_period: int = 12, slow_period: int = 26, signal_period: int = 9):
         """
         https://www.investopedia.com/terms/m/macd.asp
@@ -70,7 +103,7 @@ class momentum_indicator(object):
         n_periods = close_price.shape[0]
         if all(volume==None):
             return [None]*n_periods
-        obv = np.empty(shape=n_periods, dtype=float)
+        obv = np.zeros(shape=n_periods, dtype=float)
         obv[0] = 0
         for idx in range(1, n_periods):
             if close_price[idx] > close_price[idx-1]:
@@ -99,6 +132,34 @@ class volume_indicator(object):
         super().__init__()
         self.short_periods = short_periods
         self.long_periods = long_periods
+
+    def accumulation_distribution(self, high_price: np.ndarray, low_price: np.ndarray, close_price: np.ndarray, volume: np.ndarray):
+        """
+        https://www.investopedia.com/terms/a/accumulationdistribution.asp
+        """
+        if type(high_price) == pd.Series:
+            high_price = high_price.to_numpy()       
+        if type(low_price) == pd.Series:
+            low_price = low_price.to_numpy()       
+        if type(close_price) == pd.Series:
+            close_price = close_price.to_numpy()        
+        if type(volume) == pd.Series:
+            volume = volume.to_numpy()
+        n_periods = close_price.shape[0]
+        if n_periods == 0:
+            raise ValueError(f"n_periods cannot be zero")
+        if all(volume==None):
+            return [None]*n_periods, [None]*n_periods
+        ad = np.zeros(shape=n_periods, dtype=float)
+        ad[0] = ((close_price[0] - low_price[0]) - (high_price[0] - close_price[0])) / (high_price[0] - low_price[0]) * volume[0] # CMFV: Current money flow volume
+        for today_idx in range(1, n_periods):
+            if low_price[today_idx] == high_price[today_idx]:
+                CMFV = 0
+            else:
+                CMFV = ((close_price[today_idx] - low_price[today_idx]) - (high_price[today_idx] - close_price[today_idx])) / (high_price[today_idx] - low_price[today_idx]) * volume[today_idx]
+            ad[today_idx] = ad[today_idx-1] + CMFV
+        Z_ad = (ad - ad.mean())/(ad.std())
+        return ad, Z_ad
         
     def PVI_NVI(self, close_price: np.ndarray, volume: np.ndarray):
         if type(close_price) == pd.Series:
@@ -110,8 +171,8 @@ class volume_indicator(object):
             raise ValueError(f"n_periods cannot be zero")
         if all(volume==None):
             return [None]*n_periods, [None]*n_periods, [None]*n_periods, [None]*n_periods, [None]*n_periods, [None]*n_periods
-        PVI = np.empty(shape=n_periods, dtype=float)
-        NVI = np.empty(shape=n_periods, dtype=float)
+        PVI = np.zeros(shape=n_periods, dtype=float)
+        NVI = np.zeros(shape=n_periods, dtype=float)
         PVI[0] = 1000
         NVI[0] = 1000
         EMA_short_period_volume = moving_average(periods=self.short_periods).exponential(volume)
@@ -143,7 +204,7 @@ class moving_average(object):
         """
         https://en.wikipedia.org/wiki/Moving_average
         """
-        if type(data_series) == pd.Series:
+        if type(data_series) in [pd.Series, pd.DataFrame]:
             data_series = data_series.to_numpy()
         n_periods = data_series.shape[0]
         if n_periods<self.periods:
@@ -151,7 +212,7 @@ class moving_average(object):
         elif n_periods == self.periods:
             return [None] * (self.periods-1) + [data_series.mean()]
         else:
-            SMMA = np.empty(shape=n_periods, dtype=float)
+            SMMA = np.zeros(shape=n_periods, dtype=float)
             for i in range(self.periods-1):
                 SMMA[i] = None
             SMMA[self.periods-1] = data_series[:self.periods].mean()
@@ -160,20 +221,20 @@ class moving_average(object):
             return SMMA
 
     def exponential(self, data_series: np.ndarray):
-        if type(data_series) == pd.Series:
+        if type(data_series) in [pd.Series, pd.DataFrame]:
             data_series = data_series.to_numpy()
         n_periods = data_series.shape[0]
-        EMA = np.empty(shape=n_periods, dtype=float)
+        EMA = np.zeros(shape=n_periods, dtype=float)
         EMA[0] = data_series[0]
         for idx in range(1, n_periods):
             EMA[idx] = (data_series[idx] * self.multiplier) + (EMA[idx-1] * (1-self.multiplier))
         return EMA
 
     def simple(self, data_series: np.ndarray):
-        if type(data_series) == pd.Series:
+        if type(data_series) in [pd.Series, pd.DataFrame]:
             data_series = data_series.to_numpy()
         n_periods = data_series.shape[0]
-        SMA = np.empty(shape=n_periods, dtype=float)
+        SMA = np.zeros(shape=n_periods, dtype=float)
         data = np.array(data_series)
         for idx in range(n_periods):
             if idx >= (self.periods-1):
