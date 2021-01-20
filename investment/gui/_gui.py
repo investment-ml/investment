@@ -41,7 +41,7 @@ import matplotlib.pyplot as plt
 
 from datetime import date, datetime, timedelta, timezone
 
-from ..data import Ticker, get_ticker_data_dict, get_formatted_ticker_data, momentum_indicator, volume_indicator, moving_average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict, global_data_root_dir, nasdaqlisted_df, otherlisted_df
+from ..data import Ticker, get_ticker_data_dict, get_formatted_ticker_data, volatility_indicator, momentum_indicator, volume_indicator, moving_average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict, global_data_root_dir, nasdaqlisted_df, otherlisted_df
 
 import numpy as np
 import pandas as pd
@@ -484,11 +484,13 @@ class dialog_with_textbrowser(QDialog):
         self.textbox.setAcceptRichText(True)
         self.textbox.setOpenExternalLinks(True)
 
+
 class fed_funds_rate_dialog(dialog_with_textbrowser):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("Federal Funds Rate")
         self.textbox.setHtml("<a href='https://www.investopedia.com/terms/f/federalfundsrate.asp#citation-7'>Explanation</a><br/><br/><a href='https://www.federalreserve.gov/monetarypolicy/openmarket.htm'>FOMC's target federal funds rate or range, change (basis points) and level</a>")
+
 
 class options_dialog(dialog_with_textbrowser):
     def __init__(self, parent=None, *args, **kwargs):
@@ -496,12 +498,14 @@ class options_dialog(dialog_with_textbrowser):
         self.setWindowTitle("Options")
         self.textbox.setHtml("https://www.investopedia.com/terms/o/openinterest.asp<br/>https://www.investopedia.com/articles/optioninvestor/10/sell-puts-benefit-any-market.asp<br/><a href='https://www.investopedia.com/terms/o/option.asp'>https://www.investopedia.com/terms/o/option.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp'>https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp</a><br/>Options are derivatives/contracts (1 contract = 100 shares) that give the holder/bearer the right (but not the obligation) to buy (call option) or sell (put option) an amount of underlying asset at a set price (strike price) on or before the contract expiration date.<br/><br/>Call option is like a non-refundable down-payment for a future purchase, while put option is like insurance policy limiting downside risk.<br/><br/>Use case:<br/>1. buy calls: hedge against stock price going up.<br/>2. buy puts: hedge against stock price going down.<br/><Br/>https://www.fidelity.com/learning-center/investment-products/options/options-learning-path")
 
+
 class screener_dialog(dialog_with_textbrowser):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("Screener")
         self.textbox.setHtml("<a href='https://finance.yahoo.com/options/highest-open-interest/'>Highest open interest</a><br/><br/><a href='https://www.sectorspdr.com/sectorspdr/tools/correlation-tracker/multiple-securities'>Correlation tracker</a><br/><br/><a href='https://www.marketwatch.com/story/this-year-end-stock-selling-strategy-offsets-capital-gains-taxes-and-sidesteps-the-wash-sale-rule-2020-12-04'>tax-loss selling</a>")
         
+
 class download_data_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
@@ -517,6 +521,14 @@ class download_data_dialog(QDialog):
         self.russell1k_checkbox = QCheckBox('Russell 1000', parent=self)
         self.russell2k_checkbox = QCheckBox('Russell 2000', parent=self)
         self.russell3k_checkbox = QCheckBox('Russell 3000', parent=self)
+        self.ARK_investment_checkbox = QCheckBox('ARK Investments', parent=self)
+        self.ARKK_checkbox = QCheckBox('ARK Innovation ETF (ARKK)', parent=self)
+        self.ARKQ_checkbox = QCheckBox('ARK Autonomous Tech. & Robotics ETF (ARKQ)', parent=self)
+        self.ARKW_checkbox = QCheckBox('ARK Next Generation Internet ETF (ARKW)', parent=self)
+        self.ARKG_checkbox = QCheckBox('ARK Genomic Revolution ETF (ARKG)', parent=self)
+        self.ARKF_checkbox = QCheckBox('ARK Fintech Innovation ETF (ARKF)', parent=self)
+        self.PRNT_checkbox = QCheckBox('ARK The 3D Printing ETF (PRNT)', parent=self)
+        self.IZRL_checkbox = QCheckBox('ARK Israel Innovative Technology ETF (IZRL)', parent=self)
         self.etf_db_checkbox = QCheckBox('ETF database', parent=self)
         self.equity_db_checkbox = QCheckBox('Equity database', parent=self)
         #self.etf_db_checkbox.setEnabled(False)
@@ -525,6 +537,14 @@ class download_data_dialog(QDialog):
         self.dow30_checkbox.setChecked(True)
         self.nasdaq100_checkbox.setChecked(True)
         self.sandp500_checkbox.setChecked(True)
+        self.ARK_investment_checkbox.setChecked(True)
+        self.ARKK_checkbox.setChecked(True)
+        self.ARKQ_checkbox.setChecked(True)
+        self.ARKW_checkbox.setChecked(True)
+        self.ARKG_checkbox.setChecked(True)
+        self.ARKF_checkbox.setChecked(True)
+        self.PRNT_checkbox.setChecked(True)
+        self.IZRL_checkbox.setChecked(True)
         #
         self.dow30_checkbox.stateChanged.connect(self._update_download_selection)
         self.nasdaq100_checkbox.stateChanged.connect(self._update_download_selection)
@@ -533,12 +553,22 @@ class download_data_dialog(QDialog):
         self.russell1k_checkbox.stateChanged.connect(self._update_download_selection)
         self.russell2k_checkbox.stateChanged.connect(self._update_download_selection)
         self.russell3k_checkbox.stateChanged.connect(self._update_download_selection)
+        self.ARK_investment_checkbox.stateChanged.connect(self._update_download_selection)
+        self.ARKK_checkbox.stateChanged.connect(self._update_download_selection)
+        self.ARKQ_checkbox.stateChanged.connect(self._update_download_selection)
+        self.ARKW_checkbox.stateChanged.connect(self._update_download_selection)
+        self.ARKG_checkbox.stateChanged.connect(self._update_download_selection)
+        self.ARKF_checkbox.stateChanged.connect(self._update_download_selection)
+        self.PRNT_checkbox.stateChanged.connect(self._update_download_selection)
+        self.IZRL_checkbox.stateChanged.connect(self._update_download_selection)
         self.etf_db_checkbox.stateChanged.connect(self._update_download_selection)
         self.equity_db_checkbox.stateChanged.connect(self._update_download_selection)
         #
-        self.options_label = QLabel('Option:', parent=self)
+        self.options_label = QLabel('Options:', parent=self)
         self.checkbox_smart_redownload = QCheckBox('Do not re-download if exsting data are already up-to-date (as of -7d ~ now).', parent=self)
         self.checkbox_smart_redownload.stateChanged.connect(self._checkbox_smart_redownload_state_changed)
+        self.checkbox_reverse_order_download = QCheckBox('Download the tickers in reversed alphabetical order.', parent=self)
+        self.checkbox_reverse_order_download.stateChanged.connect(self._checkbox_reverse_order_download_state_changed)
         self.download_progressbar = QProgressBar(parent=self, objectName="ProgressBar")
         self.download_button = QPushButton(parent=self)
         self.close_button = QPushButton(parent=self)
@@ -552,18 +582,28 @@ class download_data_dialog(QDialog):
         self.layout.addWidget(self.russell1k_checkbox, 6, 0)
         self.layout.addWidget(self.russell2k_checkbox, 7, 0)
         self.layout.addWidget(self.russell3k_checkbox, 8, 0)
-        self.layout.addWidget(self.etf_db_checkbox, 9, 0)
-        self.layout.addWidget(self.equity_db_checkbox, 10, 0)
-        self.layout.addWidget(self.options_label, 11, 0)
-        self.layout.addWidget(self.checkbox_smart_redownload, 12, 0)
-        self.layout.addWidget(self.download_progressbar, 13, 0)
-        self.layout.addWidget(self.download_button, 14, 0)
-        self.layout.addWidget(self.close_button, 15, 0)
+        self.layout.addWidget(self.ARK_investment_checkbox, 9, 0)
+        self.layout.addWidget(self.ARKK_checkbox, 10, 0)
+        self.layout.addWidget(self.ARKQ_checkbox, 11, 0)
+        self.layout.addWidget(self.ARKW_checkbox, 12, 0)
+        self.layout.addWidget(self.ARKG_checkbox, 13, 0)
+        self.layout.addWidget(self.ARKF_checkbox, 14, 0)
+        self.layout.addWidget(self.PRNT_checkbox, 15, 0)
+        self.layout.addWidget(self.IZRL_checkbox, 16, 0)
+        self.layout.addWidget(self.etf_db_checkbox, 17, 0)
+        self.layout.addWidget(self.equity_db_checkbox, 18, 0)
+        self.layout.addWidget(self.options_label, 19, 0)
+        self.layout.addWidget(self.checkbox_smart_redownload, 20, 0)
+        self.layout.addWidget(self.checkbox_reverse_order_download, 21, 0)
+        self.layout.addWidget(self.download_progressbar, 22, 0)
+        self.layout.addWidget(self.download_button, 23, 0)
+        self.layout.addWidget(self.close_button, 24, 0)
         self.setLayout(self.layout)
         self.download_button.clicked.connect(self._download_button_clicked)
         self.close_button.clicked.connect(self._close_button_clicked)
         self.app_window = parent
         self._update_download_selection()
+        self.reversed_order_download = False
         #self._reset()
 
     def _update_download_selection(self):
@@ -580,6 +620,22 @@ class download_data_dialog(QDialog):
             self.tickers_to_download += ticker_group_dict['Russell 2000']
         if self.russell3k_checkbox.isChecked():
             self.tickers_to_download += ticker_group_dict['Russell 3000']
+        if self.ARK_investment_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['ARK Investments']
+        if self.ARKK_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['ARK Innovation ETF']
+        if self.ARKQ_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['ARK Autonomous Tech. & Robotics ETF']
+        if self.ARKW_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['ARK Next Generation Internet ETF']
+        if self.ARKG_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['ARK Genomic Revolution ETF']
+        if self.ARKF_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['ARK Fintech Innovation ETF']
+        if self.PRNT_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['ARK The 3D Printing ETF']
+        if self.IZRL_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['ARK Israel Innovative Technology ETF']
         if self.comp_checkbox.isChecked():
             self.tickers_to_download += ticker_group_dict['NASDAQ Composite']
         if self.etf_db_checkbox.isChecked():
@@ -594,6 +650,9 @@ class download_data_dialog(QDialog):
 
     def _checkbox_smart_redownload_state_changed(self):
         self.smart_redownload = self.checkbox_smart_redownload.isChecked()
+
+    def _checkbox_reverse_order_download_state_changed(self):
+        self.reversed_order_download = self.checkbox_reverse_order_download.isChecked()
 
     def _reset(self):
         self.checkbox_smart_redownload.setChecked(True)
@@ -628,7 +687,7 @@ class download_data_dialog(QDialog):
             # then the download_progressbar update won't show.
             # it is like we need to remove any external function call in self.download_progressbar.setValue(idx) in the signal.connect(), in MacOS
             # to see the effect, try to uncomment the # time.sleep(0.003) statement below; you will see how unsmooth it is.
-            self.thread1=ticker_download_thread(app_window=self.app_window, smart_redownload=self.smart_redownload, tickers_to_download=self.tickers_to_download, ascending=True)
+            self.thread1=ticker_download_thread(app_window=self.app_window, smart_redownload=self.smart_redownload, tickers_to_download=self.tickers_to_download, ascending=not self.reversed_order_download)
             self.thread1._signal.connect(self._download_this_ticker)
             self.thread1.start()
 
@@ -839,6 +898,12 @@ class research_dialog(QDialog):
         self.website3Button.setAutoDefault(False)
         self.website3Button.clicked.connect(self.webview.reload_website3)
         self.toolBar.addWidget(self.website3Button)
+        #
+        self.website4Button = QPushButton(parent=self)
+        self.website4Button.setText(self.webview.ref_website4)
+        self.website4Button.setAutoDefault(False)
+        self.website4Button.clicked.connect(self.webview.reload_website4)
+        self.toolBar.addWidget(self.website4Button)
         # layout
         self.layout = QGridLayout()
         self.layout.addWidget(self.web_url_lineedit, 0, 0)
@@ -894,6 +959,7 @@ class web_view(QWebEngineView):
         self.ref_website1 = "Investopedia"
         self.ref_website2 = "Nasdaq"
         self.ref_website3 = "Yahoo Finance"
+        self.ref_website4 = "SEC EDGAR"
         #self.ref_website4 = "Finviz"
     def reload_website1(self):
         self.load(QUrl.fromUserInput("https://investopedia.com"))
@@ -901,6 +967,8 @@ class web_view(QWebEngineView):
         self.load(QUrl.fromUserInput("https://www.nasdaq.com/"))
     def reload_website3(self):
         self.load(QUrl.fromUserInput("https://finance.yahoo.com/"))
+    def reload_website4(self):
+        self.load(QUrl.fromUserInput("https://www.sec.gov/edgar/searchedgar/companysearch.html"))
 
 
 class app_menu(object):
@@ -1099,7 +1167,7 @@ class UI_control(object):
         self.selected_ticker_index = None # ticker index
         self.ticker_canvas_cursor = None
         self.index_canvas_cursor = None
-        self.timeframe_dict = {"1 week": 1/52, "2 weeks": 1/26, "1 month": 1/12, "2 months": 1/6, "3 months": 1/4, "6 months": 1/2, "1 year": 1.0, "2 years": 2.0, "5 years": 5.0, "10 years": 10.0, "15 years": 15.0, "20 years": 20.0, "30 years": 30.0, "All time": float('inf')}
+        self.timeframe_dict = {"1 week": 1/52, "2 weeks": 1/26, "1 month": 1/12, "2 months": 1/6, "3 months": 1/4, "6 months": 1/2, "1 year": 1.0, "2 years": 2.0, "3 years": 3.0, "4 years": 4.0, "5 years": 5.0, "10 years": 10.0, "15 years": 15.0, "20 years": 20.0, "30 years": 30.0, "All time": float('inf')}
         self.time_last_date = pd.to_datetime(date.today(), utc=True)
         self.timeframe_selection_index = list(self.timeframe_dict).index('1 year') + 1
         self.index_options_selection_index = 1
@@ -1123,8 +1191,8 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("NVI")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'RSI':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>RSI</b> (Relative Strength Index) is a <b>momentum</b> indicator reflecting a possible oversold (RSI &lt; 30) or overbought (RSI &gt; 70) trend.<br/><br/><a href='https://www.investopedia.com/terms/r/rsi.asp'>https://www.investopedia.com/terms/r/rsi.asp</a></body>")
-                self._UI.index_canvas_options.addItem("RSI14")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>RSI</b> (Relative Strength Index) is a leading <b>momentum</b> indicator reflecting a possible oversold (RSI &lt; 30) or overbought (RSI &gt; 70) trend.<br/><br/>RSI = 50 means no trend; thus, long periods of RSI &gt; 50 (or &lt; 50) suggests continuous uptrend (or downtrend).<br/><br/><a href='https://www.investopedia.com/terms/r/rsi.asp'>https://www.investopedia.com/terms/r/rsi.asp</a></body>")
+                self._UI.index_canvas_options.addItem("RSI 14")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'MACD':
                 self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>MACD</b> (Moving Average Convergence Divergence) is a lagging momentum indicator. When <b><span style='color:blue'>MACD</span></b> crosses <b>above</b> (or below) its 9-day EMA <b><span style='color:orange'>signal</span></b> line, it's a <b>buy</b> (or sell).<br/><br/>Common interpretations: crossovers, divergences, and rapid rises/falls.<br/><br/><a href='https://www.investopedia.com/terms/m/macd.asp'>https://www.investopedia.com/terms/m/macd.asp</a></body>")
@@ -1144,9 +1212,15 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("A/D (Z-score)")
                 self.index_options_selection_index = 2
             elif self._index_selected == 'Money Flow':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Money flow indicator, known as the volume-weighted RSI, is a <b>momentum</b> indicator that measures the flow of money into and out of a security over a specified period of time.<br/><br/>Oversold / overbought levels are those below 20 / above 80, which may change depending on market conditions.<br/><br/>Oversold/Overbought levels are generally not reason enough to buy/sell; additional research should be considered to confirm the security's turning point.</body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Money flow indicator, known as the volume-weighted RSI, is a leading <b>momentum</b> indicator that measures the flow of money into and out of a security over a specified period of time.<br/><br/>Oversold / overbought levels are those below 20 (or 10) / above 80 (or 90), which may change depending on market conditions.<br/><br/>One of the primary ways to use this index is when there is a divergence, where the oscillator is moving in the opposite direction of price. This is a signal of a potential reversal in the prevailing price trend.</body>")
                 self._UI.index_canvas_options.addItem("Money Flow 14")
                 self.index_options_selection_index = 1
+            elif self._index_selected == 'Bollinger Band':
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Bollinger Band provides a visualization of the level of <b>volatility</b>.<br/><br/>Low (or high) volatility (called squeeze) is considered a potential sign of future increased (or decreased) volatility (that is, the phenomenon of regression toward the mean)<br/><br/>About 90% of price action occurs within the band.<br/><br/>However, Bollinger Band does <b>NOT</b> indicate when a change may take place or what direction price could move; it needs to be used with other indicators.<br/><br/>Note.: In an approx. normal data set, 68 - 95 - 99.7% fall within ±1σ, ±2σ, ±3σ, respectively.<br/><br/><a href='https://www.investopedia.com/terms/b/bollingerbands.asp'>https://www.investopedia.com/terms/b/bollingerbands.asp</a></body>")
+                self._UI.index_canvas_options.addItem("Bollinger Band (Short term)")
+                self._UI.index_canvas_options.addItem("Bollinger Band (Medium term)")
+                self._UI.index_canvas_options.addItem("Bollinger Band (Long term)")
+                self.index_options_selection_index = 2
 
             self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index) 
             self._calc_index()
@@ -1247,6 +1321,7 @@ class UI_control(object):
             self._UI.index_selection.addItem("MACD")
             self._UI.index_selection.addItem("OBV")
             self._UI.index_selection.addItem("A/D")
+            self._UI.index_selection.addItem("Bollinger Band")
             self._UI.index_selection.addItem("Heat")
             self._UI.index_selection.setCurrentIndex(self.index_selection_index)
 
@@ -1357,14 +1432,17 @@ class UI_control(object):
             n_ticks = len(x)
             y70 = np.empty(n_ticks); y70.fill(70)
             y30 = np.empty(n_ticks); y30.fill(30)
-            canvas.axes.set_ylabel('RSI14', fontsize=10.0)
+            y50 = np.empty(n_ticks); y50.fill(50)
+            canvas.axes.set_ylabel('RSI 14', fontsize=10.0)
             canvas.axes.set_ylim(0, 100)
             y = self.ticker_data_dict_in_effect['history']['RSI14']
             canvas.axes.plot(x, y30, '--', color='black', linewidth=0.5)
+            canvas.axes.plot(x, y50, '--', color='black', linewidth=0.5)
             canvas.axes.plot(x, y70, '--', color='black', linewidth=0.5)
-            canvas.axes.fill_between(x, y30, y70, where=(y30<y70), color='tab:blue',  alpha=0.05, interpolate=True)
-            canvas.axes.fill_between(x, y,   y70, where=(y>y70),   color='tab:green', alpha=0.3,  interpolate=True)
-            canvas.axes.fill_between(x, y,   y30, where=(y<y30),   color='tab:red',   alpha=0.3,  interpolate=True)
+            canvas.axes.fill_between(x, y50, y70, where=(y50<y70), color='tab:green', alpha=0.1,  interpolate=True)
+            canvas.axes.fill_between(x, y30, y50, where=(y30<y50), color='tab:red',   alpha=0.1,  interpolate=True)
+            canvas.axes.fill_between(x, y,   y70, where=(y>y70),   color='tab:green', alpha=0.5,  interpolate=True)
+            canvas.axes.fill_between(x, y,   y30, where=(y<y30),   color='tab:red',   alpha=0.5,  interpolate=True)
             #index_plotline, = canvas.axes.plot(x, y, color='tab:blue', linewidth=1)
             canvas.axes.plot(x, y, color='tab:blue', linewidth=1)
             #
@@ -1504,6 +1582,42 @@ class UI_control(object):
             x_index = x
             y_data = y.values
 
+        elif self._index_selected == 'Bollinger Band':
+            # to skip non-existent dates on the plot
+            dates = self.ticker_data_dict_in_effect['history']['Date'].values
+            formatter = DateFormatter(dates)
+            canvas.axes.xaxis.set_major_formatter(formatter)
+            x = np.arange(len(dates))
+            #
+            Typical_price = self.ticker_data_dict_in_effect['history']['Typical']
+            if self.index_options_selection_index == 1:
+                BB_MA = self.ticker_data_dict_in_effect['history']['BB_st_MA']
+                BB_BOLU = self.ticker_data_dict_in_effect['history']['BB_st_BOLU']
+                BB_BOLD = self.ticker_data_dict_in_effect['history']['BB_st_BOLD']
+                canvas.axes.set_ylabel('Bollinger Band - SMA10, 1.5σ', fontsize=10.0)
+            elif self.index_options_selection_index == 2:
+                BB_MA = self.ticker_data_dict_in_effect['history']['BB_mt_MA']
+                BB_BOLU = self.ticker_data_dict_in_effect['history']['BB_mt_BOLU']
+                BB_BOLD = self.ticker_data_dict_in_effect['history']['BB_mt_BOLD']
+                canvas.axes.set_ylabel('Bollinger Band - SMA20, 2.0σ', fontsize=10.0)
+            elif self.index_options_selection_index == 3:
+                BB_MA = self.ticker_data_dict_in_effect['history']['BB_lt_MA']
+                BB_BOLU = self.ticker_data_dict_in_effect['history']['BB_lt_BOLU']
+                BB_BOLD = self.ticker_data_dict_in_effect['history']['BB_lt_BOLD']
+                canvas.axes.set_ylabel('Bollinger Band - SMA50, 2.5σ', fontsize=10.0)
+            #canvas.axes.fill_between(x, 0, Close_price, where=(0<Close_price), color='tab:blue', alpha=0.1, interpolate=True)
+            canvas.axes.plot(x, Typical_price, color='tab:blue', linewidth=1)
+            canvas.axes.fill_between(x, BB_BOLD, BB_BOLU, where=(BB_BOLD<BB_BOLU), color='tab:green', alpha=0.05, interpolate=True)
+            canvas.axes.plot(x, BB_BOLU,   color='tab:green', linewidth=1)
+            canvas.axes.plot(x, BB_BOLD,   color='tab:green', linewidth=1)
+            canvas.axes.plot(x, BB_MA,     color='tab:red',   linewidth=1)
+            #
+            canvas.figure.autofmt_xdate()
+            index_plotline = None
+            actual_x_data = dates
+            x_index = x
+            y_data = BB_MA.values
+
         else:
             raise ValueError(f"Unexpected self._index_selected = [{self._index_selected}]")
 
@@ -1581,6 +1695,15 @@ class UI_control(object):
         ######################
         history_all_df['Close_EMA9'], history_all_df['Close_EMA255'] = moving_average(periods=9).exponential(history_all_df['Close']), moving_average(periods=255).exponential(history_all_df['Close'])
         history_df[['Close_EMA9', 'Close_EMA255']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['Close_EMA9', 'Close_EMA255']]
+        ######################
+        history_all_df['BB_st_MA'], history_all_df['BB_st_BOLU'], history_all_df['BB_st_BOLD'] = volatility_indicator().Bollinger_Band(typical_price=history_all_df['Typical'], n_smoothing_days = 10, n_std_dev = 1.5)
+        history_df[['BB_st_MA', 'BB_st_BOLU', 'BB_st_BOLD']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['BB_st_MA', 'BB_st_BOLU', 'BB_st_BOLD']]
+        #
+        history_all_df['BB_mt_MA'], history_all_df['BB_mt_BOLU'], history_all_df['BB_mt_BOLD'] = volatility_indicator().Bollinger_Band(typical_price=history_all_df['Typical'], n_smoothing_days = 20, n_std_dev = 2)
+        history_df[['BB_mt_MA', 'BB_mt_BOLU', 'BB_mt_BOLD']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['BB_mt_MA', 'BB_mt_BOLU', 'BB_mt_BOLD']]
+        #
+        history_all_df['BB_lt_MA'], history_all_df['BB_lt_BOLU'], history_all_df['BB_lt_BOLD'] = volatility_indicator().Bollinger_Band(typical_price=history_all_df['Typical'], n_smoothing_days = 50, n_std_dev = 2.5)
+        history_df[['BB_lt_MA', 'BB_lt_BOLU', 'BB_lt_BOLD']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['BB_lt_MA', 'BB_lt_BOLU', 'BB_lt_BOLD']]
         ######################
         self.ticker_data_dict_in_effect['history'] = history_df
 

@@ -7,6 +7,30 @@
 import pandas as pd
 import numpy as np
 
+class volatility_indicator(object):
+    def __init__(self):
+        super().__init__()
+
+    def Bollinger_Band(self, typical_price: np.ndarray, n_smoothing_days = 20, n_std_dev = 2):
+        """
+        https://www.investopedia.com/terms/b/bollingerbands.asp
+        """
+        if type(typical_price) == pd.Series:
+            typical_price = typical_price.to_numpy()
+        n_periods = typical_price.shape[0]
+        if n_periods == 0:
+            raise ValueError(f"n_periods cannot be zero")
+        MA = moving_average(periods = n_smoothing_days).simple(typical_price)
+        sigma = np.zeros(shape=n_periods, dtype=float)
+        for idx in range(n_periods):
+            if idx < n_smoothing_days:
+                sigma[idx] = np.nan
+            else:
+                sigma[idx] = np.std(typical_price[(idx-n_smoothing_days):(idx)])
+        BOLU = MA + n_std_dev * sigma
+        BOLD = MA - n_std_dev * sigma
+        return MA, BOLU, BOLD
+
 class momentum_indicator(object):
     def __init__(self):
         super().__init__()
@@ -151,7 +175,10 @@ class volume_indicator(object):
         if all(volume==None):
             return [None]*n_periods, [None]*n_periods
         ad = np.zeros(shape=n_periods, dtype=float)
-        ad[0] = ((close_price[0] - low_price[0]) - (high_price[0] - close_price[0])) / (high_price[0] - low_price[0]) * volume[0] # CMFV: Current money flow volume
+        if high_price[0] == low_price[0]:
+            ad[0] = 0
+        else:
+            ad[0] = ((close_price[0] - low_price[0]) - (high_price[0] - close_price[0])) / (high_price[0] - low_price[0]) * volume[0] # CMFV: Current money flow volume
         for today_idx in range(1, n_periods):
             if low_price[today_idx] == high_price[today_idx]:
                 CMFV = 0
@@ -237,7 +264,7 @@ class moving_average(object):
         SMA = np.zeros(shape=n_periods, dtype=float)
         data = np.array(data_series)
         for idx in range(n_periods):
-            if idx >= (self.periods-1):
+            if idx > (self.periods-1):
                 SMA[idx] = np.mean(data[(idx-self.periods+1):(idx+1)])
             else:
                 SMA[idx] = np.nan

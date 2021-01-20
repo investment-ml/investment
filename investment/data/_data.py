@@ -287,6 +287,29 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
     return info_dict
 
 
+def max_diff_pct(ticker_history: pd.DataFrame, days=None):
+    if days is None:
+        raise ValueError('days cannot be None')
+    history_df = ticker_history[['Date','High','Low']]
+    last_date = ticker_history['Date'].iloc[-1]
+    history_df = history_df[history_df['Date'] >= (last_date - timedelta(days=days))]
+    low_to_high_max_pct = high_to_low_max_pct = 0
+    for this_date in history_df['Date'].tolist():
+        #
+        this_date_high = float(history_df[history_df['Date'] == this_date]['High'])
+        subsequent_lowest = float(history_df[history_df['Date'] >= this_date]['Low'].min())
+        high_to_low_pct = 100 * (subsequent_lowest - this_date_high) / this_date_high
+        if high_to_low_pct < high_to_low_max_pct:
+            high_to_low_max_pct = high_to_low_pct
+        #
+        this_date_low = float(history_df[history_df['Date'] == this_date]['Low'])
+        subsequent_highest = float(history_df[history_df['Date'] >= this_date]['High'].max())
+        low_to_high_pct = 100 * (subsequent_highest - this_date_low) / this_date_low
+        if low_to_high_pct > low_to_high_max_pct:
+            low_to_high_max_pct = low_to_high_pct
+    return [low_to_high_max_pct, high_to_low_max_pct,]
+
+
 def get_ticker_data_dict(ticker: str = None, 
                          last_date = None,
                          verbose: bool = True, 
@@ -301,6 +324,27 @@ def get_ticker_data_dict(ticker: str = None,
     """
     if keep_up_to_date is True, try to redownload if the last Date is not today
     """
+
+    def process_and_save_raw_data():
+        nonlocal ticker_history_df       
+        ticker_history_df.to_csv(ticker_history_df_file, index=False)
+        #
+        history_df = pd.read_csv(ticker_history_df_file, index_col=False)
+        if ticker in ['^VIX','^TNX','^VOLQ']: # these have no volume
+            history_df = history_df[(history_df['Close']>0) & (history_df['High']>0) & (history_df['Low']>0) & (history_df['Open']>0)]
+            history_df['Volume'] = None
+        else:
+            history_df = history_df[(history_df['Close']>0) & (history_df['High']>0) & (history_df['Low']>0) & (history_df['Open']>0) & (history_df['Volume']>0)]
+        history_df['Date'] = pd.to_datetime(history_df['Date'], format='%Y-%m-%d', utc=True) # "utc=True" is to be consistent with yfinance datetimes, which are received as UTC.
+        #
+        ticker_info_dict['max_diff_pct_1yr']  = max_diff_pct(ticker_history=history_df, days=365.25*1)
+        ticker_info_dict['max_diff_pct_2yr']  = max_diff_pct(ticker_history=history_df, days=365.25*2)
+        ticker_info_dict['max_diff_pct_3yr']  = max_diff_pct(ticker_history=history_df, days=365.25*3)
+        ticker_info_dict['max_diff_pct_4yr']  = max_diff_pct(ticker_history=history_df, days=365.25*4)
+        ticker_info_dict['max_diff_pct_5yr']  = max_diff_pct(ticker_history=history_df, days=365.25*5)
+        ticker_info_dict['max_diff_pct_10yr'] = max_diff_pct(ticker_history=history_df, days=365.25*10)
+        ticker_info_dict['max_diff_pct_20yr'] = max_diff_pct(ticker_history=history_df, days=365.25*20)
+        pickle.dump(ticker_info_dict, open(ticker_info_dict_file, "wb"))
 
     from ._ticker import global_data_root_dir
 
@@ -344,8 +388,7 @@ def get_ticker_data_dict(ticker: str = None,
         except:
             raise SystemError("cannot download ticker info dict")
 
-        ticker_history_df.to_csv(ticker_history_df_file, index=False)
-        pickle.dump(ticker_info_dict, open(ticker_info_dict_file, "wb"))
+        process_and_save_raw_data()
 
     elif force_redownload or keep_up_to_date:
 
@@ -402,8 +445,8 @@ def get_ticker_data_dict(ticker: str = None,
                     raise SystemError("cannot download ticker info dict")
                 shutil.copy2( ticker_history_df_file, data_backup_dir )
                 shutil.copy2( ticker_info_dict_file,  data_backup_dir )
-                new_df.to_csv(ticker_history_df_file, index=False)
-                pickle.dump(ticker_info_dict, open(ticker_info_dict_file, "wb"))
+                ticker_history_df = new_df
+                process_and_save_raw_data()
 
     history_df = pd.read_csv(ticker_history_df_file, index_col=False)
     if ticker in ['^VIX','^TNX','^VOLQ']: # these have no volume
@@ -411,9 +454,12 @@ def get_ticker_data_dict(ticker: str = None,
         history_df['Volume'] = None
     else:
         history_df = history_df[(history_df['Close']>0) & (history_df['High']>0) & (history_df['Low']>0) & (history_df['Open']>0) & (history_df['Volume']>0)]
+    history_df['Typical'] = ( history_df['Close'] + history_df['High'] + history_df['Low'] ) / 3
     history_df['Date'] = pd.to_datetime(history_df['Date'], format='%Y-%m-%d', utc=True) # "utc=True" is to be consistent with yfinance datetimes, which are received as UTC.
+    #
     if last_date is not None:
         history_df = history_df[history_df['Date']<=last_date]
+    #
     info_dict = pickle.load( open( ticker_info_dict_file, "rb" ) )
     if 'info' not in info_dict.keys():
         raise KeyError(f"for ticker = [{ticker}], 'info' is not in the info_dict keys")
@@ -684,18 +730,25 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                         dividends_info += f"\n\nAs an evaluation of the dividend payment system, {payoutRatio*100:.2f}% of the earnings is paid out to shareholders."
 
     # measures
+    max_diff_pct_yr1 = this_ticker.max_diff_pct_year_n(year_n=1)
+    max_diff_pct_yr2 = this_ticker.max_diff_pct_year_n(year_n=2)
+    max_diff_pct_yr3 = this_ticker.max_diff_pct_year_n(year_n=3)
+    max_diff_pct_yr4 = this_ticker.max_diff_pct_year_n(year_n=4)
+    max_diff_pct_yr5 = this_ticker.max_diff_pct_year_n(year_n=5)
+    max_diff_pct_yr10 = this_ticker.max_diff_pct_year_n(year_n=10)
+    max_diff_pct_yr20 = this_ticker.max_diff_pct_year_n(year_n=20)
     if use_html:
-        risk_info = f"<br/><hr>Beta measure unavailable"
+        risk_info = f"<br/><hr> 1yr_h/l(%): ({max_diff_pct_yr1[0]:+.2f}%, {max_diff_pct_yr1[1]:+.2f}%)<br/> 2yr_h/l(%): ({max_diff_pct_yr2[0]:+.2f}%, {max_diff_pct_yr2[1]:+.2f}%)<br/> 3yr_h/l(%): ({max_diff_pct_yr3[0]:+.2f}%, {max_diff_pct_yr3[1]:+.2f}%)<br/> 4yr_h/l(%): ({max_diff_pct_yr4[0]:+.2f}%, {max_diff_pct_yr4[1]:+.2f}%)<br/> 5yr_h/l(%): ({max_diff_pct_yr5[0]:+.2f}%, {max_diff_pct_yr5[1]:+.2f}%)<br/>10yr_h/l(%): ({max_diff_pct_yr10[0]:+.2f}%, {max_diff_pct_yr10[1]:+.2f}%)<br/>20yr_h/l(%): ({max_diff_pct_yr20[0]:+.2f}%, {max_diff_pct_yr20[1]:+.2f}%)"
     else:
-        risk_info = f"\n\nBeta measure unavailable"
+        risk_info = f"\n\n 1yr_h/l(%): ({max_diff_pct_yr1[0]:+.2f}%, {max_diff_pct_yr1[1]:+.2f}%)\n 2yr_h/l(%): ({max_diff_pct_yr2[0]:+.2f}%, {max_diff_pct_yr2[1]:+.2f}%)\n 3yr_h/l(%): ({max_diff_pct_yr3[0]:+.2f}%, {max_diff_pct_yr3[1]:+.2f}%)\n 4yr_h/l(%): ({max_diff_pct_yr4[0]:+.2f}%, {max_diff_pct_yr4[1]:+.2f}%)\n 5yr_h/l(%): ({max_diff_pct_yr5[0]:+.2f}%, {max_diff_pct_yr5[1]:+.2f}%)\n10yr_h/l(%): ({max_diff_pct_yr10[0]:+.2f}%, {max_diff_pct_yr10[1]:+.2f}%)\n20yr_h/l(%): ({max_diff_pct_yr20[0]:+.2f}%, {max_diff_pct_yr20[1]:+.2f}%)"
     # beta: covariance of stock with market
     if 'beta' in ticker_info_keys:
         beta = ticker_info['beta']
         if beta is not None:
             if use_html:
-                risk_info = f"<br/><hr>Beta: {beta:.2f}"
+                risk_info += f"<br/><br/>Beta: {beta:.2f}"
             else:
-                risk_info = f"\n\nBeta: {beta:.2f}"
+                risk_info += f"\n\nBeta: {beta:.2f}"
             if beta > 1.00:
                 risk_info += f" (more volatile than the overall market)"
             if beta <= 1.00:

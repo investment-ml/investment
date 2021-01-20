@@ -8,6 +8,7 @@ from ..math_and_stats import sigmoid
 
 import pandas as pd
 
+from ._data import timedata
 from datetime import datetime, timedelta, timezone
 from calendar import day_name
 
@@ -18,6 +19,8 @@ import ftplib
 import os
 from os.path import join
 import pathlib
+
+import requests
 
 # NASDAQ Composite Components:
 # https://indexes.nasdaqomx.com/Index/Weighting/COMP -> Export
@@ -37,6 +40,8 @@ otherlisted_df = pd.DataFrame()
 options_df = pd.DataFrame()
 global_data_root_dir = join(str(pathlib.Path.home()), ".investment")
 
+ARK_df_dict = {}
+
 ###########################################################################################
 
 def Internet_connection_available():
@@ -48,6 +53,67 @@ def Internet_connection_available():
     except OSError:
         pass
     return False
+
+###########################################################################################
+
+def download_and_load_ARK_data(data_root_dir: str = None):
+    if data_root_dir is None:
+         raise ValueError("Error: data_root_dir cannot be None")
+
+    data_dir = join(data_root_dir, "ticker_data/ARK")
+    if not os.path.exists(data_dir):
+        try:
+            pathlib.Path(data_dir).mkdir(parents=True, exist_ok=True)
+        except:
+            raise IOError(f"cannot create data dir: {data_dir}")
+    
+    pairs = {'ARKK': 'ARK_INNOVATION_ETF_ARKK_HOLDINGS.csv',
+             'ARKQ': 'ARK_AUTONOMOUS_TECHNOLOGY_&_ROBOTICS_ETF_ARKQ_HOLDINGS.csv',
+             'ARKW': 'ARK_NEXT_GENERATION_INTERNET_ETF_ARKW_HOLDINGS.csv',
+             'ARKG': 'ARK_GENOMIC_REVOLUTION_MULTISECTOR_ETF_ARKG_HOLDINGS.csv',
+             'ARKF': 'ARK_FINTECH_INNOVATION_ETF_ARKF_HOLDINGS.csv',
+             'PRNT': 'THE_3D_PRINTING_ETF_PRNT_HOLDINGS.csv',
+             'IZRL': 'ARK_ISRAEL_INNOVATIVE_TECHNOLOGY_ETF_IZRL_HOLDINGS.csv'}
+
+    global ARK_df_dict
+
+    for ETF_name in pairs.keys():
+        filename = join(data_dir, ETF_name + ".csv")
+
+        file1 = pathlib.Path(filename)
+
+        to_download = True
+
+        if file1.exists():
+            if timedata().now.datetime - timedata(time_stamp=file1.stat().st_ctime).datetime < timedelta(days=1): # creation time
+                to_download = False
+
+        if not Internet_connection_available():
+            to_download = False
+            if not file1.exists():
+                raise RuntimeError("Internet is unavailable but the system depends on certain ark-invest.com files to run")
+
+        if to_download:
+            print(f'Download [{ETF_name}] data from ark-funds.com ...', end='')
+            url = "https://ark-funds.com/wp-content/fundsiteliterature/csv/" + pairs[ETF_name]
+            r = requests.get(url)
+            with open(filename, 'wb') as outfile:
+                outfile.write(r.content)
+            print(' Done')
+                
+        with open(filename, 'r') as f:
+            data = f.readlines()
+        footer_n = 0
+        for idx, d in enumerate(data):
+            if d[0] == ',': # figure out how many footer to skip
+                footer_n = len(data) - idx
+                break
+
+        ARK_df_dict[ETF_name] = pd.read_csv(filename, skipfooter=footer_n, engine='python').replace({'ticker': {'TREE UW':'TREE','ARCT UQ':'ARCT','TCS LI': None, 'MDT UN': 'MDT', 'XRX UN': 'XRX'}})
+
+download_and_load_ARK_data(data_root_dir=global_data_root_dir)
+
+###########################################################################################
 
 # references:
 # https://quant.stackexchange.com/questions/1640/where-to-download-list-of-all-common-stocks-traded-on-nyse-nasdaq-and-amex
@@ -77,8 +143,6 @@ def download_nasdaqtrader_data(data_root_dir: str = None):
 
 
 def load_nasdaqtrader_data(data_root_dir: str = None):
-
-    from ._data import timedata
 
     if data_root_dir is None:
         raise ValueError("Error: data_root_dir cannot be None")
@@ -173,10 +237,12 @@ ticker_group_dict = {'All': [],
                      'Dividend Stocks (11/2020)': ['BMY','WMT','HD','AAPL','MSFT'],
                      'Growth Stocks (11/2020)': ['ALGN','FIVE','LGIH','MELI','PTON'],
                      'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','ZM','AZN','ARCT','QDEL','ABT','HOLX','DGX','GME','CHWY','AMC'],
-                     'Cyber Security': ['SWI','CYBR','CHKP','PANW','ZS','CRWD','FEYE','SCWX','VMW','MSFT','FTNT','MIME','HACK','PFPT','QLYS','RPD','TENB','VRNS','CIBR'],
+                     'Cyber Security': ['SWI','CYBR','CHKP','PANW','ZS','CRWD','FEYE','SCWX','VMW','MSFT','FTNT','MIME','HACK','PFPT','QLYS','RPD','TENB','VRNS','CIBR','NET'],
                      '5G': ['AAPL','TMUS','VZ','T','QCOM','QRVO','ERIC','TSM','NVDA','SWKS','ADI','MRVL','AVGO','XLNX'],
-                     'Innovation': ['ARKK','ARKQ','ARKW','ARKG','ARKF','EDIT','CRSP','NTLA'],
                      'ASD': ['BNGO','ZYNE',],
+                     'Cryptocurrencies': ['GBTC','RIOT','MARA','BTC-USD'],
+                     'Boom': ['ROKU','AMD','SHOP','NIO','MRNA','NVDA','QS'],
+                     'Space': ['SPCE','SRAC','MAXR','LMT','NOC'],
                      'ETF': ['JETS', 'ONEQ', 'IEMG', 'VTHR', 'IWB', 'IWM', 'IWV', 'IWF', 'VTV', 'SCHD', 'USMV', 'VEA', 'VWO', 'AGG', 'LQD', 'GLD', 'VTI', 'DIA', 'OILU', 'OILD', 'TQQQ', 'SQQQ', 'UDOW', 'SDOW', 'UVXY', 'SVXY', 'KORU', 'YANG', 'YINN', 'QQQ', 'VOO','SPY','IVV','TMF','TMV','TBF','TLT','ESPO','GDX','XLC','XLI','XLF','XLE','XLV','XLB','XLK','XLU','XLP','XLY','XLRE'],
                      'ETF database': [],
                      'Major Market Indexes': ['^DJI','^NDX','^GSPC','^IXIC','^RUT','^VIX','DIA','SPLG','IVV','VOO','SPY','QQQ','ONEQ','IWM','VTWO','VXX'],
@@ -195,6 +261,14 @@ ticker_group_dict = {'All': [],
                      'Volatility': ['^VIX','VIXY','VXX','^VOLQ'],
                      'Treasury Yield': ['^TNX','SHV','TIP','FLOT','VUT','BND'],
                      'OTC Market': ['JCPNQ',],
+                     'ARK Investments': ['ARKK','ARKQ','ARKW','ARKG','ARKF','IZRL','PRNT'],
+                     'ARK Innovation ETF': [x for x in ARK_df_dict['ARKK']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
+                     'ARK Autonomous Tech. & Robotics ETF': [x for x in ARK_df_dict['ARKQ']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
+                     'ARK Next Generation Internet ETF': [x for x in ARK_df_dict['ARKW']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
+                     'ARK Genomic Revolution ETF': [x for x in ARK_df_dict['ARKG']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
+                     'ARK Fintech Innovation ETF': [x for x in ARK_df_dict['ARKF']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
+                     'ARK The 3D Printing ETF': [x for x in ARK_df_dict['PRNT']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
+                     'ARK Israel Innovative Technology ETF': [x for x in ARK_df_dict['IZRL']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'Others': ['JWN','KSS','HMC','BRK-A','PROG','DS','OBSV']}
 
 ticker_group_dict['Russell 3000'] = sorted(ticker_group_dict['Russell 1000'] + ticker_group_dict['Russell 2000'])
@@ -389,8 +463,10 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'COVID-19': f"Vaccines: 'ALT','MRNA','INO','GILD','JNJ','PFE','AZN','ARCT'<br/><br/>COVID-19 testing: 'QDEL','ABT','HOLX','DGX'<br/><br/>Cruises: 'RCL','CCL','NCLH'<br/><br/>Pet food: 'CHWY'<br/><br/>Game: 'GME'",
                    'Cyber Security': f"One of the largest recent <a href='https://en.wikipedia.org/wiki/2020_United_States_federal_government_data_breach'>hacks</a>:<br/>On 12/14/2020, the news that SWI was used by Russia to back the U.S. governments went public.<br/>SWI tumbled and other cyber security firms soared because of the heightened need for years to come.<br/><br/>CRWD, CYBR, FEYE, PANW, ZS ... all jumped big within 2 weeks.",
                    '5G': f"5G wireless networks",
-                   'Innovation': "https://ark-invest.com/",
                    'ASD': f"Autism Spectrum Disorder stocks",
+                   'Cryptocurrencies': f"A digital asset designed to work as a medium of exchange wherein individual coin ownership records are stored in a ledger existing in a form of computerized database using strong cryptography to secure transaction records, to control the creation of additional coins, and to verify the transfer of coin ownership.<br/><br><a href='https://www.investopedia.com/articles/investing/082914/basics-buying-and-investing-bitcoin.asp'>trading bitcoin</a>.",
+                   'Boom': f"Stocks that have a history of skyrocketing",
+                   'Space': f"<a href='https://www.barrons.com/articles/ark-invest-is-planning-a-space-etf-here-are-5-stocks-that-could-benefit-51610641331'>5 Stocks That Could Benefit From ARK’s Planned Space ETF</a>",
                    'ETF': f"Exchange-traded fund (ETF) is a basket of securities that trade on an exchange. Unlike mutual funds (which only trade once a day after the market closes), ETF is just like a stock and share prices fluctuate all day as the ETF is bought and sold.\n\nExchange-traded note (ETN) is a basket of unsecured debt securities that track an underlying index of securities and trade on a major exchange like a stock.\n\nDifference: Investing ETF is investing in a fund that holds the asset it tracks. That asset may be stocks, bonds, gold or other commodities, or futures contracts. In contrast, ETN is more like a bond. It's an unsecured debt note issued by an institution. If the underwriter (usually a bank) were to go bankrupt, the investor would risk a total default.",
                    'ETF database': f"https://nasdaqtrader.com/",
                    'Major Market Indexes': f"https://www.investing.com/indices/major-indices",
@@ -406,6 +482,14 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Volatility': f"<a href='https://www.investopedia.com/articles/active-trading/070213/tracking-volatility-how-vix-calculated.asp'>https://www.investopedia.com/articles/active-trading/070213/tracking-volatility-how-vix-calculated.asp</a>",
                    'Treasury Yield': f"<a href='https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield'>https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield</a>",
                    'OTC Market': f"Over-the-counter Market",
+                   'ARK Investments': "<a href='https://ark-funds.com/'>https://ark-funds.com/</a> and <a href='https://ark-invest.com/'>https://ark-invest.com/</a><br/><br/>see also: <a href='https://cathiesark.com/'>https://cathiesark.com/</a><br/><hr><b>ARK Actively Managed Innovation ETFs:</b><br/><br/>ARKK - ARK Innovation ETF (171% gain)<br/>ARKQ - Autonomous Technology & Robotics ETF (125% gain)<br/>ARKW - Next Generation Internet ETF (155% gain)<br/>ARKG - Genomic Revolution ETF (210% gain)<br/>ARKF - Fintech Innovation ETF (104% gain)<br/><hr><b>ARK Indexed Innovation ETFs:</b><br/><br/>PRNT - The 3D Printing ETF (68% gain)<br/>IZRL - Israel Innovative Technology ETF (37% gain)",
+                   'ARK Innovation ETF': ARK_df_dict['ARKK'][['ticker','company','weight(%)']].to_html(index=False),
+                   'ARK Autonomous Tech. & Robotics ETF': ARK_df_dict['ARKQ'][['ticker','company','weight(%)']].to_html(index=False),
+                   'ARK Next Generation Internet ETF': ARK_df_dict['ARKW'][['ticker','company','weight(%)']].to_html(index=False),
+                   'ARK Genomic Revolution ETF': ARK_df_dict['ARKG'][['ticker','company','weight(%)']].to_html(index=False),
+                   'ARK Fintech Innovation ETF': ARK_df_dict['ARKF'][['ticker','company','weight(%)']].to_html(index=False),
+                   'ARK The 3D Printing ETF': ARK_df_dict['PRNT'][['ticker','company','weight(%)']].to_html(index=False),
+                   'ARK Israel Innovative Technology ETF': ARK_df_dict['IZRL'][['ticker','company','weight(%)']].to_html(index=False),
                    'Others': f"Others"}
 
 def ticker_preprocessing():
@@ -687,6 +771,47 @@ class Ticker(object):
     @property
     def ticker_history(self):
         return self.ticker_data_dict['history']
+
+    @property
+    def fifty_two_weeks_high(self):
+        history_df = self.ticker_history[['Date','High']]
+        history_df = history_df[history_df['Date'] >= (self.last_date - timedelta(weeks=52))]
+        return float(history_df['High'].max())
+
+    @property
+    def fifty_two_weeks_low(self):
+        history_df = self.ticker_history[['Date','Low']]
+        history_df = history_df[history_df['Date'] >= (self.last_date - timedelta(weeks=52))]
+        return float(history_df['Low'].min())
+
+    def max_diff_pct_year_n(self, year_n=None):
+        if year_n is None:
+            raise ValueError('year_n cannot be None')
+        key = f"max_diff_pct_{year_n}yr"
+        if key in self.ticker_data_dict.keys():
+            if self.ticker_data_dict[key] is not None:
+                return self.ticker_data_dict[key]
+        return [0,0]
+
+    @property
+    def one_year_max_diff_pct(self):
+        return self.max_diff_pct_year_n(year_n=1)
+
+    @property
+    def two_years_max_diff_pct(self):
+        return self.max_diff_pct_year_n(year_n=2)
+
+    @property
+    def three_years_max_diff_pct(self):
+        return self.max_diff_pct_year_n(year_n=3)
+
+    @property
+    def four_years_max_diff_pct(self):
+        return self.max_diff_pct_year_n(year_n=4)
+
+    @property
+    def five_years_max_diff_pct(self):
+        return self.max_diff_pct_year_n(year_n=5)
 
     @property
     def last_date(self):
