@@ -6,6 +6,7 @@
 
 from ..math_and_stats import sigmoid
 
+import numpy as np
 import pandas as pd
 
 from ._data import timedata
@@ -194,8 +195,8 @@ def load_nasdaqtrader_data(data_root_dir: str = None):
         otherlisted_df = pd.read_csv(file2,sep='|',header=0,skipfooter=1,engine='python')
         #options_df = pd.read_csv(file3,sep='|',header=0,skipfooter=1,engine='python')
         #
-        nasdaqlisted_df['ticker'] = nasdaqlisted_df['Symbol'].str.replace('\.','\-').str.replace('\\','')
-        otherlisted_df['ticker'] = otherlisted_df['NASDAQ Symbol'].str.replace('\.','\-').str.replace('\\','').str.replace('ACIC=','ACIC-UN').str.replace('AJAX=','AJAX-UN').str.replace('PRIF-A','PRIF-PA').str.replace('PRIF-B','PRIF-PB').str.replace('PRIF-C','PRIF-PC').str.replace('PRIF-D','PRIF-PD').str.replace('PRIF-E','PRIF-PE').str.replace('PRIF-F','PRIF-PF')
+        nasdaqlisted_df['ticker'] = nasdaqlisted_df['Symbol'].str.replace('\.','\-',regex=True).str.replace('\\','',regex=True)
+        otherlisted_df['ticker'] = otherlisted_df['NASDAQ Symbol'].str.replace('\.','\-',regex=True).str.replace('\\','',regex=True).str.replace('ACIC=','ACIC-UN',regex=True).str.replace('AJAX=','AJAX-UN',regex=True).str.replace('PRIF-A','PRIF-PA',regex=True).str.replace('PRIF-B','PRIF-PB',regex=True).str.replace('PRIF-C','PRIF-PC',regex=True).str.replace('PRIF-D','PRIF-PD',regex=True).str.replace('PRIF-E','PRIF-PE',regex=True).str.replace('PRIF-F','PRIF-PF',regex=True)
         #options_df['ticker'] = options_df['Underlying Symbol'].str.replace('\.','\-').str.replace('\\','')
         #
         nasdaqlisted_df = nasdaqlisted_df[ (nasdaqlisted_df['Test Issue'] == 'N') & (nasdaqlisted_df['NextShares'] == 'N') ].drop(['Test Issue','Symbol','NextShares','Round Lot Size'], axis=1)
@@ -258,7 +259,7 @@ ticker_group_dict = {'All': [],
                                       'INGN', 'INN', 'INO', 'INOV', 'INS', 'INSG', 'INSM', 'INSP', 'INSW', 'INT', 'INTL', 'INVA', 'IOSP', 'IPAR', 'IPI', 'IRBT', 'IRDM', 'IRET', 'IRMD', 'IRT', 'IRTC', 'IRWD', 'ISBC', 'ISEE', 'ISTR', 'ITCI', 'ITGR', 'ITI', 'ITIC', 'ITRI', 'IVAC', 'IVC', 'IVR', 'JACK', 'JBSS', 'JBT', 'JCAP', 'JCOM', 'JELD', 'JJSF', 'JNCE', 'JOE', 'JOUT', 'JRVR', 'JYNT', 'KAI', 'KALA', 'KALU', 'KALV', 'KAMN', 'KAR', 'KBAL', 'KBH', 'KBR', 'KDMN', 'KE', 'KELYA', 'KERN', 'KFRC', 'KFY', 'KIDS', 'KIN', 'KLDO', 'KMT', 'KN', 'KNL', 'KNSA', 'KNSL', 'KOD', 'KODK', 'KOP', 'KOS', 'KPTI', 'KRA', 'KREF', 'KRG', 'KRMD', 'KRNY', 'KRO', 'KROS', 'KRTX', 'KRUS', 'KRYS', 'KTB', 'KTOS', 'KURA', 'KVHI', 'KW', 'KWR', 'KZR', 'LAD', 'LADR', 'LAKE', 'LANC', 'LAND', 'LARK', 'LASR', 'LAUR', 'LAWS', 'LBAI', 'LBC', 'LBRT', 'LC', 'LCI', 'LCII', 'LCNB', 'LCUT', 'LDL', 'LE', 'LEGH', 'LEVL', 'LFVN', 'LGIH', 'LGND', 'LHCG', 'LILA', 'LILAK', 'LIND', 'LIVN', 'LIVX', 'LJPC', 'LKFN', 'LL', 'LLNW', 'LMAT', 'LMNR', 'LMNX', 'LMST', 'LNDC', 'LNN', 'LNTH', 'LOB', 'LOCO', 'LOGC', 'LORL', 'LOVE', 'LPG', 'LPSN', 'LPX', 'LQDA', 'LQDT', 'LRN', 'LSCC', 'LTC', 'LTHM', 'LTRPA', 'LUNA', 'LXFR', 'LXP', 'LXRX', 'LYRA', 'LYTS', 'LZB', 'M', 'MAC', 'MANT', 'MATW', 'MATX', 'MAXR', 'MBCN', 'MBI', 'MBII', 'MBIN', 'MBIO', 'MBUU', 'MBWM', 'MC', 'MCB', 'MCBC', 'MCBS', 'MCF', 'MCFT', 'MCRB', 'MCRI', 'MCS', 'MD', 'MDC', 'MDGL', 'MDP', 'MDRX', 'MEC', 'MED', 'MEDP', 'MEET', 'MEI', 'MEIP', 'MESA', 'MFA', 'MFNC', 'MG', 'MGEE', 'MGI', 'MGLN', 'MGNX', 'MGPI', 'MGRC', 'MGTA', 'MGTX', 'MGY', 'MHH', 'MHO', 'MIK', 'MIME', 'MINI', 'MIRM', 'MITK', 'MJCO', 'MLAB', 'MLHR', 'MLI', 'MLP', 'MLR', 'MLSS', 'MMAC', 'MMI', 'MMS', 'MMSI', 'MNK', 'MNKD', 'MNLO', 'MNOV', 'MNR', 'MNRL', 'MNRO', 'MNSB', 'MNTA', 'MOBL', 'MOD', 'MODN', 'MOFG', 'MOG-A', 'MORF', 'MOV', 'MPAA', 'MPB', 'MPX', 'MR', 'MRBK', 'MRC', 'MRKR', 'MRLN', 'MRNS', 'MRSN', 'MRTN', 'MRTX', 'MSBI', 'MSEX', 'MSGN', 'MSON', 'MSTR', 'MTDR', 'MTEM', 'MTH', 'MTOR', 'MTRN', 'MTRX', 'MTSC', 'MTSI', 'MTW', 'MTX', 'MTZ', 'MUSA', 'MVBF', 'MWA', 'MXL', 'MYE', 'MYFW', 'MYGN', 'MYOK', 'MYRG', 'NAT', 'NATH', 'NATR', 'NAV', 'NAVI', 'NBEV', 'NBHC', 'NBN', 'NBR', 'NBSE', 'NBTB', 'NC', 'NCBS', 'NCMI', 'NDLS', 'NEO', 'NEOG', 'NERV', 'NESR', 'NEX', 'NEXT', 'NFBK', 'NG', 'NGHC', 'NGM', 'NGVC', 'NGVT', 'NH', 'NHC', 'NHI', 'NJR', 'NK', 'NKSH', 'NL', 'NLS', 'NLTX', 'NMIH', 'NMRD', 'NMRK', 'NNBR', 'NNI', 'NODK', 'NOVA', 'NOVT', 'NP', 'NPK', 'NPO', 'NPTN', 'NR', 'NRBO', 'NRC', 'NRIM', 'NSA', 'NSCO', 'NSIT', 'NSP', 'NSSC', 'NSTG', 'NTB', 'NTCT', 'NTGR', 'NTLA', 'NTRA', 'NTUS', 'NUVA', 'NVAX', 'NVEC', 'NVEE', 'NVRO', 'NVTA', 'NWBI', 'NWE', 'NWFL', 'NWLI', 'NWN', 'NWPX', 'NX', 'NXGN', 'NXRT', 'NXTC', 'NYMT', 'NYMX', 'OBNK', 'OCFC', 'OCUL', 'OCX', 'ODC', 'ODP', 'ODT', 'OEC', 'OESX', 'OFED', 'OFG', 'OFIX', 'OFLX', 'OGS', 'OI', 'OII', 'OIS', 'OLP', 'OMCL', 'OMER', 'OMI', 'ONB', 'ONEM', 'ONEW', 'ONTO', 'OOMA', 'OPBK', 'OPCH', 'OPI', 'OPK', 'OPRT', 'OPRX', 'OPTN', 'OPY', 'ORA', 'ORBC', 'ORC', 'ORGO', 'ORGS', 'ORIC', 'ORRF', 'OSBC', 'OSG', 'OSIS', 'OSMT', 'OSPN', 'OSTK', 'OSUR', 'OSW', 'OTTR', 'OVBC', 'OVID', 'OVLY', 'OVV', 'OXM', 'OYST', 'PACB', 'PACK', 'PAE', 'PAHC', 'PANL', 'PAR', 'PARR', 'PASG', 'PATK', 'PAVM', 'PAYS', 'PBF', 'PBFS', 'PBH', 'PBI', 'PBIP', 'PBYI', 'PCB', 'PCH', 'PCRX', 'PCSB', 'PCTI', 'PCYG', 'PCYO', 'PDCE', 'PDCO', 'PDFS', 'PDLB', 'PDLI', 'PDM', 'PEB', 'PEBK', 'PEBO', 'PENN', 'PETQ', 'PETS', 'PFBC', 'PFBI', 'PFC', 'PFGC', 'PFHD', 'PFIS', 'PFNX', 'PFS', 'PFSI', 'PFSW', 'PGC', 'PGEN', 'PGNY', 'PGTI', 'PHAS', 'PHAT', 'PHR', 'PI', 'PICO', 'PINE', 'PING', 'PIPR', 'PIRS', 'PJT', 'PKBK', 'PKE', 'PKOH', 'PLAB', 'PLAY', 'PLBC', 'PLCE', 'PLMR', 'PLOW', 'PLPC', 'PLSE', 'PLT', 'PLUG', 'PLUS', 'PLXS', 'PLYM', 'PMT', 'PNM', 'PNRG', 'PNTG', 'POL', 'POR', 'POWI', 'POWL', 'PPBI', 'PQG', 'PRA', 'PRAA', 'PRDO', 'PRFT', 'PRGS', 'PRIM', 'PRK', 'PRLB', 'PRMW', 'PRNB', 'PRO', 'PROS', 'PROV', 'PRPL', 'PRSC', 'PRSP', 'PRTA', 'PRTH', 'PRTK', 'PRTS', 'PRVB', 'PRVL', 'PSB', 'PSMT', 'PSN', 'PSNL', 'PTCT', 'PTEN', 'PTGX', 'PTLA', 'PTSI', 'PTVCB', 'PUB', 'PUMP', 'PVAC', 'PVBC', 'PWFL', 'PWOD', 'PXLW', 'PZN', 'PZZA', 'QADA', 'QCRH', 'QLYS', 'QMCO', 'QNST', 'QTNT', 'QTRX', 'QTS', 'QTWO', 'QUAD', 'QUOT', 'RAD', 'RAMP', 'RAPT', 'RARE', 'RAVN', 'RBB', 'RBBN', 'RBCAA', 'RBNC', 'RC', 'RCII', 'RCKT', 'RCKY', 'RCM', 'RCUS', 'RDFN', 'RDN', 'RDNT', 'RDUS', 'RDVT', 'REAL', 'REFR', 'REGI', 'REPH', 'REPL', 'RES', 'RESI', 'RESN', 'REV', 'REVG', 'REX', 'REZI', 'RFL', 'RGCO', 'RGNX', 'RGP', 'RGR', 'RGS', 'RH', 'RHP', 'RICK', 'RIG', 'RIGL', 'RILY', 'RLGT', 'RLGY', 'RLI', 'RLJ', 'RLMD', 'RM', 'RMAX', 'RMBI', 'RMBS', 'RMNI', 'RMR', 'RMTI', 'RNST', 'ROAD', 'ROCK', 'ROG', 'ROIC', 'ROLL', 'RPAI', 'RPAY', 'RPD', 'RPT', 'RRBI', 'RRC', 'RRGB', 'RRR', 'RST', 'RTIX', 'RTRX', 'RUBI', 'RUBY', 'RUN', 'RUSHA', 'RUSHB', 'RUTH', 'RVI', 'RVMD', 'RVNC', 'RVP', 'RVSB', 'RWT', 'RXN', 'RYAM', 'RYI', 'RYTM', 'SAFE', 'SAFM', 'SAFT', 'SAH', 'SAIA', 'SAIL', 'SAL', 'SALT', 'SAMG', 'SANM', 'SASR', 'SAVA', 'SAVE', 'SB', 'SBBP', 'SBBX', 'SBCF', 'SBFG', 'SBGI', 'SBH', 'SBRA', 'SBSI', 'SBT', 'SCHL', 'SCHN', 'SCL', 'SCOR', 'SCPH', 'SCS', 'SCSC', 'SCU', 'SCVL', 'SCWX', 'SDGR', 'SEAC', 'SEAS', 'SELB', 'SEM', 'SENEA', 'SF', 'SFBS', 'SFE', 'SFIX', 'SFL', 'SFNC', 'SFST', 'SGA', 'SGC', 'SGH', 'SGMO', 'SGMS', 'SGRY', 'SHAK', 'SHBI', 'SHEN', 'SHO', 'SHOO', 'SHYF', 'SI', 'SIBN', 'SIEB', 'SIEN', 'SIG', 'SIGA', 'SIGI', 'SILK', 'SITC', 'SITE', 'SITM', 'SJI', 'SJW', 'SKT', 'SKY', 'SKYW', 'SLAB', 'SLCA', 'SLCT', 'SLDB', 'SLNO', 'SLP', 'SM', 'SMBC', 'SMBK', 'SMCI', 'SMED', 'SMMF', 'SMP', 'SMPL', 'SMSI', 'SMTC', 'SNBR', 'SNCR', 'SNDX', 'SNFCA', 'SNR', 'SOI', 'SOLY', 'SONA', 'SONO', 'SP', 'SPFI', 'SPKE', 'SPNE', 'SPNS', 'SPOK', 'SPPI', 'SPRO', 'SPSC', 'SPT', 'SPTN', 'SPWH', 'SPWR', 'SPXC', 'SR', 'SRCE', 'SRDX', 'SREV', 'SRG', 'SRI', 'SRNE', 'SRRK', 'SRT', 'SSB', 'SSD', 'SSP', 'SSTI', 'SSTK', 'STAA', 'STAG', 'STAR', 'STBA', 'STC', 'STFC', 'STMP', 'STND', 'STNG', 'STOK', 'STRA', 'STRL', 'STRO', 'STRS', 'STSA', 'STXB', 'STXS', 'SUM', 'SUPN', 'SVC', 'SVMK', 'SVRA', 'SWAV', 'SWBI', 'SWKH', 'SWM', 'SWN', 'SWTX', 'SWX', 'SXC', 'SXI', 'SXT', 'SYBT', 'SYKE', 'SYNA', 'SYRS', 'SYX', 'TACO', 'TALO', 'TARA', 'TAST', 'TBBK', 'TBI', 'TBIO', 'TBK', 'TBNK', 'TBPH', 'TCBI', 'TCBK', 'TCDA', 'TCFC', 'TCI', 'TCMD', 'TCRR', 'TCS', 'TCX', 'TDW', 'TELA', 'TELL', 'TEN', 'TENB', 'TERP', 'TEX', 'TG', 'TGH', 'TGI', 'TGNA', 'TGTX', 'TH', 'THC', 'THFF', 'THR', 'THRM', 'TILE', 'TIPT', 'TISI', 'TITN', 'TLYS', 'TMDX', 'TMHC', 'TMP', 'TMST', 'TNAV', 'TNC', 'TNET', 'TOWN', 'TPB', 'TPC', 'TPCO', 'TPH', 'TPIC', 'TPRE', 'TPTX', 'TR', 'TRC', 'TREC', 'TRHC', 'TRMK', 'TRNO', 'TRNS', 'TROX', 'TRS', 'TRST', 'TRTN', 'TRTX', 'TRUE', 'TRUP', 'TRWH', 'TSBK', 'TSC', 'TSE', 'TTEC', 'TTEK', 'TTGT', 'TTMI', 'TUP', 'TVTY', 'TWNK', 'TWO', 'TWST', 'TXMD', 'TXRH', 'TYME', 'UBA', 'UBFO', 'UBSI', 'UBX', 'UCBI', 'UCTT', 'UE', 'UEC', 'UEIC', 'UFCS', 'UFI', 'UFPI', 'UFPT', 'UFS', 'UHT', 'UIHC', 'UIS', 'ULBI', 'ULH', 'UMBF', 'UMH', 'UNF', 'UNFI', 'UNIT', 'UNTY', 'UPLD', 'UPWK', 'URBN', 'URGN', 'USCR', 'USLM', 'USNA', 'USPH', 'USX', 'UTI', 'UTL', 'UTMD', 'UUUU', 'UVE', 'UVSP', 'UVV', 'VAC', 'VALU', 'VAPO', 'VBIV', 'VBTX', 'VC', 'VCEL', 'VCRA', 'VCYT', 'VEC', 'VECO', 'VERI', 'VERO', 'VERU', 'VERY', 'VG', 'VGR', 'VHC', 'VIAV', 'VICR', 'VIE', 'VIR', 'VIVO', 'VKTX', 'VLGEA', 'VLY', 'VMD', 'VNDA', 'VNRX', 'VOXX', 'VPG', 'VRA', 'VRAY', 'VRCA', 'VREX', 'VRNS', 'VRNT', 'VRRM', 'VRS', 'VRTS', 'VRTU', 'VRTV', 'VSEC', 'VSH', 'VSLR', 'VSTM', 'VSTO', 'VTOL', 'VTVT', 'VVI', 'VVNT', 'VXRT', 'VYGR', 'WABC', 'WAFD', 'WASH', 'WBT', 'WCC', 'WD', 'WDFC', 'WDR', 'WERN', 'WETF', 'WEYS', 'WGO', 'WHD', 'WHG', 'WIFI', 'WINA', 'WING', 'WIRE', 'WK', 'WKHS', 'WLDN', 'WLFC', 'WLL', 'WMC', 'WMGI', 'WMK', 'WMS', 'WNC', 'WNEB', 'WOR', 'WOW', 'WRE', 'WRLD', 'WRTC', 'WSBC', 'WSBF', 'WSC', 'WSFS', 'WSR', 'WTBA', 'WTI', 'WTRE', 'WTRH', 'WTS', 'WTTR', 'WVE', 'WW', 'WWW', 'X', 'XAIR', 'XBIT', 'XCUR', 'XENT', 'XERS', 'XFOR', 'XGN', 'XHR', 'XNCR', 'XOMA', 'XONE', 'XPEL', 'XPER', 'YELP', 'YETI', 'YEXT', 'YMAB', 'YORW', 'ZEUS', 'ZGNX', 'ZIOP', 'ZIXI', 'ZNTL', 'ZUMZ', 'ZUO', 'ZYXI',],
                      'Russell 3000': [],
                      'Equity database': [],
-                     'Volatility': ['^VIX','VIXY','VXX','^VOLQ'],
+                     'Volatility': ['^VIX','VIXY','VXX','^VXN',],
                      'Treasury Yield': ['^TNX','SHV','TIP','FLOT','VUT','BND'],
                      'OTC Market': ['JCPNQ',],
                      'ARK Investments': ['ARKK','ARKQ','ARKW','ARKG','ARKF','IZRL','PRNT'],
@@ -532,7 +533,8 @@ class Ticker(object):
         """
         if ticker is None:
             if ticker_data_dict is None:
-                raise ValueError('error')
+                #raise ValueError('error')
+                pass
             else:
                 self.ticker_data_dict = ticker_data_dict
                 self.ticker = ticker_data_dict['ticker']
@@ -784,14 +786,61 @@ class Ticker(object):
         history_df = history_df[history_df['Date'] >= (self.last_date - timedelta(weeks=52))]
         return float(history_df['Low'].min())
 
+    def days_to_double(self, ticker_history: pd.DataFrame = None, days=None):
+        if days is None:
+            raise ValueError('days cannot be None')
+        if ticker_history is None:
+            ticker_history = self.ticker_history
+        history_df = ticker_history[['Date','High','Low']]
+        last_date = ticker_history['Date'].iloc[-1]
+        history_df = history_df[history_df['Date'] >= (last_date - timedelta(days=days))]
+        days = []
+        for this_date in history_df['Date'].tolist():
+            this_date_low = float(history_df[history_df['Date'] == this_date]['Low'])
+            subsequent_double = history_df[(history_df['Date'] >= this_date) & (history_df['High'] >= this_date_low*2)]
+            if subsequent_double['Date'].size > 0:
+                subsequent_double_date = subsequent_double['Date'].iloc[0]
+                #print(this_date, subsequent_double_date, this_date_low, subsequent_double['High'].iloc[0])
+                days.append( (subsequent_double_date - this_date).days )
+        if len(days)>0:
+            arr = np.array(days)
+            return int(np.mean(arr,axis=0)), int(np.std(arr,axis=0)), arr.size
+        else:
+            return None, None, None
+
+    def max_diff_pct(self, ticker_history: pd.DataFrame, days=None):
+        #print(f'max_diff_pct, days=[{days}]')
+        if days is None:
+            raise ValueError('days cannot be None')
+        history_df = ticker_history[['Date','High','Low']]
+        last_date = ticker_history['Date'].iloc[-1]
+        history_df = history_df[history_df['Date'] >= (last_date - timedelta(days=days))]
+        low_to_high_max_pct = high_to_low_max_pct = 0
+        for this_date in history_df['Date'].tolist():
+            #
+            this_date_high = float(history_df[history_df['Date'] == this_date]['High'])
+            subsequent_lowest = float(history_df[history_df['Date'] >= this_date]['Low'].min())
+            high_to_low_pct = 100 * (subsequent_lowest - this_date_high) / this_date_high
+            if high_to_low_pct < high_to_low_max_pct:
+                high_to_low_max_pct = high_to_low_pct
+            #
+            this_date_low = float(history_df[history_df['Date'] == this_date]['Low'])
+            subsequent_highest = float(history_df[history_df['Date'] >= this_date]['High'].max())
+            low_to_high_pct = 100 * (subsequent_highest - this_date_low) / this_date_low
+            if low_to_high_pct > low_to_high_max_pct:
+                low_to_high_max_pct = low_to_high_pct
+        return [low_to_high_max_pct, high_to_low_max_pct,]
+
     def max_diff_pct_year_n(self, year_n=None):
         if year_n is None:
             raise ValueError('year_n cannot be None')
         key = f"max_diff_pct_{year_n}yr"
-        if key in self.ticker_data_dict.keys():
-            if self.ticker_data_dict[key] is not None:
-                return self.ticker_data_dict[key]
-        return [0,0]
+        if (key in self.ticker_data_dict.keys()) and (self.ticker_data_dict[key] is not None):
+            return self.ticker_data_dict[key]
+        elif (self.ticker_data_dict is not None) and (self.ticker_data_dict['history'] is not None):
+            return self.max_diff_pct(ticker_history = self.ticker_data_dict['history'], days = year_n * 365.25)
+        else:
+            return [0,0]
 
     @property
     def one_year_max_diff_pct(self):
@@ -812,6 +861,10 @@ class Ticker(object):
     @property
     def five_years_max_diff_pct(self):
         return self.max_diff_pct_year_n(year_n=5)
+
+    @property
+    def ten_years_max_diff_pct(self):
+        return self.max_diff_pct_year_n(year_n=10)
 
     @property
     def last_date(self):

@@ -1071,8 +1071,8 @@ class app_window(QMainWindow):
         # screen
         screen = self.app.primaryScreen()
         dpi = 72/screen.devicePixelRatio()
-        self.width = screen.availableGeometry().width() * 0.96
-        self.height = screen.availableGeometry().height() * 0.75
+        self.width = screen.availableGeometry().width() * 1.00
+        self.height = screen.availableGeometry().height() * 0.80
             
         # central widget
         self.UI = UI(parent=self, app_window=self, dpi=dpi)
@@ -1517,7 +1517,7 @@ class UI_control(object):
             #
             n_ticks = len(x)
             y0 = np.empty(n_ticks); y0.fill(0)
-            canvas.axes.plot(x, y0, '--', color='#0e6b0e', linewidth=0.5)
+            canvas.axes.plot(x, y0, '--', color='green', linewidth=2)
             #
             canvas.axes.set_ylabel('Standardized Price * Volume (EMA9, EMA255)', fontsize=10.0)
             Z_price_vol = self.ticker_data_dict_in_effect['history']['Z_price_vol']
@@ -1662,14 +1662,17 @@ class UI_control(object):
         # positive volume index and negative volume index
         history_all_df['PVI'], history_all_df['NVI'], history_all_df['PVI_EMA9'], history_all_df['NVI_EMA9'], history_all_df['PVI_EMA255'], history_all_df['NVI_EMA255'] = volume_indicator(short_periods=9, long_periods=255).PVI_NVI(history_all_df['Close'], history_all_df['Volume'])
         history_df[['PVI','NVI','PVI_EMA9','NVI_EMA9','PVI_EMA255','NVI_EMA255']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['PVI','NVI','PVI_EMA9','NVI_EMA9','PVI_EMA255','NVI_EMA255']]
-        PVI_max = max(history_df[['PVI','PVI_EMA9','PVI_EMA255']].max())
-        PVI_min = min(history_df[['PVI','PVI_EMA9','PVI_EMA255']].min())
-        NVI_max = max(history_df[['NVI','NVI_EMA9','NVI_EMA255']].max())
-        NVI_min = min(history_df[['NVI','NVI_EMA9','NVI_EMA255']].min())
-        # this is to keep PVI indexes between 0 and 1000
-        history_df[['PVI','PVI_EMA9','PVI_EMA255']] = (history_df[['PVI','PVI_EMA9','PVI_EMA255']] - PVI_min) / (PVI_max - PVI_min) * 1000
-        # this is to keep NVI indexes between 0 and 1000
-        history_df[['NVI','NVI_EMA9','NVI_EMA255']] = (history_df[['NVI','NVI_EMA9','NVI_EMA255']] - NVI_min) / (NVI_max - NVI_min) * 1000
+        if history_df[['PVI','PVI_EMA9','PVI_EMA255']].isnull().any(axis=None):
+            PVI_max = PVI_min = NVI_max = NVI_min = None
+        else:
+            PVI_max = max(history_df[['PVI','PVI_EMA9','PVI_EMA255']].max())
+            PVI_min = min(history_df[['PVI','PVI_EMA9','PVI_EMA255']].min())
+            NVI_max = max(history_df[['NVI','NVI_EMA9','NVI_EMA255']].max())
+            NVI_min = min(history_df[['NVI','NVI_EMA9','NVI_EMA255']].min())
+            # this is to keep PVI indexes between 0 and 1000
+            history_df[['PVI','PVI_EMA9','PVI_EMA255']] = (history_df[['PVI','PVI_EMA9','PVI_EMA255']] - PVI_min) / (PVI_max - PVI_min) * 1000
+            # this is to keep NVI indexes between 0 and 1000
+            history_df[['NVI','NVI_EMA9','NVI_EMA255']] = (history_df[['NVI','NVI_EMA9','NVI_EMA255']] - NVI_min) / (NVI_max - NVI_min) * 1000
         ######################
         history_all_df['RSI14'] = momentum_indicator().RSI(close_price=history_all_df['Close'], RSI_periods=14)
         history_df['RSI14'] = history_all_df[history_all_df['Date'].isin(history_df['Date'])]['RSI14']

@@ -25,6 +25,10 @@ from functools import total_ordering
 
 ###########################################################################################
 
+tickers_with_no_volume = ['^VIX','^TNX','^VXN']
+
+###########################################################################################
+
 @total_ordering
 class timedata(object):
     def __init__(self, time_stamp: float=None, date_time=None, Y_m_d={}):
@@ -287,29 +291,6 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
     return info_dict
 
 
-def max_diff_pct(ticker_history: pd.DataFrame, days=None):
-    if days is None:
-        raise ValueError('days cannot be None')
-    history_df = ticker_history[['Date','High','Low']]
-    last_date = ticker_history['Date'].iloc[-1]
-    history_df = history_df[history_df['Date'] >= (last_date - timedelta(days=days))]
-    low_to_high_max_pct = high_to_low_max_pct = 0
-    for this_date in history_df['Date'].tolist():
-        #
-        this_date_high = float(history_df[history_df['Date'] == this_date]['High'])
-        subsequent_lowest = float(history_df[history_df['Date'] >= this_date]['Low'].min())
-        high_to_low_pct = 100 * (subsequent_lowest - this_date_high) / this_date_high
-        if high_to_low_pct < high_to_low_max_pct:
-            high_to_low_max_pct = high_to_low_pct
-        #
-        this_date_low = float(history_df[history_df['Date'] == this_date]['Low'])
-        subsequent_highest = float(history_df[history_df['Date'] >= this_date]['High'].max())
-        low_to_high_pct = 100 * (subsequent_highest - this_date_low) / this_date_low
-        if low_to_high_pct > low_to_high_max_pct:
-            low_to_high_max_pct = low_to_high_pct
-    return [low_to_high_max_pct, high_to_low_max_pct,]
-
-
 def get_ticker_data_dict(ticker: str = None, 
                          last_date = None,
                          verbose: bool = True, 
@@ -326,24 +307,27 @@ def get_ticker_data_dict(ticker: str = None,
     """
 
     def process_and_save_raw_data():
+        from ._ticker import Ticker
+
         nonlocal ticker_history_df       
         ticker_history_df.to_csv(ticker_history_df_file, index=False)
         #
         history_df = pd.read_csv(ticker_history_df_file, index_col=False)
-        if ticker in ['^VIX','^TNX','^VOLQ']: # these have no volume
+        if ticker in tickers_with_no_volume: # these have no volume
             history_df = history_df[(history_df['Close']>0) & (history_df['High']>0) & (history_df['Low']>0) & (history_df['Open']>0)]
             history_df['Volume'] = None
         else:
             history_df = history_df[(history_df['Close']>0) & (history_df['High']>0) & (history_df['Low']>0) & (history_df['Open']>0) & (history_df['Volume']>0)]
         history_df['Date'] = pd.to_datetime(history_df['Date'], format='%Y-%m-%d', utc=True) # "utc=True" is to be consistent with yfinance datetimes, which are received as UTC.
         #
-        ticker_info_dict['max_diff_pct_1yr']  = max_diff_pct(ticker_history=history_df, days=365.25*1)
-        ticker_info_dict['max_diff_pct_2yr']  = max_diff_pct(ticker_history=history_df, days=365.25*2)
-        ticker_info_dict['max_diff_pct_3yr']  = max_diff_pct(ticker_history=history_df, days=365.25*3)
-        ticker_info_dict['max_diff_pct_4yr']  = max_diff_pct(ticker_history=history_df, days=365.25*4)
-        ticker_info_dict['max_diff_pct_5yr']  = max_diff_pct(ticker_history=history_df, days=365.25*5)
-        ticker_info_dict['max_diff_pct_10yr'] = max_diff_pct(ticker_history=history_df, days=365.25*10)
-        ticker_info_dict['max_diff_pct_20yr'] = max_diff_pct(ticker_history=history_df, days=365.25*20)
+        ticker_info_dict['max_diff_pct_1yr']  = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*1)
+        ticker_info_dict['max_diff_pct_2yr']  = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*2)
+        ticker_info_dict['max_diff_pct_3yr']  = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*3)
+        ticker_info_dict['max_diff_pct_4yr']  = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*4)
+        ticker_info_dict['max_diff_pct_5yr']  = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*5)
+        ticker_info_dict['max_diff_pct_10yr'] = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*10)
+        ticker_info_dict['max_diff_pct_20yr'] = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*20)
+        ticker_info_dict['max_diff_pct_30yr'] = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*30)
         pickle.dump(ticker_info_dict, open(ticker_info_dict_file, "wb"))
 
     from ._ticker import global_data_root_dir
@@ -449,7 +433,7 @@ def get_ticker_data_dict(ticker: str = None,
                 process_and_save_raw_data()
 
     history_df = pd.read_csv(ticker_history_df_file, index_col=False)
-    if ticker in ['^VIX','^TNX','^VOLQ']: # these have no volume
+    if ticker in tickers_with_no_volume: # these have no volume
         history_df = history_df[(history_df['Close']>0) & (history_df['High']>0) & (history_df['Low']>0) & (history_df['Open']>0)]
         history_df['Volume'] = None
     else:
@@ -552,14 +536,14 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
         earnings_info = f"\n\nEarnings info unavailable"
     if this_ticker.trailingEps is not None:
         if use_html:
-            earnings_info = f"<br/><hr>Earnings per share (EPS) from the last four quarters: ${this_ticker.trailingEps:.2f}"
+            earnings_info = f"<br/><hr>Diluted Earnings per share (EPS) from the last four quarters: ${this_ticker.trailingEps:.2f}"
         else:
-            earnings_info = f"\n\nEarnings per share (EPS) from the last four quarters: ${this_ticker.trailingEps:.2f}"
+            earnings_info = f"\n\nDiluted Earnings per share (EPS) from the last four quarters: ${this_ticker.trailingEps:.2f}"
         if this_ticker.forwardEps is not None:
             if use_html:
-                earnings_info += f"<br/>EPS estimated for the next four quarters: ${this_ticker.forwardEps:.2f}, which is <b><span style=\"color:blue;\">{round(this_ticker.Eps_change_pct,2):+.2f}%</span></b>"
+                earnings_info += f"<br/>EPS estimated for the next four quarters: ${this_ticker.forwardEps:.2f}." # , which is <b><span style=\"color:blue;\">{round(this_ticker.Eps_change_pct,2):+.2f}%</span></b>
             else:
-                earnings_info += f"\nEPS estimated for the next four quarters: ${this_ticker.forwardEps:.2f}, which is {round(this_ticker.Eps_change_pct,2):+.2f}%"
+                earnings_info += f"\nEPS estimated for the next four quarters: ${this_ticker.forwardEps:.2f}." # , which is {round(this_ticker.Eps_change_pct,2):+.2f}%
         if this_ticker.Eps_growth_rate is not None:
             if use_html:
                 earnings_info += f"<br/><br/>The 5-yr EPS growth rate is estimated to be <b><span style=\"color:blue;\">{this_ticker.Eps_growth_rate:+.2f}%</span></b> (compound rate per year)"
@@ -596,7 +580,7 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                 company_to_company_comparison_info += f"\n\nThe ratio of current price to the earnings estimated for the next four quarters (the forward P/E, the earnings multiple): {this_ticker.forwardPE:.2f}. If the forward P/E ratio is lower (or higher) than the trailing P/E ratio, it means analysts are expecting earnings to increase (or decrease)."
     if this_ticker.PEG_ratio is not None:
         if use_html:
-            company_to_company_comparison_info += f"<br/><br/>The Price/Earnings-to-Growth (PEG) ratio is <b><span style=\"color:blue;\">{this_ticker.PEG_ratio}</span></b> (which is over-valued if &gt; 1.0, or under-valued if &lt; 1.0; in theory, the lower the PEG ratio the better, which implies paying less for future earnings growth.)"
+            company_to_company_comparison_info += f"<br/><hr>The Price/Earnings-to-Growth (PEG) ratio is <b><span style=\"color:blue;\">{this_ticker.PEG_ratio}</span></b> (which is over-valued if &gt; 1.0, or under-valued if &lt; 1.0; in theory, the lower the PEG ratio the better, which implies paying less for future earnings growth.)"
         else:
             company_to_company_comparison_info += f"\n\nThe Price/Earnings-to-Growth (PEG) ratio is {this_ticker.PEG_ratio} (which is over-valued if > 1.0, or under-valued if < 1.0; in theory, the lower the PEG ratio the better, which implies paying less for future earnings growth.)"
 
@@ -730,25 +714,25 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                         dividends_info += f"\n\nAs an evaluation of the dividend payment system, {payoutRatio*100:.2f}% of the earnings is paid out to shareholders."
 
     # measures
-    max_diff_pct_yr1 = this_ticker.max_diff_pct_year_n(year_n=1)
-    max_diff_pct_yr2 = this_ticker.max_diff_pct_year_n(year_n=2)
-    max_diff_pct_yr3 = this_ticker.max_diff_pct_year_n(year_n=3)
-    max_diff_pct_yr4 = this_ticker.max_diff_pct_year_n(year_n=4)
-    max_diff_pct_yr5 = this_ticker.max_diff_pct_year_n(year_n=5)
-    max_diff_pct_yr10 = this_ticker.max_diff_pct_year_n(year_n=10)
-    max_diff_pct_yr20 = this_ticker.max_diff_pct_year_n(year_n=20)
     if use_html:
-        risk_info = f"<br/><hr> 1yr_h/l(%): ({max_diff_pct_yr1[0]:+.2f}%, {max_diff_pct_yr1[1]:+.2f}%)<br/> 2yr_h/l(%): ({max_diff_pct_yr2[0]:+.2f}%, {max_diff_pct_yr2[1]:+.2f}%)<br/> 3yr_h/l(%): ({max_diff_pct_yr3[0]:+.2f}%, {max_diff_pct_yr3[1]:+.2f}%)<br/> 4yr_h/l(%): ({max_diff_pct_yr4[0]:+.2f}%, {max_diff_pct_yr4[1]:+.2f}%)<br/> 5yr_h/l(%): ({max_diff_pct_yr5[0]:+.2f}%, {max_diff_pct_yr5[1]:+.2f}%)<br/>10yr_h/l(%): ({max_diff_pct_yr10[0]:+.2f}%, {max_diff_pct_yr10[1]:+.2f}%)<br/>20yr_h/l(%): ({max_diff_pct_yr20[0]:+.2f}%, {max_diff_pct_yr20[1]:+.2f}%)"
+        risk_info = f"<br/><hr>"
     else:
-        risk_info = f"\n\n 1yr_h/l(%): ({max_diff_pct_yr1[0]:+.2f}%, {max_diff_pct_yr1[1]:+.2f}%)\n 2yr_h/l(%): ({max_diff_pct_yr2[0]:+.2f}%, {max_diff_pct_yr2[1]:+.2f}%)\n 3yr_h/l(%): ({max_diff_pct_yr3[0]:+.2f}%, {max_diff_pct_yr3[1]:+.2f}%)\n 4yr_h/l(%): ({max_diff_pct_yr4[0]:+.2f}%, {max_diff_pct_yr4[1]:+.2f}%)\n 5yr_h/l(%): ({max_diff_pct_yr5[0]:+.2f}%, {max_diff_pct_yr5[1]:+.2f}%)\n10yr_h/l(%): ({max_diff_pct_yr10[0]:+.2f}%, {max_diff_pct_yr10[1]:+.2f}%)\n20yr_h/l(%): ({max_diff_pct_yr20[0]:+.2f}%, {max_diff_pct_yr20[1]:+.2f}%)"
+        risk_info = f"\n\n"
+    years = [1,2,3,4,5,10,20,30]
+    for year_n in years:
+        max_diff_pct_yr_n = this_ticker.max_diff_pct_year_n(year_n=year_n)
+        if use_html:
+            risk_info += f" {year_n}yr_h/l(%): ({max_diff_pct_yr_n[0]:+,.0f}%, {max_diff_pct_yr_n[1]:+,.0f}%), ratio = {abs(max_diff_pct_yr_n[0]/max_diff_pct_yr_n[1] if max_diff_pct_yr_n[1] else 0):,.2f}<br/>"
+        else:
+            risk_info += f" {year_n}yr_h/l(%): ({max_diff_pct_yr_n[0]:+,.0f}%, {max_diff_pct_yr_n[1]:+,.0f}%), ratio = {abs(max_diff_pct_yr_n[0]/max_diff_pct_yr_n[1] if max_diff_pct_yr_n[1] else 0):,.2f}\n"
     # beta: covariance of stock with market
     if 'beta' in ticker_info_keys:
         beta = ticker_info['beta']
         if beta is not None:
             if use_html:
-                risk_info += f"<br/><br/>Beta: {beta:.2f}"
+                risk_info += f"<br/>Beta: {beta:.2f}"
             else:
-                risk_info += f"\n\nBeta: {beta:.2f}"
+                risk_info += f"\nBeta: {beta:.2f}"
             if beta > 1.00:
                 risk_info += f" (more volatile than the overall market)"
             if beta <= 1.00:

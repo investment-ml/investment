@@ -85,8 +85,8 @@ class momentum_indicator(object):
         n_periods = close_price.shape[0]
         if n_periods == 0:
             raise ValueError(f"n_periods cannot be zero")
-        if all(volume==None):
-            return [None]*n_periods, [None]*n_periods
+        if any(volume==None):
+            return [None]*n_periods
         typical_price = (high_price + low_price + close_price)/3
         money_flow = typical_price * volume
         positive_money_flow = np.zeros(shape=n_periods, dtype=float)
@@ -125,7 +125,7 @@ class momentum_indicator(object):
         if type(volume) == pd.Series:
             volume = volume.to_numpy()
         n_periods = close_price.shape[0]
-        if all(volume==None):
+        if any(volume==None):
             return [None]*n_periods
         obv = np.zeros(shape=n_periods, dtype=float)
         obv[0] = 0
@@ -144,7 +144,7 @@ class momentum_indicator(object):
         if type(volume) == pd.Series:
             volume = volume.to_numpy()
         n_periods = volume.shape[0]
-        if all(volume==None):
+        if any(volume==None):
             return [None]*n_periods
         price_vol = close_price * volume
         Z_price_vol = (price_vol - price_vol.mean())/(price_vol.std())
@@ -172,7 +172,7 @@ class volume_indicator(object):
         n_periods = close_price.shape[0]
         if n_periods == 0:
             raise ValueError(f"n_periods cannot be zero")
-        if all(volume==None):
+        if any(volume==None):
             return [None]*n_periods, [None]*n_periods
         ad = np.zeros(shape=n_periods, dtype=float)
         if high_price[0] == low_price[0]:
@@ -196,7 +196,7 @@ class volume_indicator(object):
         n_periods = close_price.shape[0]
         if n_periods == 0:
             raise ValueError(f"n_periods cannot be zero")
-        if all(volume==None):
+        if any(volume==None):
             return [None]*n_periods, [None]*n_periods, [None]*n_periods, [None]*n_periods, [None]*n_periods, [None]*n_periods
         PVI = np.zeros(shape=n_periods, dtype=float)
         NVI = np.zeros(shape=n_periods, dtype=float)
@@ -234,6 +234,8 @@ class moving_average(object):
         if type(data_series) in [pd.Series, pd.DataFrame]:
             data_series = data_series.to_numpy()
         n_periods = data_series.shape[0]
+        if any(data_series==None):
+            return [None]*n_periods
         if n_periods<self.periods:
             return [None] * n_periods
         elif n_periods == self.periods:
@@ -251,6 +253,8 @@ class moving_average(object):
         if type(data_series) in [pd.Series, pd.DataFrame]:
             data_series = data_series.to_numpy()
         n_periods = data_series.shape[0]
+        if any(data_series==None):
+            return [None]*n_periods
         EMA = np.zeros(shape=n_periods, dtype=float)
         EMA[0] = data_series[0]
         for idx in range(1, n_periods):
@@ -261,6 +265,8 @@ class moving_average(object):
         if type(data_series) in [pd.Series, pd.DataFrame]:
             data_series = data_series.to_numpy()
         n_periods = data_series.shape[0]
+        if any(data_series==None):
+            return [None]*n_periods
         SMA = np.zeros(shape=n_periods, dtype=float)
         data = np.array(data_series)
         for idx in range(n_periods):
