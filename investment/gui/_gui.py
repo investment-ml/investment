@@ -41,7 +41,7 @@ import matplotlib.pyplot as plt
 
 from datetime import date, datetime, timedelta, timezone
 
-from ..data import Ticker, get_ticker_data_dict, get_formatted_ticker_data, volatility_indicator, momentum_indicator, volume_indicator, moving_average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict, global_data_root_dir, nasdaqlisted_df, otherlisted_df
+from ..data import Ticker, get_ticker_data_dict, get_formatted_ticker_data, volatility_indicator, momentum_indicator, volume_indicator, moving_average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict, global_data_root_dir, nasdaqlisted_df, otherlisted_df, tickers_with_no_volume
 
 import numpy as np
 import pandas as pd
@@ -1315,15 +1315,22 @@ class UI_control(object):
             self._draw_index_canvas()
 
             self._UI.index_selection.reset()
-            self._UI.index_selection.addItem("PVI and NVI")
-            self._UI.index_selection.addItem("RSI")
-            self._UI.index_selection.addItem("Money Flow")
-            self._UI.index_selection.addItem("MACD")
-            self._UI.index_selection.addItem("OBV")
-            self._UI.index_selection.addItem("A/D")
-            self._UI.index_selection.addItem("Bollinger Band")
-            self._UI.index_selection.addItem("Heat")
-            self._UI.index_selection.setCurrentIndex(self.index_selection_index)
+            if self.selected_ticker in tickers_with_no_volume:
+                self._UI.index_selection.addItem("Bollinger Band")
+                self._UI.index_selection.addItem("RSI")
+                self._UI.index_selection.addItem("MACD")
+                self.index_selection_index = 1
+                self._UI.index_selection.setCurrentIndex(self.index_selection_index)
+            else:
+                self._UI.index_selection.addItem("PVI and NVI")
+                self._UI.index_selection.addItem("RSI")
+                self._UI.index_selection.addItem("Money Flow")
+                self._UI.index_selection.addItem("MACD")
+                self._UI.index_selection.addItem("OBV")
+                self._UI.index_selection.addItem("A/D")
+                self._UI.index_selection.addItem("Bollinger Band")
+                self._UI.index_selection.addItem("Heat")
+                self._UI.index_selection.setCurrentIndex(self.index_selection_index)
 
             self._UI.ticker_lastdate_pushbutton.setEnabled(True)
             self._UI.ticker_download_latest_data_from_yfinance_pushbutton.setEnabled(True)
