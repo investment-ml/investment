@@ -398,6 +398,7 @@ class preferences_dialog(QDialog):
         self.checkbox_force_redownload_yfinance_data = QCheckBox("When viewing an individual ticker's history data, do not use any existing cache but download latest data from the Internet ?", parent=self)
         self.checkbox_download_today_data = QCheckBox("When downloading latest data from the Internet, include today's data (which may be incomplete if market still opens) ?", parent=self)
         self.checkbox_overlap_fear_green_index_data = QCheckBox("Overlap the ticker plot on top of CNN's Fear && Greed Index", parent=self)
+        self.checkbox_download_short_interest_data = QCheckBox("Download short interest info for each ticker", parent=self)
         self.label_data_root_dir = QLabel(parent=self)
         self.data_root_dir = data_root_dir
         self.label_data_root_dir.setText(f"Directory to store cache data: <span style=\"color:blue\">{data_root_dir}</span>")
@@ -408,14 +409,20 @@ class preferences_dialog(QDialog):
         self.checkbox_force_redownload_yfinance_data.stateChanged.connect(self._checkbox_force_redownload_yfinance_data_state_changed)
         self.checkbox_download_today_data.setChecked(self.download_today_data)
         self.checkbox_overlap_fear_green_index_data.setChecked(True)
+        #
+        self.checkbox_download_short_interest_data.setChecked(False)
+        self.download_short_interest = False
+        self.checkbox_download_short_interest_data.stateChanged.connect(self._checkbox_download_short_interest_data_state_changed)
+        #
         self.checkbox_download_today_data.stateChanged.connect(self._checkbox_download_today_data_state_changed)
         self.close_button = QPushButton('Close', parent=self)
         self.layout = QGridLayout()
         self.layout.addWidget(self.checkbox_force_redownload_yfinance_data, 0, 0)
         self.layout.addWidget(self.checkbox_download_today_data, 1, 0)
         self.layout.addWidget(self.checkbox_overlap_fear_green_index_data, 2, 0)
-        self.layout.addWidget(self.label_data_root_dir, 3, 0)
-        self.layout.addWidget(self.close_button, 4, 0)
+        self.layout.addWidget(self.checkbox_download_short_interest_data, 3, 0)
+        self.layout.addWidget(self.label_data_root_dir, 4, 0)
+        self.layout.addWidget(self.close_button, 5, 0)
         self.setLayout(self.layout)
         self.close_button.clicked.connect(self._close_button_clicked)
 
@@ -424,6 +431,9 @@ class preferences_dialog(QDialog):
 
     def _checkbox_download_today_data_state_changed(self):
         self.download_today_data = self.checkbox_download_today_data.isChecked()
+
+    def _checkbox_download_short_interest_data_state_changed(self):
+        self.download_short_interest = self.checkbox_download_short_interest_data.isChecked()
 
     def _close_button_clicked(self):
         self.hide()
@@ -447,7 +457,7 @@ class ticker_download_thread(QThread):
         for idx, ticker in enumerate(tickers_to_download):
             try:
                 #time.sleep(0.001)
-                get_ticker_data_dict(ticker = ticker, force_redownload = True, smart_redownload = self.smart_redownload, download_today_data = self.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir = self.app_window.app_menu.preferences_dialog.data_root_dir, auto_retry = True, web_scraper = self.app_window.web_scraper)
+                get_ticker_data_dict(ticker = ticker, force_redownload = True, smart_redownload = self.smart_redownload, download_today_data = self.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir = self.app_window.app_menu.preferences_dialog.data_root_dir, auto_retry = True, web_scraper = self.app_window.web_scraper, download_short_interest = self.app_window.app_menu.preferences_dialog.download_short_interest)
             except:
                 print(f"Warning: Unable to download this ticker = {ticker}")
             self._signal.emit(idx+1, ticker)
@@ -492,13 +502,38 @@ class fed_funds_rate_dialog(dialog_with_textbrowser):
         self.textbox.setHtml("<a href='https://www.investopedia.com/terms/f/federalfundsrate.asp#citation-7'>Explanation</a><br/><br/><a href='https://www.federalreserve.gov/monetarypolicy/openmarket.htm'>FOMC's target federal funds rate or range, change (basis points) and level</a>")
 
 
-class options_dialog(dialog_with_textbrowser):
+class options_dialog(QDialog):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
-        self.setWindowTitle("Options")
-        self.textbox.setHtml("https://www.investopedia.com/terms/o/openinterest.asp<br/>https://www.investopedia.com/articles/optioninvestor/10/sell-puts-benefit-any-market.asp<br/><a href='https://www.investopedia.com/terms/o/option.asp'>https://www.investopedia.com/terms/o/option.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp'>https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp</a><br/>Options are derivatives/contracts (1 contract = 100 shares) that give the holder/bearer the right (but not the obligation) to buy (call option) or sell (put option) an amount of underlying asset at a set price (strike price) on or before the contract expiration date.<br/><br/>Call option is like a non-refundable down-payment for a future purchase, while put option is like insurance policy limiting downside risk.<br/><br/>Use case:<br/>1. buy calls: hedge against stock price going up.<br/>2. buy puts: hedge against stock price going down.<br/><Br/>https://www.fidelity.com/learning-center/investment-products/options/options-learning-path")
+        self.app_window = parent
+        self.resize(self.app_window.width*0.6, self.app_window.height*0.8)
+        self.setWindowTitle("Options Trading")
+        self.layout = QGridLayout()
 
+        self.cash_covered_puts_label = QLabel('Sell-to-open cash-covered puts:', parent=self)
+        self.cash_covered_puts_tb = QTextBrowser(parent=self)
+        self.cash_covered_puts_tb.setOpenExternalLinks(True)
+        self.cash_covered_puts_tb.setHtml("An alternative to limit price buy (low) order, with incentives for commitment.<br/><br/>Suitable when there is a solid support above strike price, there's little downward risk, and price will bounce soon; not suitable when lots of downside potential (e.g., overbought and ready to sell off).<br/><br/>When selling a cash-covered put, you get paid in exchange for being willing to <b>risk getting in when the price trends lower and setting aside lots of cash reserve that could be used otherwise</b> (like the role of a Financial Stabilization Fund). You are like the insurance company; you collect premium from the buyers to help them mitigate the risk of suffering from a future downside (while you estimate there's little future downside).<br/><br/>https://www.fidelity.com/learning-center/investment-products/options/know-about-cash-covered-puts#:~:text=A%20cash%2Dcovered%20put%20is,hits%20the%20option's%20strike%20price <br/><br/>https://seekingalpha.com/article/4287670-adding-income-using-cash-covered-puts-and-covered-calls")
+        
+        self.covered_calls_label = QLabel('Sell-to-open covered calls:', parent=self)
+        self.covered_calls_tb = QTextBrowser(parent=self)
+        self.covered_calls_tb.setOpenExternalLinks(True)
+        self.covered_calls_tb.setHtml("An alternative to limit price sell (high) order, with incentives for commitment.<br/><br/>Suitable for sideways stock price action, limited upside potential, or strong resistance below strike price; there's little upward potential; not suitable when lots of upside potential (e.g., oversold and ready to bounce).<br/><br/>When selling a covered call, you get paid in exchange for being willing to <b>risk giving up a portion of your future upside</b>. You are like the insurance company; you collect premium from the buyers to help them mitigate the risk of missing a future upside (while you estimate there's little future upside).<br/><br/>https://www.investopedia.com/trading/cut-down-option-risk-with-covered-calls/<br/><br/>https://seekingalpha.com/article/4287670-adding-income-using-cash-covered-puts-and-covered-calls")
+        
+        self.options_general_label = QLabel('General (others):', parent=self)
+        self.options_general_tb = QTextBrowser(parent=self)
+        self.options_general_tb.setOpenExternalLinks(True)
+        self.options_general_tb.setHtml("https://www.investopedia.com/terms/o/openinterest.asp<br/>https://www.investopedia.com/articles/optioninvestor/10/sell-puts-benefit-any-market.asp<br/><a href='https://www.investopedia.com/terms/o/option.asp'>https://www.investopedia.com/terms/o/option.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp'>https://www.investopedia.com/articles/active-trading/040915/guide-option-trading-strategies-beginners.asp</a><br/>Options are derivatives/contracts (1 contract = 100 shares) that give the holder/bearer the right (but not the obligation) to buy (call option) or sell (put option) an amount of underlying asset at a set price (strike price) on or before the contract expiration date.<br/><br/>Call option is like a non-refundable down-payment for a future purchase, while put option is like insurance policy limiting downside risk.<br/><br/>Use case:<br/>1. buy calls: hedge against stock price going up.<br/>2. buy puts: hedge against stock price going down.<br/><Br/>https://www.fidelity.com/learning-center/investment-products/options/options-learning-path")
+        
+        self.layout.addWidget(self.cash_covered_puts_label, 0, 0)
+        self.layout.addWidget(self.cash_covered_puts_tb, 1, 0)
+        self.layout.addWidget(self.covered_calls_label, 2, 0)
+        self.layout.addWidget(self.covered_calls_tb, 3, 0)
+        self.layout.addWidget(self.options_general_label, 4, 0)
+        self.layout.addWidget(self.options_general_tb, 5, 0)
+        self.setLayout(self.layout)
 
+        
 class screener_dialog(dialog_with_textbrowser):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
@@ -1036,7 +1071,7 @@ class app_menu(object):
         options_trading_Act.triggered.connect(self.options_dialog.exec)
         #
         screener_Act = QAction('&Screener', parent=self.app_window)
-        screener_Act.setShortcut('Ctrl+S')
+        #screener_Act.setShortcut('Ctrl+S')
         screener_Act.triggered.connect(self.screener_dialog.exec)
         # 2. researchMenu
         self.app_window.ResearchMenu = self.app_window.menubar.addMenu('&Research')
@@ -1293,7 +1328,8 @@ class UI_control(object):
                                                                   force_redownload = self._UI.app_window.app_menu.preferences_dialog.force_redownload_yfinance_data, 
                                                                   download_today_data = self._UI.app_window.app_menu.preferences_dialog.download_today_data, 
                                                                   data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir,
-                                                                  web_scraper = self._UI.app_window.web_scraper)
+                                                                  web_scraper = self._UI.app_window.web_scraper,
+                                                                  download_short_interest = self._UI.app_window.app_menu.preferences_dialog.download_short_interest)
             self.ticker_data_dict_in_effect = copy.deepcopy(self.ticker_data_dict_original)
             self._calc_index()
 
@@ -1723,7 +1759,7 @@ class UI_control(object):
 
     def _ticker_download_latest_data_from_yfinance(self):
         if self._ticker_selected:
-            self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, force_redownload = True, download_today_data=self._UI.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir, web_scraper = self._UI.app_window.web_scraper)
+            self.ticker_data_dict_original = get_ticker_data_dict(ticker = self.selected_ticker, force_redownload = True, download_today_data=self._UI.app_window.app_menu.preferences_dialog.download_today_data, data_root_dir=self._UI.app_window.app_menu.preferences_dialog.data_root_dir, web_scraper = self._UI.app_window.web_scraper, download_short_interest = self._UI.app_window.app_menu.preferences_dialog.download_short_interest)
             self._ticker_lastdate_dialog_use_last_available_date_button_clicked()
             self._ticker_selection_change(self.selected_ticker_index)
             self._UI.repaint()

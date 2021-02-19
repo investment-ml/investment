@@ -21,6 +21,8 @@ import os
 from os.path import join
 import pathlib
 
+import shutil
+
 import requests
 
 # NASDAQ Composite Components:
@@ -62,11 +64,19 @@ def download_and_load_ARK_data(data_root_dir: str = None):
          raise ValueError("Error: data_root_dir cannot be None")
 
     data_dir = join(data_root_dir, "ticker_data/ARK")
+    ARK_historical_dir = join(data_root_dir, "ticker_data/ARK/historical")
+
     if not os.path.exists(data_dir):
         try:
             pathlib.Path(data_dir).mkdir(parents=True, exist_ok=True)
         except:
             raise IOError(f"cannot create data dir: {data_dir}")
+
+    if not os.path.exists(ARK_historical_dir):
+        try:
+            pathlib.Path(ARK_historical_dir).mkdir(parents=True, exist_ok=True)
+        except:
+            raise IOError(f"cannot create ARK historical dir: {ARK_historical_dir}")
     
     pairs = {'ARKK': 'ARK_INNOVATION_ETF_ARKK_HOLDINGS.csv',
              'ARKQ': 'ARK_AUTONOMOUS_TECHNOLOGY_&_ROBOTICS_ETF_ARKQ_HOLDINGS.csv',
@@ -100,6 +110,8 @@ def download_and_load_ARK_data(data_root_dir: str = None):
             r = requests.get(url)
             with open(filename, 'wb') as outfile:
                 outfile.write(r.content)
+            filename_to = join(ARK_historical_dir, ETF_name + "-" + timedata(time_stamp=file1.stat().st_ctime).datetime.astimezone().strftime("%Y%m%d") + ".csv") # astimezone() -> local time zone
+            shutil.copy(filename, filename_to)
             print(' Done')
                 
         with open(filename, 'r') as f:
@@ -236,14 +248,18 @@ ticker_group_dict = {'All': [],
                      'Utilities': ['PCG','D','DUK','XEL','NRG','ES','XLU'],
                      'Real Estate': ['AMT','CCI','PLD','BPYU','BDN','CSGP','XLRE'],
                      'Dividend Stocks (11/2020)': ['BMY','WMT','HD','AAPL','MSFT'],
-                     'Growth Stocks (11/2020)': ['ALGN','FIVE','LGIH','MELI','PTON'],
-                     'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','ZM','AZN','ARCT','QDEL','ABT','HOLX','DGX','GME','CHWY','AMC'],
+                     'Growth Stocks': ['ALGN','FIVE','LGIH','MELI','PTON', 'KEYS', 'AMD', 'FLGT', 'GNRC'],
+                     'Biden Stocks': ['TLRY','RUN',],
+                     'Warren Buffett Stocks (Q4/2020)': ['VZ', 'CVX','MMC','SSP','ABBV','MRK','BMY','KR','RH','TMUS','AAPL','USB','GM','WFC','SU','LILAK','PNC','JPM','MTB','GOLD','PFE'],
+                     'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','AAL','ZM','AZN','ARCT','QDEL','ABT','HOLX','DGX','PROG','GME','CHWY','AMC'],
+                     'Inflation': ['VTIP','LTPZ','IVOL','SPIP'],
                      'Cyber Security': ['SWI','CYBR','CHKP','PANW','ZS','CRWD','FEYE','SCWX','VMW','MSFT','FTNT','MIME','HACK','PFPT','QLYS','RPD','TENB','VRNS','CIBR','NET'],
                      '5G': ['AAPL','TMUS','VZ','T','QCOM','QRVO','ERIC','TSM','NVDA','SWKS','ADI','MRVL','AVGO','XLNX'],
                      'ASD': ['BNGO','ZYNE',],
                      'Cryptocurrencies': ['GBTC','RIOT','MARA','BTC-USD'],
                      'Boom': ['ROKU','AMD','SHOP','NIO','MRNA','NVDA','QS'],
                      'Space': ['SPCE','SRAC','MAXR','LMT','NOC'],
+                     'Gene therapy': ['ABEO', 'CAPR', 'AVRO', 'EDIT', 'QURE'],
                      'ETF': ['JETS', 'ONEQ', 'IEMG', 'VTHR', 'IWB', 'IWM', 'IWV', 'IWF', 'VTV', 'SCHD', 'USMV', 'VEA', 'VWO', 'AGG', 'LQD', 'GLD', 'VTI', 'DIA', 'OILU', 'OILD', 'TQQQ', 'SQQQ', 'UDOW', 'SDOW', 'UVXY', 'SVXY', 'KORU', 'YANG', 'YINN', 'QQQ', 'VOO','SPY','IVV','TMF','TMV','TBF','TLT','ESPO','GDX','XLC','XLI','XLF','XLE','XLV','XLB','XLK','XLU','XLP','XLY','XLRE'],
                      'ETF database': [],
                      'Major Market Indexes': ['^DJI','^NDX','^GSPC','^IXIC','^RUT','^VIX','DIA','SPLG','IVV','VOO','SPY','QQQ','ONEQ','IWM','VTWO','VXX'],
@@ -260,8 +276,8 @@ ticker_group_dict = {'All': [],
                      'Russell 3000': [],
                      'Equity database': [],
                      'Volatility': ['^VVIX','^VIX','VIXY','VXX','^VXN',],
-                     'Treasury Yield': ['^TNX','SHV','TIP','FLOT','VUT','BND'],
-                     'OTC Market': ['JCPNQ',],
+                     'Treasury Yield': ['^TNX','SHV','TIP','FLOT','VUT','BND','TMV','TLT','EDV','ZROZ','TBT'],
+                     'OTC Market': ['JCPNQ','TGLO',],
                      'ARK Investments': ['ARKK','ARKQ','ARKW','ARKG','ARKF','IZRL','PRNT'],
                      'ARK Innovation ETF': [x for x in ARK_df_dict['ARKK']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK Autonomous Tech. & Robotics ETF': [x for x in ARK_df_dict['ARKQ']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
@@ -460,14 +476,18 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Utilities': f"Companies that provide electricity, natural gas, water, sewage, and other services to homes and businesses.",
                    'Real Estate': f"Companies that allow individual investors to buy shares in real estate portfolios that receive income from a variety of properties.",
                    'Dividend Stocks (11/2020)': f"Dividend Stocks (11/2020)",
-                   'Growth Stocks (11/2020)': f"Growth Stocks (11/2020)",
-                   'COVID-19': f"Vaccines: 'ALT','MRNA','INO','GILD','JNJ','PFE','AZN','ARCT'<br/><br/>COVID-19 testing: 'QDEL','ABT','HOLX','DGX'<br/><br/>Cruises: 'RCL','CCL','NCLH'<br/><br/>Pet food: 'CHWY'<br/><br/>Game: 'GME'",
+                   'Growth Stocks': f"https://www.investopedia.com/investing/best-growth-stocks/<br>November 2020: ALGN, FIVE, LGIH, MELI, PTON<br/>February 2021 (Updated Jan 26, 2021): KEYS, AMD, FLGT, GNRC, PTON",
+                   'Biden Stocks': f"Stocks that would be supported by President Joe Biden's policy, such as weeds, solar energy, etc.",
+                   'Warren Buffett Stocks (Q4/2020)': f"https://www.fool.com/investing/2021/02/18/here-are-all-10-stocks-warren-buffett-has-been-buy/<br/><br/>-- During Q4 2020 --<br/><br/>1. 4 new stocks in Berkshire's portfolio: VZ, CVX, MMC, SSP<br/><br/>2. 6 stocks Berkshire bought more of: ABBV, MRK, BMY, KR, RH, TMUS<br/><br/>3. 6 stocks Berkshire reduced: AAPL, USB, GM, WFC, SU, LILAK<br/><br/>4. 5 stock positions Berkshire exited completely: PNC, JPM, MTB, GOLD, PFE",
+                   'COVID-19': f"Vaccines: 'ALT','MRNA','INO','GILD','JNJ','PFE','AZN','ARCT'<br/><br/>COVID-19 testing: 'QDEL','ABT','HOLX','DGX','PROG'<br/><br/>Cruises: 'RCL','CCL','NCLH'<br/><br/>Pet food: 'CHWY'<br/><br/>Game: 'GME'",
+                   'Inflation': f"TIPS (U.S. Treasury Inflation-Protected Securities) ETF: https://www.investopedia.com/articles/investing/092215/top-5-tips-etfs.asp<br/><br/>House Price Index: http://www.freddiemac.com/research/indices/house-price-index.page<br/><br/>https://seekingalpha.com/article/4405852-stock-market-faces-moment-of-truth-inflation-rises-over-horizon",
                    'Cyber Security': f"One of the largest recent <a href='https://en.wikipedia.org/wiki/2020_United_States_federal_government_data_breach'>hacks</a>:<br/>On 12/14/2020, the news that SWI was used by Russia to back the U.S. governments went public.<br/>SWI tumbled and other cyber security firms soared because of the heightened need for years to come.<br/><br/>CRWD, CYBR, FEYE, PANW, ZS ... all jumped big within 2 weeks.",
                    '5G': f"5G wireless networks",
                    'ASD': f"Autism Spectrum Disorder stocks",
                    'Cryptocurrencies': f"A digital asset designed to work as a medium of exchange wherein individual coin ownership records are stored in a ledger existing in a form of computerized database using strong cryptography to secure transaction records, to control the creation of additional coins, and to verify the transfer of coin ownership.<br/><br><a href='https://www.investopedia.com/articles/investing/082914/basics-buying-and-investing-bitcoin.asp'>trading bitcoin</a>.",
                    'Boom': f"Stocks that have a history of skyrocketing",
                    'Space': f"<a href='https://www.barrons.com/articles/ark-invest-is-planning-a-space-etf-here-are-5-stocks-that-could-benefit-51610641331'>5 Stocks That Could Benefit From ARK’s Planned Space ETF</a>",
+                   'Gene therapy': "Gene therapy",
                    'ETF': f"Exchange-traded fund (ETF) is a basket of securities that trade on an exchange. Unlike mutual funds (which only trade once a day after the market closes), ETF is just like a stock and share prices fluctuate all day as the ETF is bought and sold.\n\nExchange-traded note (ETN) is a basket of unsecured debt securities that track an underlying index of securities and trade on a major exchange like a stock.\n\nDifference: Investing ETF is investing in a fund that holds the asset it tracks. That asset may be stocks, bonds, gold or other commodities, or futures contracts. In contrast, ETN is more like a bond. It's an unsecured debt note issued by an institution. If the underwriter (usually a bank) were to go bankrupt, the investor would risk a total default.",
                    'ETF database': f"https://nasdaqtrader.com/",
                    'Major Market Indexes': f"https://www.investing.com/indices/major-indices",
@@ -755,9 +775,17 @@ class Ticker(object):
 
     def option_chain(self, expiration_date: str = None):
         if 'option_chain_dict' in self.ticker_data_dict.keys():
-            return self.ticker_data_dict['option_chain_dict'][expiration_date]
-        else:
-            return None
+            if expiration_date in self.ticker_data_dict['option_chain_dict'].keys():
+                return self.ticker_data_dict['option_chain_dict'][expiration_date]
+        return None
+
+    def option_info(self, expiration_date: str = None, type: str = None, strike_price: float = None):
+        assert type in ['puts','calls'], 'type must be either puts or calls'
+        df = self.option_chain(expiration_date = expiration_date)
+        if df is not None:
+            ds = df[(df['strike'] == strike_price) & (df['type'] == type)].iloc[0]
+            return ds
+        return None
 
     @property
     def recommendations(self):

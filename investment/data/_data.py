@@ -41,7 +41,7 @@ class timedata(object):
         """
         if time_stamp is None and date_time is None:
             if Y_m_d == {} or Y_m_d == ():
-                pass
+                self.datetime = datetime.now(tz=timezone.utc)
                 #raise ValueError("either time_stamp, date_time, or Y_m_d must be specified")
             elif type(Y_m_d) == dict:
                self.datetime = datetime(Y_m_d['year'], Y_m_d['month'], Y_m_d['day'], tzinfo=timezone.utc)
@@ -55,7 +55,8 @@ class timedata(object):
 
     @property
     def now(self):
-        self.datetime = datetime.now(tz=timezone.utc)
+        self._datetime = datetime.now(tz=timezone.utc)
+        self._timestamp = self._datetime.timestamp()
         return self
 
     @property
@@ -183,7 +184,7 @@ def download_ticker_history_df(ticker: str = None, verbose: bool = True, downloa
     return df
 
 
-def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_retry: bool = False, web_scraper = False):
+def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_retry: bool = False, web_scraper = False, download_short_interest = False):
 
     if ticker is None:
         raise ValueError("Error: ticker cannot be None")
@@ -283,7 +284,10 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
 
     if web_scraper is not None:
         info_dict['price_target'] = web_scraper().price_target(ticker=ticker)
-        info_dict['short_interest'], info_dict['short_interest_prior'], info_dict['days_to_cover'], info_dict['trading_vol_avg'], info_dict['shares_float'] = web_scraper().short_interest(ticker=ticker)
+        if download_short_interest:
+            info_dict['short_interest'], info_dict['short_interest_prior'], info_dict['days_to_cover'], info_dict['trading_vol_avg'], info_dict['shares_float'] = web_scraper().short_interest(ticker=ticker)
+        else:
+            info_dict['short_interest'], info_dict['short_interest_prior'], info_dict['days_to_cover'], info_dict['trading_vol_avg'], info_dict['shares_float'] = None, None, None, None, None
     else:
         info_dict['price_target'] = web_scrape().price_target(ticker=ticker)
         info_dict['short_interest'], info_dict['short_interest_prior'], info_dict['days_to_cover'], info_dict['trading_vol_avg'], info_dict['shares_float'] = None, None, None, None, None
@@ -300,7 +304,8 @@ def get_ticker_data_dict(ticker: str = None,
                          data_root_dir: str = None, 
                          auto_retry: bool = False,
                          keep_up_to_date: bool = False,
-                         web_scraper = None):
+                         web_scraper = None,
+                         download_short_interest: bool = False):
 
     """
     if keep_up_to_date is True, try to redownload if the last Date is not today
@@ -368,7 +373,7 @@ def get_ticker_data_dict(ticker: str = None,
             raise SystemError("cannot download ticker history")
 
         try:
-            ticker_info_dict = download_ticker_info_dict(ticker, verbose = verbose, auto_retry = auto_retry, web_scraper = web_scraper)
+            ticker_info_dict = download_ticker_info_dict(ticker, verbose = verbose, auto_retry = auto_retry, web_scraper = web_scraper, download_short_interest = download_short_interest)
         except:
             raise SystemError("cannot download ticker info dict")
 
@@ -413,7 +418,7 @@ def get_ticker_data_dict(ticker: str = None,
             if curr_df.shape[0] > new_df.shape[0]:
                 #raise ValueError(f"for ticker [{ticker}], the redownloaded df has fewer rows than the current one")
                 print(f"ticker: [{ticker}]")
-                print("*** The redownloaded df has fewer rows than the current one --> the current one will be used instead")
+                print(f"*** The redownloaded df's rows [n={new_df.shape[0]}] are fewer than that of the current one [n={curr_df.shape[0]}] --> the current one will be used instead")
             elif (curr_first_date - new_first_date) < timedelta(days=0):
                 #raise ValueError(f"for ticker [{ticker}], the redownloaded df has a more recent start date: {new_first_date_str}, compared to the current one: {curr_first_date_str}")
                 print(f"ticker: [{ticker}]")
@@ -424,7 +429,7 @@ def get_ticker_data_dict(ticker: str = None,
                 print("*** The redownloaded df has an older end date, compared to the current one --> the current one will be used instead")
             else:
                 try:
-                    ticker_info_dict = download_ticker_info_dict(ticker, verbose = verbose, auto_retry = auto_retry, web_scraper = web_scraper)
+                    ticker_info_dict = download_ticker_info_dict(ticker, verbose = verbose, auto_retry = auto_retry, web_scraper = web_scraper, download_short_interest = download_short_interest)
                 except:
                     raise SystemError("cannot download ticker info dict")
                 shutil.copy2( ticker_history_df_file, data_backup_dir )
@@ -748,11 +753,17 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
             options_info = f"<br/><hr>Options expirations: {this_ticker.options}"
         else:
             options_info = f"\n\nOptions expirations: {this_ticker.options}"
-        if this_ticker.option_chain(expiration_date = this_ticker.options[0]) is not None:
+        df = this_ticker.option_chain(expiration_date = this_ticker.options[0])
+        if df is not None:
+            df.drop(columns=['contractSymbol', 'lastTradeDate', 'contractSize', 'currency', 'bid', 'ask', 'change', 'volume'], inplace=True)
+            calls = df[df['type'] == 'calls'].drop(columns=['type']).copy()
+            #calls.drop(columns=['type'], inplace=True)
+            puts = df[df['type'] == 'puts'].drop(columns=['type']).copy()
+            #puts.drop(columns=['type'], inplace=True)
             if use_html:
-                options_info += f"<br/><br/>The most recent one:{this_ticker.option_chain(expiration_date = this_ticker.options[0]).to_html(index=False)}"
+                options_info += f"<br/><br/>The most recent one:<br/><br/>calls:{calls.to_html(index=False)}<br/><br/>puts:{puts.to_html(index=False)}"
             else:
-                options_info += f"\n\nThe most recent one:{this_ticker.option_chain(expiration_date = this_ticker.options[0]).to_string(index=False)}"
+                options_info += f"\n\nThe most recent one:\n\ncalls:{calls.to_string(index=False)}\n\nputs:{puts.to_string(index=False)}"
 
     # recommendations
     if use_html:
