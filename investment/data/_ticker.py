@@ -38,6 +38,11 @@ import requests
 
 ###########################################################################################
 
+tickers_with_no_volume = ['^W5000','^VVIX','^VIX','^TNX','^TYX','^FVX','^IRX','^VXN','EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','DX-Y.NYB','^TWII','^TWDOWD','^HSI','^N225','^GDAXI','^FCHI','000001.SS','399001.SZ','^STOXX50E']
+tickers_with_no_PT = ['^NDX','^GSPC','000001.SS','399001.SZ','NQ=F','YM=F','GC=F','ES=F','CL=F']
+
+###########################################################################################
+
 nasdaqlisted_df = pd.DataFrame()
 otherlisted_df = pd.DataFrame()
 options_df = pd.DataFrame()
@@ -105,14 +110,18 @@ def download_and_load_ARK_data(data_root_dir: str = None):
                 raise RuntimeError("Internet is unavailable but the system depends on certain ark-invest.com files to run")
 
         if to_download:
-            print(f'Download [{ETF_name}] data from ark-funds.com ...', end='')
+            print(f'Attempt to download [{ETF_name}] data from ark-funds.com ...', end='')
             url = "https://ark-funds.com/wp-content/fundsiteliterature/csv/" + pairs[ETF_name]
-            r = requests.get(url)
-            with open(filename, 'wb') as outfile:
-                outfile.write(r.content)
-            filename_to = join(ARK_historical_dir, ETF_name + "-" + timedata(time_stamp=file1.stat().st_ctime).datetime.astimezone().strftime("%Y%m%d") + ".csv") # astimezone() -> local time zone
-            shutil.copy(filename, filename_to)
-            print(' Done')
+            headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.192 Safari/537.36'} # https://stackoverflow.com/questions/57155387/workaround-for-blocked-get-requests-in-python
+            r = requests.get(url, headers=headers)
+            if r.status_code == 200:
+                with open(filename, 'wb') as outfile:
+                    outfile.write(r.content)
+                filename_to = join(ARK_historical_dir, ETF_name + "-" + timedata(time_stamp=file1.stat().st_ctime).datetime.astimezone().strftime("%Y%m%d") + ".csv") # astimezone() -> local time zone
+                shutil.copy(filename, filename_to)
+                print(f' Successful [status code: {r.status_code}]')
+            else:
+                print(f' Failed [status code: {r.status_code}]')
                 
         with open(filename, 'r') as f:
             data = f.readlines()
@@ -121,7 +130,7 @@ def download_and_load_ARK_data(data_root_dir: str = None):
             if d[0] == ',': # figure out how many footer to skip
                 footer_n = len(data) - idx
                 break
-
+        
         ARK_df_dict[ETF_name] = pd.read_csv(filename, skipfooter=footer_n, engine='python').replace({'ticker': {'TREE UW':'TREE','ARCT UQ':'ARCT','TCS LI': None, 'MDT UN': 'MDT', 'XRX UN': 'XRX'}})
 
 download_and_load_ARK_data(data_root_dir=global_data_root_dir)
@@ -251,19 +260,25 @@ ticker_group_dict = {'All': [],
                      'Growth Stocks': ['ALGN','FIVE','LGIH','MELI','PTON', 'KEYS', 'AMD', 'FLGT', 'GNRC'],
                      'Biden Stocks': ['TLRY','RUN',],
                      'Warren Buffett Stocks (Q4/2020)': ['VZ', 'CVX','MMC','SSP','ABBV','MRK','BMY','KR','RH','TMUS','AAPL','USB','GM','WFC','SU','LILAK','PNC','JPM','MTB','GOLD','PFE'],
-                     'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','AAL','ZM','AZN','ARCT','QDEL','ABT','HOLX','DGX','PROG','GME','CHWY','AMC'],
+                     'Marijuana': ['YOLO','CNBS','TLRY','TOKE','THCX','EVVLF','MJ','XXII','ATTBF','ABBV','AERO','MO','ERBB','ACAN','APH','ARNA','AXIM','BLPG','CBDS','CGRW','CNTTQ','CARA','CGRA','CLSH','CRBP','CRON','CVSI','DBCCF','DIGP','EDXC','ENRT','EVIO','GBLX','CANN','GRNH','GRWC','PHOT','GWPH','HEMP','IGC','IIPR','KAYS','KSHB','MSRT','BTZI','MJNA','SHWZ','VIVO','POTN','SWM','SMG','SRNA','TER','TRTC','TCNNF','TRST','TPB','TURV','UBQU','CNABQ','UVV','VPOR','VGR','ZYNE'],
+                     'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','AAL','ZM','AZN','ARCT','QDEL','ABT','HOLX','DGX','PROG','GME','CHWY','AMC','USO','JETS','TRIP','LVS','HLT','H','MAR'],
                      'Inflation': ['VTIP','LTPZ','IVOL','SPIP'],
                      'Cyber Security': ['SWI','CYBR','CHKP','PANW','ZS','CRWD','FEYE','SCWX','VMW','MSFT','FTNT','MIME','HACK','PFPT','QLYS','RPD','TENB','VRNS','CIBR','NET'],
                      '5G': ['AAPL','TMUS','VZ','T','QCOM','QRVO','ERIC','TSM','NVDA','SWKS','ADI','MRVL','AVGO','XLNX'],
                      'ASD': ['BNGO','ZYNE',],
                      'Cryptocurrencies': ['GBTC','RIOT','MARA','BTC-USD'],
+                     'Currencies': ['EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','DX-Y.NYB'],
+                     'Commodities': ['GC=F','CL=F'],
                      'Boom': ['ROKU','AMD','SHOP','NIO','MRNA','NVDA','QS'],
-                     'Space': ['SPCE','SRAC','MAXR','LMT','NOC'],
+                     'Space': ['SPCE','SRAC','MAXR','LMT','BA','NOC','UFO','HOL','SRAC','VGAC','NPA','MAXR'],
                      'Gene therapy': ['ABEO', 'CAPR', 'AVRO', 'EDIT', 'QURE'],
+                     'Data Science and A.I.': ['THNQ','JSMD','IVES','QTUM','AYX','PLTR'],
                      'ETF': ['JETS', 'ONEQ', 'IEMG', 'VTHR', 'IWB', 'IWM', 'IWV', 'IWF', 'VTV', 'SCHD', 'USMV', 'VEA', 'VWO', 'AGG', 'LQD', 'GLD', 'VTI', 'DIA', 'OILU', 'OILD', 'TQQQ', 'SQQQ', 'UDOW', 'SDOW', 'UVXY', 'SVXY', 'KORU', 'YANG', 'YINN', 'QQQ', 'VOO','SPY','IVV','TMF','TMV','TBF','TLT','ESPO','GDX','XLC','XLI','XLF','XLE','XLV','XLB','XLK','XLU','XLP','XLY','XLRE'],
                      'ETF database': [],
+                     'Buffett Indicator': ['^W5000',],
                      'Major Market Indexes': ['^DJI','^NDX','^GSPC','^IXIC','^RUT','^VIX','DIA','SPLG','IVV','VOO','SPY','QQQ','ONEQ','IWM','VTWO','VXX'],
-                     'Non-US World Market Indexes': ['^FTSE',],
+                     'Non-US World Market Indexes': ['^FTSE','^HSI','^N225','^GDAXI','^FCHI','^TWII','^TWDOWD','000001.SS','399001.SZ','^STOXX50E'],
+                     'Futures': ['NQ=F','YM=F','ES=F','GC=F','CL=F'],
                      'DOW 30': ['^DJI', 'GS','WMT','MCD','CRM','DIS','NKE','CAT','TRV','VZ','JPM','IBM','HD','INTC','AAPL','MMM','MSFT','JNJ','CSCO','V','DOW','MRK','PG','AXP','KO','AMGN','HON','UNH','WBA','CVX','BA'],
                      'NASDAQ 100': ['^NDX', 'AAPL', 'ADBE', 'ADI', 'ADP', 'ADSK', 'ALGN', 'ALXN', 'AMAT', 'AMD', 'AMGN', 'AMZN', 'ANSS', 'ASML', 'ATVI', 'AVGO', 'BIDU', 'BIIB', 'BKNG', 'BMRN', 'CDNS', 'CDW', 'CERN', 'CHKP', 'CHTR', 'CMCSA', 'COST', 'CPRT', 'CSCO', 'CSX', 'CTAS', 'CTSH', 'CTXS', 'DLTR', 'DOCU', 'DXCM', 'EA', 'EBAY', 'EXC', 'EXPE', 'FAST', 'FB', 'FISV', 'FOX', 'FOXA', 'GILD', 'GOOG', 'GOOGL', 'IDXX', 'ILMN', 'INCY', 'INTC', 'INTU', 'ISRG', 'JD', 'KDP', 'KHC', 'KLAC', 'LBTYA', 'LBTYK', 'LRCX', 'LULU', 'MAR', 'MCHP', 'MDLZ', 'MELI', 'MNST', 'MRNA', 'MSFT', 'MU', 'MXIM', 'NFLX', 'NTES', 'NVDA', 'NXPI', 'ORLY', 'PAYX', 'PCAR', 'PDD', 'PEP', 'PYPL', 'QCOM', 'REGN', 'ROST', 'SBUX', 'SGEN', 'SIRI', 'SNPS', 'SPLK', 'SWKS', 'TCOM', 'TMUS', 'TSLA', 'TTWO', 'TXN', 'ULTA', 'VRSK', 'VRSN', 'VRTX', 'WBA', 'WDAY', 'XEL', 'XLNX', 'ZM'],
                      'S&P 500': ['^GSPC', 'VOO','SPY','IVV','MMM','ABT','ABBV','ABMD','ACN','ATVI','ADBE','AMD','AAP','AES','AFL','A','APD','AKAM','ALK','ALB','ARE','ALXN','ALGN','ALLE','LNT','ALL','GOOGL','GOOG','MO','AMZN','AMCR','AEE','AAL','AEP','AXP','AIG','AMT','AWK','AMP','ABC','AME','AMGN','APH','ADI','ANSS','ANTM','AON','AOS','APA','AIV','AAPL','AMAT','APTV','ADM','ANET','AJG','AIZ','T','ATO','ADSK','ADP','AZO','AVB','AVY','BKR','BLL','BAC','BK','BAX','BDX','BRK-B','BBY','BIO','BIIB','BLK','BA','BKNG','BWA','BXP','BSX','BMY','AVGO','BR','BF-B','CHRW','COG','CDNS','CPB','COF','CAH','KMX','CCL','CARR','CTLT','CAT','CBOE','CBRE','CDW','CE','CNC','CNP','CERN','CF','SCHW','CHTR','CVX','CMG','CB','CHD','CI','CINF','CTAS','CSCO','C','CFG','CTXS','CLX','CME','CMS','KO','CTSH','CL','CMCSA','CMA','CAG','CXO','COP','ED','STZ','COO','CPRT','GLW','CTVA','COST','CCI','CSX','CMI','CVS','DHI','DHR','DRI','DVA','DE','DAL','XRAY','DVN','DXCM','FANG','DLR','DFS','DISCA','DISCK','DISH','DG','DLTR','D','DPZ','DOV','DOW','DTE','DUK','DRE','DD','DXC','EMN','ETN','EBAY','ECL','EIX','EW','EA','EMR','ETR','EOG','EFX','EQIX','EQR','ESS','EL','ETSY','EVRG','ES','RE','EXC','EXPE','EXPD','EXR','XOM','FFIV','FB','FAST','FRT','FDX','FIS','FITB','FE','FRC','FISV','FLT','FLIR','FLS','FMC','F','FTNT','FTV','FBHS','FOXA','FOX','BEN','FCX','GPS','GRMN','IT','GD','GE','GIS','GM','GPC','GILD','GL','GPN','GS','GWW','HAL','HBI','HIG','HAS','HCA','PEAK','HSIC','HSY','HES','HPE','HLT','HFC','HOLX','HD','HON','HRL','HST','HWM','HPQ','HUM','HBAN','HII','IEX','IDXX','INFO','ITW','ILMN','INCY','IR','INTC','ICE','IBM','IP','IPG','IFF','INTU','ISRG','IVZ','IPGP','IQV','IRM','JKHY','J','JBHT','SJM','JNJ','JCI','JPM','JNPR','KSU','K','KEY','KEYS','KMB','KIM','KMI','KLAC','KHC','KR','LB','LHX','LH','LRCX','LW','LVS','LEG','LDOS','LEN','LLY','LNC','LIN','LYV','LKQ','LMT','L','LOW','LUMN','LYB','MTB','MRO','MPC','MKTX','MAR','MMC','MLM','MAS','MA','MKC','MXIM','MCD','MCK','MDT','MRK','MET','MTD','MGM','MCHP','MU','MSFT','MAA','MHK','TAP','MDLZ','MNST','MCO','MS','MOS','MSI','MSCI','NDAQ','NOV','NTAP','NFLX','NWL','NEM','NWSA','NWS','NEE','NLSN','NKE','NI','NSC','NTRS','NOC','NLOK','NCLH','NRG','NUE','NVDA','NVR','ORLY','OXY','ODFL','OMC','OKE','ORCL','OTIS','PCAR','PKG','PH','PAYX','PAYC','PYPL','PNR','PBCT','PEP','PKI','PRGO','PFE','PM','PSX','PNW','PXD','PNC','POOL','PPG','PPL','PFG','PG','PGR','PLD','PRU','PEG','PSA','PHM','PVH','QRVO','PWR','QCOM','DGX','RL','RJF','RTX','O','REG','REGN','RF','RSG','RMD','RHI','ROK','ROL','ROP','ROST','RCL','SPGI','CRM','SBAC','SLB','STX','SEE','SRE','NOW','SHW','SPG','SWKS','SLG','SNA','SO','LUV','SWK','SBUX','STT','STE','SYK','SIVB','SYF','SNPS','SYY','TMUS','TROW','TTWO','TPR','TGT','TEL','FTI','TDY','TFX','TER','TSLA','TXT','TMO','TIF','TJX','TSCO','TT','TDG','TRV','TFC','TWTR','TYL','TSN','UDR','ULTA','USB','UAA','UA','UNP','UAL','UNH','UPS','URI','UHS','UNM','VLO','VAR','VTR','VTRS','VRSN','VRSK','VZ','VRTX','VFC','VIAC','V','VNT','VNO','VMC','WRB','WAB','WMT','WBA','DIS','WM','WAT','WEC','WFC','WELL','WST','WDC','WU','WRK','WY','WHR','WMB','WLTW','WYNN','XEL','XRX','XLNX','XYL','YUM','ZBRA','ZBH','ZION','ZTS'],
@@ -276,7 +291,7 @@ ticker_group_dict = {'All': [],
                      'Russell 3000': [],
                      'Equity database': [],
                      'Volatility': ['^VVIX','^VIX','VIXY','VXX','^VXN',],
-                     'Treasury Yield': ['^TNX','SHV','TIP','FLOT','VUT','BND','TMV','TLT','EDV','ZROZ','TBT'],
+                     'Treasury Bonds Yield': ['^TNX','^TYX','^FVX','^IRX','SHV','TIP','FLOT','VUT','BND','TMV','TLT','EDV','ZROZ','TBT'],
                      'OTC Market': ['JCPNQ','TGLO',],
                      'ARK Investments': ['ARKK','ARKQ','ARKW','ARKG','ARKF','IZRL','PRNT'],
                      'ARK Innovation ETF': [x for x in ARK_df_dict['ARKK']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
@@ -479,19 +494,25 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Growth Stocks': f"https://www.investopedia.com/investing/best-growth-stocks/<br>November 2020: ALGN, FIVE, LGIH, MELI, PTON<br/>February 2021 (Updated Jan 26, 2021): KEYS, AMD, FLGT, GNRC, PTON",
                    'Biden Stocks': f"Stocks that would be supported by President Joe Biden's policy, such as weeds, solar energy, etc.",
                    'Warren Buffett Stocks (Q4/2020)': f"https://www.fool.com/investing/2021/02/18/here-are-all-10-stocks-warren-buffett-has-been-buy/<br/><br/>-- During Q4 2020 --<br/><br/>1. 4 new stocks in Berkshire's portfolio: VZ, CVX, MMC, SSP<br/><br/>2. 6 stocks Berkshire bought more of: ABBV, MRK, BMY, KR, RH, TMUS<br/><br/>3. 6 stocks Berkshire reduced: AAPL, USB, GM, WFC, SU, LILAK<br/><br/>4. 5 stock positions Berkshire exited completely: PNC, JPM, MTB, GOLD, PFE",
-                   'COVID-19': f"Vaccines: 'ALT','MRNA','INO','GILD','JNJ','PFE','AZN','ARCT'<br/><br/>COVID-19 testing: 'QDEL','ABT','HOLX','DGX','PROG'<br/><br/>Cruises: 'RCL','CCL','NCLH'<br/><br/>Pet food: 'CHWY'<br/><br/>Game: 'GME'",
+                   'Marijuana': "Cannabis",
+                   'COVID-19': f"Vaccines: 'ALT','MRNA','INO','GILD','JNJ','PFE','AZN','ARCT'<br/><br/>COVID-19 testing: 'QDEL','ABT','HOLX','DGX','PROG'<br/><br/>Cruises: 'RCL','CCL','NCLH'<br/><br/>Pet food: 'CHWY'<br/><br/>Game: 'GME'<br/><br/>Energy: 'USO'<br/><br/>Travel: 'JETS','TRIP','LVS'<br/><br/>Hotel: 'HLT','H','MAR'",
                    'Inflation': f"TIPS (U.S. Treasury Inflation-Protected Securities) ETF: https://www.investopedia.com/articles/investing/092215/top-5-tips-etfs.asp<br/><br/>House Price Index: http://www.freddiemac.com/research/indices/house-price-index.page<br/><br/>https://seekingalpha.com/article/4405852-stock-market-faces-moment-of-truth-inflation-rises-over-horizon",
                    'Cyber Security': f"One of the largest recent <a href='https://en.wikipedia.org/wiki/2020_United_States_federal_government_data_breach'>hacks</a>:<br/>On 12/14/2020, the news that SWI was used by Russia to back the U.S. governments went public.<br/>SWI tumbled and other cyber security firms soared because of the heightened need for years to come.<br/><br/>CRWD, CYBR, FEYE, PANW, ZS ... all jumped big within 2 weeks.",
                    '5G': f"5G wireless networks",
                    'ASD': f"Autism Spectrum Disorder stocks",
                    'Cryptocurrencies': f"A digital asset designed to work as a medium of exchange wherein individual coin ownership records are stored in a ledger existing in a form of computerized database using strong cryptography to secure transaction records, to control the creation of additional coins, and to verify the transfer of coin ownership.<br/><br><a href='https://www.investopedia.com/articles/investing/082914/basics-buying-and-investing-bitcoin.asp'>trading bitcoin</a>.",
+                   'Currencies': f"Currencies",
+                   'Commodities': f"Commodities",
                    'Boom': f"Stocks that have a history of skyrocketing",
                    'Space': f"<a href='https://www.barrons.com/articles/ark-invest-is-planning-a-space-etf-here-are-5-stocks-that-could-benefit-51610641331'>5 Stocks That Could Benefit From ARK’s Planned Space ETF</a>",
                    'Gene therapy': "Gene therapy",
+                   'Data Science and A.I.': "Data science, machine learning, and artifical intelligence",
                    'ETF': f"Exchange-traded fund (ETF) is a basket of securities that trade on an exchange. Unlike mutual funds (which only trade once a day after the market closes), ETF is just like a stock and share prices fluctuate all day as the ETF is bought and sold.\n\nExchange-traded note (ETN) is a basket of unsecured debt securities that track an underlying index of securities and trade on a major exchange like a stock.\n\nDifference: Investing ETF is investing in a fund that holds the asset it tracks. That asset may be stocks, bonds, gold or other commodities, or futures contracts. In contrast, ETN is more like a bond. It's an unsecured debt note issued by an institution. If the underwriter (usually a bank) were to go bankrupt, the investor would risk a total default.",
                    'ETF database': f"https://nasdaqtrader.com/",
+                   'Buffett Indicator': f"Divide the Wilshire 5000 Index (viewed as the total stock market) by the annual U.S. GDP. Before dot-com bubble burst, it was 159.2%.<br/><br/><a href='https://www.gurufocus.com/stock-market-valuations.php'>https://www.gurufocus.com/stock-market-valuations.php</a>",
                    'Major Market Indexes': f"https://www.investing.com/indices/major-indices",
-                   'Non-US World Market Indexes': f"FTSE (Financial Times Stock Exchange) 100 Index is a share index of the 100 companies listed on the London Stock Exchange with the highest market capitalisation.",
+                   'Non-US World Market Indexes': f"<b>FTSE</b> (Financial Times Stock Exchange) 100 Index is a share index of the 100 companies listed on the <b>London Stock Exchange</b> with the highest market capitalisation.<br/><br/><b>HSI</b> is Hang Seng Index.<br/><br/><b>N225</b> is the Nikkei 225, the Nikkei Stock Average, is a stock market index for the Tokyo Stock Exchange.<br/><br/><b>GDAXI</b> is the DAX Performance Index, a blue chip stock market index consisting of the 30 major <b>German</b> companies trading on the Frankfurt Stock Exchange.<br/><br/><b>FCHI</b> is CAC 40, a benchmark <b>French stock market index</b>, representing a capitalization-weighted measure of the 40 most significant stocks among the 100 largest market caps on the Euronext Paris.<br/><br/><b>TWII</b> is the TSEC (Taiwan Stock Exchange Corporation) weighted index.<br/><br/><b>000001.SS</b> is the SSE (Shanghai Stock Exchange) Composite Index, currency in CNY.<br/><br/><b>399001.SZ</b> is the Shenzhen Component, currency in CNY.<br/><br/><b>^STOXX50E</b> is the EURO STOXX 50 index, dominated by France (36.4%) and Germany (35.2%) and providing a blue-chip representation of supersector leaders in the Eurozone.<br/><br/>",
+                   'Futures': f"<b>NQ=F</b>: Nasdaq Futures<br/><br/><b>YM=F</b>: Dow Futures<br/><br/><b>ES=F</b>: S&P Futures<br/><br/><b>GC=F</b>: Gold Futures<br/><br/><b>CL=F</b>: Crude Oil Futures",
                    'DOW 30': f"Dow Jones Industrial Average 30 Components",
                    'NASDAQ 100': f"A stock market index made up of 103 equity securities issued by 100 of the largest non-financial companies listed on the Nasdaq stock market.\n\nThe complete index, NASDAQ Composite (COMP), has 2,667 securities as of February 2020.\n\nBecause the index is weighted by market capitalization, the index is rather top-heavy. In fact, the top 10 stocks in the Nasdaq Composite account for one-third of the index’s performance.",
                    'S&P 500': f"A stock market index that measures the stock performance of 500 large companies listed on stock exchanges in the United States.\n\nIndex funds that track the S&P 500 have been recommended as investments by Warren Buffett, Burton Malkiel, and John C. Bogle for investors with long time horizons.",
@@ -501,8 +522,8 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Russell 3000': f"The Russell 3000 Index, a market-capitalization-weighted equity index maintained by FTSE Russell, provides exposure to the entire U.S. stock market and represents about 98% of all U.S incorporated equity securities.\n\nRussell 3000 = Russell 1000 (larger cap) + Russell 2000 (smaller cap).",
                    'Equity database': f"https://nasdaqtrader.com/",
                    'Volatility': f"<a href='https://www.investopedia.com/articles/active-trading/070213/tracking-volatility-how-vix-calculated.asp'>https://www.investopedia.com/articles/active-trading/070213/tracking-volatility-how-vix-calculated.asp</a>",
-                   'Treasury Yield': f"<a href='https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield'>https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield</a>",
-                   'OTC Market': f"Over-the-counter Market",
+                   'Treasury Bonds Yield': f"<a href='https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield'>https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield</a><br/><br/>^IRX: 13 Week Treasury Bill<br/>^FVX: Treasury Yield 5 Years<br/>^TNX: Treasury Yield 10 Years<br/>^TYX: Treasury Yield 30 Years",
+                   'OTC Market': f"Over-the-counter Market<br/><br/><a href='https://www.otcmarkets.com/research/stock-screener'>https://www.otcmarkets.com/research/stock-screener</a>",
                    'ARK Investments': "<a href='https://ark-funds.com/'>https://ark-funds.com/</a> and <a href='https://ark-invest.com/'>https://ark-invest.com/</a><br/><br/>see also: <a href='https://cathiesark.com/'>https://cathiesark.com/</a><br/><hr><b>ARK Actively Managed Innovation ETFs:</b><br/><br/>ARKK - ARK Innovation ETF (171% gain)<br/>ARKQ - Autonomous Technology & Robotics ETF (125% gain)<br/>ARKW - Next Generation Internet ETF (155% gain)<br/>ARKG - Genomic Revolution ETF (210% gain)<br/>ARKF - Fintech Innovation ETF (104% gain)<br/><hr><b>ARK Indexed Innovation ETFs:</b><br/><br/>PRNT - The 3D Printing ETF (68% gain)<br/>IZRL - Israel Innovative Technology ETF (37% gain)",
                    'ARK Innovation ETF': ARK_df_dict['ARKK'][['ticker','company','weight(%)']].to_html(index=False),
                    'ARK Autonomous Tech. & Robotics ETF': ARK_df_dict['ARKQ'][['ticker','company','weight(%)']].to_html(index=False),
@@ -547,7 +568,7 @@ ticker_preprocessing()
 ###########################################################################################
 
 class Ticker(object):
-    def __init__(self, ticker=None, ticker_data_dict=None, last_date=None, keep_up_to_date=False):
+    def __init__(self, ticker=None, ticker_data_dict=None, last_date=None, keep_up_to_date=False, web_scraper=None):
         """
         if keep_up_to_date = True ==> try to download the lastest data so it's as new as today
         """
@@ -562,7 +583,7 @@ class Ticker(object):
             if ticker_data_dict is None:
                 from ._data import get_ticker_data_dict
                 self.ticker = ticker
-                self.ticker_data_dict = get_ticker_data_dict(ticker=self.ticker, last_date=last_date, keep_up_to_date=keep_up_to_date, download_today_data=True)
+                self.ticker_data_dict = get_ticker_data_dict(ticker=self.ticker, last_date=last_date, keep_up_to_date=keep_up_to_date, download_today_data=True, web_scraper=web_scraper)
             else:
                 self.ticker_data_dict = ticker_data_dict
                 self.ticker = ticker_data_dict['ticker']
@@ -634,6 +655,44 @@ class Ticker(object):
             return True
         else:
             raise ValueError(f'self.ticker = {self.ticker}, n_len should not be >1')
+
+    @property
+    def exchange(self):
+        exchange_info = self.ticker_info['exchange']
+        exchange_info_dict = {'PNK': 'OTC Markets (Pink Sheets) (e.g., GBTC, ROSGQ, HEMP, ACAN)',
+                              'CCC': 'Concierge Coin - CoinMarketCap (e.g., $BTC-USD)',
+                              'NYQ': 'New York Stock Exchange (NYSE) (e.g., $WOW)',
+                              'NMS': 'National Market System (which governs the activities of all formal U.S. stock exchanges and the NASDAQ market) (e.g., GILD)',
+                              'NCM': 'Nasdaq - Capital Market small cap (e.g. CELH)',
+                              'NGM': 'Nasdaq - Global Select large cap & NASDAQ - Global Market mid cap (e.g., LGND, CDTX)',
+                              'PCX': 'NYSE Arca (ArcaEx, Archipelago Exchange) (e.g., ARKW)',
+                              'ASE': 'NYSE American (Small Cap Equity Market) (e.g., ^GORO)',
+                              'WCB': 'Chicago Board Options Exchange (e.g., ^VXN)',
+                              'BTS': '‎Better Alternative Trading System (BATS) (e.g., ARKG)',
+                              'NIM': 'Nasdaq Index - Global Index Data Service (e.g., ^IXIC)',
+                              'FGI': 'FTSE Index (e.g., ^FTSE)',
+                              'NYB': 'NYBOT (New York Board of Trade) (e.g., ^TNX)',
+                              'DJI': 'Dow Jones Industrial Average (e.g., ^DJI)',
+                              'SNP': 'S&P 500 (e.g., ^GSPC)',
+                              'CCY': 'Currency (e.g., EUR=X)',
+                              'HKG': 'The Stock Exchange of Hong Kong Limited (e.g., ^HSI)',
+                              'OSA': 'Osaka Exchange (e.g., ^N225)',
+                              'PAR': 'Euronext Paris (e.g., ^FCHI)',
+                              'GER': 'German Stock Exchange (e.g., ^GDAXI)',
+                              'TAI': 'Taiwan Stock Exchange (e.g., ^TWII)',
+                              'NYS': 'NYSE (e.g., ^W5000)',
+                              'SHH': 'Shanghai (e.g., 000001.SS)',
+                              'SHZ': 'Shenzhen (e.g., 399001.SZ)',
+                              'CME': 'Chicago Mercantile Exchange (e.g., NQ=F, ES=F)',
+                              'CMX': 'COMEX (Commodity Exchange Inc., e.g., GC=F)',
+                              'NYM': 'NYMEX (New York Mercantile Exchange, e.g., CL=F)',
+                              'CBT': 'Chicago Board of Trade (e.g., YM=F)',
+                              'ZRH': 'Zurich/headquarters (e.g., ^STOXX50E)'}
+        if exchange_info not in exchange_info_dict.keys():
+            #print(f"exchange code [{exchange_info}] not defined")
+            return f"{exchange_info} (??)"
+        else:
+            return exchange_info_dict[exchange_info]
 
     @property
     def non_nasdaq_security_name(self):
@@ -783,8 +842,10 @@ class Ticker(object):
         assert type in ['puts','calls'], 'type must be either puts or calls'
         df = self.option_chain(expiration_date = expiration_date)
         if df is not None:
-            ds = df[(df['strike'] == strike_price) & (df['type'] == type)].iloc[0]
-            return ds
+            df1 = df[df['strike'] == strike_price]
+            if len(df1.index)>0:
+                ds = df[(df['strike'] == strike_price) & (df['type'] == type)].iloc[0]
+                return ds
         return None
 
     @property
@@ -836,6 +897,13 @@ class Ticker(object):
         else:
             return None, None, None
 
+    def highest_price_in_the_recent_past(self, days=90):
+        if self.ticker_data_dict['history'] is not None:
+            history_df = self.ticker_data_dict['history'][['Date','High']]
+            last_date = history_df['Date'].iloc[-1]
+            history_df = history_df[history_df['Date'] >= (last_date - timedelta(days=days))]
+            return history_df['High'].max()
+
     def max_diff_pct(self, ticker_history: pd.DataFrame, days=None):
         #print(f'max_diff_pct, days=[{days}]')
         if days is None:
@@ -857,7 +925,7 @@ class Ticker(object):
             low_to_high_pct = 100 * (subsequent_highest - this_date_low) / this_date_low
             if low_to_high_pct > low_to_high_max_pct:
                 low_to_high_max_pct = low_to_high_pct
-        return [low_to_high_max_pct, high_to_low_max_pct,]
+        return [low_to_high_max_pct, high_to_low_max_pct]
 
     def max_diff_pct_year_n(self, year_n=None):
         if year_n is None:
@@ -868,7 +936,7 @@ class Ticker(object):
         elif (self.ticker_data_dict is not None) and (self.ticker_data_dict['history'] is not None):
             return self.max_diff_pct(ticker_history = self.ticker_data_dict['history'], days = year_n * 365.25)
         else:
-            return [0,0]
+            return [0, 0]
 
     @property
     def one_year_max_diff_pct(self):
@@ -910,13 +978,29 @@ class Ticker(object):
         idx = self.ticker_history['Date'].searchsorted(target_date)
         return self.ticker_history['Date'].iloc[idx]
 
+    def open_price_on_date(self, target_date):
+        return self.price_on_date(data_type = 'Open', target_date = target_date)
+
+    def high_price_on_date(self, target_date):
+        return self.price_on_date(data_type = 'High', target_date = target_date)
+
+    def low_price_on_date(self, target_date):
+        return self.price_on_date(data_type = 'Low', target_date = target_date)
+
     def close_price_on_date(self, target_date):
+        return self.price_on_date(data_type = 'Close', target_date = target_date)
+
+    def price_range_on_date(self, target_date):
+        return (self.high_price_on_date(target_date)[0] - self.low_price_on_date(target_date)[0])
+
+    def price_on_date(self, data_type, target_date):
+        assert data_type in ['Close','High','Low','Open'], "must be either 'Close','High','Low', or 'Open'"
         max_idx = len(self.ticker_history) - 1
         idx = min( self.ticker_history['Date'].searchsorted(target_date), max_idx ) # if the date is beyond all available dates, idx could be max_idx+1
         #df = self.ticker_history[self.ticker_history['Date'] == target_date]
         #if len(df) != 1:
         #    raise ValueError('not exactly 1 match here')
-        return float(self.ticker_history['Close'].iloc[idx]), self.ticker_history['Date'].iloc[idx]
+        return float(self.ticker_history[data_type].iloc[idx]), self.ticker_history['Date'].iloc[idx]
 
     def key_value(self, this_key):
         if this_key is not None:

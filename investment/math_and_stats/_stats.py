@@ -26,7 +26,7 @@ def one_sample_proportion_z_test(p, p0, n):
     z = (p-p0) / math.sqrt(p0*(1-p0)/n)
     p_value = p_value_for_z_score(z)
     CI = z_score_for_p_value(0.05)*math.sqrt(p*(1-p)/n)
-    print(f"H0: {p:.2f} = {p0:.2f} ==> z = {z:.4f}, p-value = {p_value:.5f}, 95% C.I. of p = {p:.2f} = ({p-CI:.2f}, {p+CI:.2f})")
+    print(f"H0: {p:.2f} = {p0:.2f} ==> z = {z:.4f}, p-value = {p_value:.5f}, 95% C.I. of proportion = {p:.2f} = ({p-CI:.2f}, {p+CI:.2f})\n")
 
 def two_sample_proportion_z_test(num1, num2, denom1, denom2):
     """

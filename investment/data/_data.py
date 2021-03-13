@@ -23,15 +23,9 @@ import time
 
 from functools import total_ordering
 
-###########################################################################################
-
-tickers_with_no_volume = ['^VVIX','^VIX','^TNX','^VXN']
-
-###########################################################################################
-
 @total_ordering
 class timedata(object):
-    def __init__(self, time_stamp: float=None, date_time=None, Y_m_d={}):
+    def __init__(self, time_stamp: float=None, date_time=None, Y_m_d={}, days_from_now=0, use_y_m_d_precision=False):
         """
         time_stamp: seconds since epoch
         date_time: datetime_object_with_tzinfo
@@ -41,7 +35,11 @@ class timedata(object):
         """
         if time_stamp is None and date_time is None:
             if Y_m_d == {} or Y_m_d == ():
-                self.datetime = datetime.now(tz=timezone.utc)
+                if use_y_m_d_precision:
+                    this_now = datetime.now(tz=timezone.utc)
+                    self.datetime = datetime(this_now.year, this_now.month, this_now.day, tzinfo=timezone.utc) + timedelta(days=days_from_now)
+                else:
+                    self.datetime = datetime.now(tz=timezone.utc) + timedelta(days=days_from_now)
                 #raise ValueError("either time_stamp, date_time, or Y_m_d must be specified")
             elif type(Y_m_d) == dict:
                self.datetime = datetime(Y_m_d['year'], Y_m_d['month'], Y_m_d['day'], tzinfo=timezone.utc)
@@ -52,6 +50,14 @@ class timedata(object):
                 self.datetime = date_time
             else:
                 self.timestamp = time_stamp
+
+    @property
+    def Y_m_d(self):
+        return self.datetime.strftime('%Y-%m-%d')
+
+    @property
+    def remaining_days_this_year(self):
+        return (timedata(Y_m_d = {'year': self.datetime.year, 'month': 12, 'day': 31}).datetime - self.datetime).days + 1
 
     @property
     def now(self):
@@ -184,7 +190,7 @@ def download_ticker_history_df(ticker: str = None, verbose: bool = True, downloa
     return df
 
 
-def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_retry: bool = False, web_scraper = False, download_short_interest = False):
+def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_retry: bool = False, web_scraper = None, download_short_interest: bool = False):
 
     if ticker is None:
         raise ValueError("Error: ticker cannot be None")
@@ -282,14 +288,22 @@ def download_ticker_info_dict(ticker: str = None, verbose: bool = True, auto_ret
 
     ####################################################################
 
+    from ._ticker import ticker_group_dict, tickers_with_no_volume, tickers_with_no_PT
+
     if web_scraper is not None:
-        info_dict['price_target'] = web_scraper().price_target(ticker=ticker)
-        if download_short_interest:
+        if (ticker not in tickers_with_no_volume) and (ticker not in ticker_group_dict['ETF database']) and (ticker not in tickers_with_no_PT) and (ticker[0] != '^'):
+            info_dict['price_target'] = web_scraper().price_target(ticker=ticker)
+        else:
+            info_dict['price_target'] = None
+        if download_short_interest and (ticker not in tickers_with_no_volume) and (ticker not in tickers_with_no_PT) and (ticker[0] != '^'):
             info_dict['short_interest'], info_dict['short_interest_prior'], info_dict['days_to_cover'], info_dict['trading_vol_avg'], info_dict['shares_float'] = web_scraper().short_interest(ticker=ticker)
         else:
             info_dict['short_interest'], info_dict['short_interest_prior'], info_dict['days_to_cover'], info_dict['trading_vol_avg'], info_dict['shares_float'] = None, None, None, None, None
     else:
-        info_dict['price_target'] = web_scrape().price_target(ticker=ticker)
+        if (ticker not in tickers_with_no_volume) and (ticker not in ticker_group_dict['ETF database']) and (ticker not in tickers_with_no_PT) and (ticker[0] != '^'):
+            info_dict['price_target'] = web_scrape().price_target(ticker=ticker)
+        else:
+            info_dict['price_target'] = None
         info_dict['short_interest'], info_dict['short_interest_prior'], info_dict['days_to_cover'], info_dict['trading_vol_avg'], info_dict['shares_float'] = None, None, None, None, None
 
     return info_dict
@@ -312,7 +326,8 @@ def get_ticker_data_dict(ticker: str = None,
     """
 
     def process_and_save_raw_data():
-        from ._ticker import Ticker
+
+        from ._ticker import Ticker, tickers_with_no_volume
 
         nonlocal ticker_history_df       
         ticker_history_df.to_csv(ticker_history_df_file, index=False)
@@ -325,17 +340,12 @@ def get_ticker_data_dict(ticker: str = None,
             history_df = history_df[(history_df['Close']>0) & (history_df['High']>0) & (history_df['Low']>0) & (history_df['Open']>0) & (history_df['Volume']>0)]
         history_df['Date'] = pd.to_datetime(history_df['Date'], format='%Y-%m-%d', utc=True) # "utc=True" is to be consistent with yfinance datetimes, which are received as UTC.
         #
-        ticker_info_dict['max_diff_pct_1yr']  = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*1)
-        ticker_info_dict['max_diff_pct_2yr']  = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*2)
-        ticker_info_dict['max_diff_pct_3yr']  = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*3)
-        ticker_info_dict['max_diff_pct_4yr']  = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*4)
-        ticker_info_dict['max_diff_pct_5yr']  = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*5)
-        ticker_info_dict['max_diff_pct_10yr'] = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*10)
-        ticker_info_dict['max_diff_pct_20yr'] = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*20)
-        ticker_info_dict['max_diff_pct_30yr'] = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*30)
+        for year in [1,2,3,4,5,10,20,30]:
+            ticker_info_dict[f'max_diff_pct_{year}yr']  = Ticker().max_diff_pct(ticker_history=history_df, days=365.25*year)
+        #
         pickle.dump(ticker_info_dict, open(ticker_info_dict_file, "wb"))
 
-    from ._ticker import global_data_root_dir
+    from ._ticker import global_data_root_dir, tickers_with_no_volume
 
     if ticker is None:
         raise ValueError("Error: ticker cannot be None")
@@ -498,16 +508,21 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
 
     # stock exchange listing info
     stock_exchange_info = ""
+    if use_html:
+        stock_exchange_info = f"<br/><hr>Exchange: {this_ticker.exchange}"
+    else:
+        stock_exchange_info = f"\n\nExchange: {this_ticker.exchange}"
+    #
     if this_ticker.nasdaq_listed:
         if use_html:
-            stock_exchange_info = f"<br/><hr>Nasdaq Listed<br/>- Name: [{this_ticker.nasdaq_security_name}]<br/>- Market category: [{this_ticker.nasdaq_market_category}]<br/>- Financial status: [{this_ticker.nasdaq_financial_status}]<br/>- ETF? [{this_ticker.nasdaq_etf}]"
+            stock_exchange_info += f"<br/><hr>Nasdaq Listed<br/>- Name: [{this_ticker.nasdaq_security_name}]<br/>- Market category: [{this_ticker.nasdaq_market_category}]<br/>- Financial status: [{this_ticker.nasdaq_financial_status}]<br/>- ETF? [{this_ticker.nasdaq_etf}]"
         else:
-            stock_exchange_info = f"\n\nNasdaq Listed\n- Name: [{this_ticker.nasdaq_security_name}]\n- Market category: [{this_ticker.nasdaq_market_category}]\n- Financial status: [{this_ticker.nasdaq_financial_status}]\n- ETF? [{this_ticker.nasdaq_etf}]"
+            stock_exchange_info += f"\n\nNasdaq Listed\n- Name: [{this_ticker.nasdaq_security_name}]\n- Market category: [{this_ticker.nasdaq_market_category}]\n- Financial status: [{this_ticker.nasdaq_financial_status}]\n- ETF? [{this_ticker.nasdaq_etf}]"
     elif this_ticker.non_nasdaq_listed:
         if use_html:
-            stock_exchange_info = f"<br/><hr>Exchange: {this_ticker.non_nasdaq_exchange}<br/>- Name: [{this_ticker.non_nasdaq_security_name}]<br/>- ETF? [{this_ticker.non_nasdaq_etf}]"
+            stock_exchange_info += f"<br/><hr>Exchange: {this_ticker.non_nasdaq_exchange}<br/>- Name: [{this_ticker.non_nasdaq_security_name}]<br/>- ETF? [{this_ticker.non_nasdaq_etf}]"
         else:
-            stock_exchange_info = f"\n\nExchange: {this_ticker.non_nasdaq_exchange}\n- Name: [{this_ticker.non_nasdaq_security_name}]\n- ETF? [{this_ticker.non_nasdaq_etf}]"
+            stock_exchange_info += f"\n\nExchange: {this_ticker.non_nasdaq_exchange}\n- Name: [{this_ticker.non_nasdaq_security_name}]\n- ETF? [{this_ticker.non_nasdaq_etf}]"
 
     # sector info
     if use_html:
@@ -736,23 +751,27 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
         if beta is not None:
             if use_html:
                 risk_info += f"<br/>Beta: {beta:.2f}"
+                if beta > 1.00:
+                    risk_info += f" (more volatile than the overall market)<br/>"
+                else:
+                    risk_info += f" (less volatile than the overall market)<br/>"
             else:
                 risk_info += f"\nBeta: {beta:.2f}"
-            if beta > 1.00:
-                risk_info += f" (more volatile than the overall market)"
-            if beta <= 1.00:
-                risk_info += f" (less volatile than the overall market)"
+                if beta > 1.00:
+                    risk_info += f" (more volatile than the overall market)\n"
+                else:
+                    risk_info += f" (less volatile than the overall market)\n"
 
     # options
     if use_html:
-        options_info = f"<br/><hr>Options info unavailable"
+        options_info = f"<hr>Options info unavailable"
     else:
-        options_info = f"\n\nOptions info unavailable"
+        options_info = f"\nOptions info unavailable"
     if this_ticker.options is not None:
         if use_html:
-            options_info = f"<br/><hr>Options expirations: {this_ticker.options}"
+            options_info = f"<hr>Options expirations: {this_ticker.options}"
         else:
-            options_info = f"\n\nOptions expirations: {this_ticker.options}"
+            options_info = f"\nOptions expirations: {this_ticker.options}"
         df = this_ticker.option_chain(expiration_date = this_ticker.options[0])
         if df is not None:
             df.drop(columns=['contractSymbol', 'lastTradeDate', 'contractSize', 'currency', 'bid', 'ask', 'change', 'volume'], inplace=True)
