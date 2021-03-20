@@ -499,7 +499,7 @@ class fed_funds_rate_dialog(dialog_with_textbrowser):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("Federal Funds Rate")
-        self.textbox.setHtml("<a href='https://www.investopedia.com/terms/f/federalfundsrate.asp#citation-7'>Explanation</a><br/><br/><a href='https://www.federalreserve.gov/monetarypolicy/openmarket.htm'>FOMC's target federal funds rate or range, change (basis points) and level</a>")
+        self.textbox.setHtml("<a href='https://www.investopedia.com/terms/f/federalfundsrate.asp#citation-7'>Explanation</a><br/><br/><a href='https://www.federalreserve.gov/monetarypolicy/openmarket.htm'>FOMC's target federal funds rate or range, change (basis points) and level</a><br/><br/><a href='https://www.investing.com/central-banks/fed-rate-monitor'>https://www.investing.com/central-banks/fed-rate-monitor</a><br/><br/><a href='https://www.investing.com/central-banks/federal-reserve'>https://www.investing.com/central-banks/federal-reserve</a><br/><br/><a href='https://ycharts.com/indicators/us_inflation_rate'>US Inflation Rate</a>; <a href='https://www.bea.gov/data/personal-consumption-expenditures-price-index-excluding-food-and-energy'>Inflation (core PCE)</a><br/><br/><a href='https://www.federalreserve.gov/live-broadcast.htm'>https://www.federalreserve.gov/live-broadcast.htm</a><br/><br/><a href='https://www.federalreserve.gov/faqs/summary-economic-projections-sep.htm'>Summary of Economic Projections (SEP)</a>")
 
 
 class options_dialog(QDialog):

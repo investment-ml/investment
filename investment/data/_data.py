@@ -25,15 +25,19 @@ from functools import total_ordering
 
 @total_ordering
 class timedata(object):
-    def __init__(self, time_stamp: float=None, date_time=None, Y_m_d={}, days_from_now=0, use_y_m_d_precision=False):
+    def __init__(self, time_stamp: float=None, date_time=None, Y_m_d_str: str = None, Y_m_d={}, days_from_now=0, use_y_m_d_precision=False):
         """
         time_stamp: seconds since epoch
         date_time: datetime_object_with_tzinfo
-        Y_m_d: {'year': 2020, 'month': 11, 'day': 15}, or (2020, 11, 15)
+        Y_m_d: {'year': 2020, 'month': 11, 'day': 15}
+        Y_m_d_str: '2020-11-15'
+        Y_m_d_tuple: (2020, 11, 15)
 
         internally, self._datetime and self._timestamp are stored in UTC
         """
         if time_stamp is None and date_time is None:
+            if Y_m_d_str is not None:
+                Y_m_d = {'year': int(Y_m_d_str[0:4]), 'month': int(Y_m_d_str[5:7]), 'day': int(Y_m_d_str[8:10])}
             if Y_m_d == {} or Y_m_d == ():
                 if use_y_m_d_precision:
                     this_now = datetime.now(tz=timezone.utc)
@@ -52,8 +56,16 @@ class timedata(object):
                 self.timestamp = time_stamp
 
     @property
-    def Y_m_d(self):
+    def Y_m_d_str(self):
         return self.datetime.strftime('%Y-%m-%d')
+
+    @property
+    def Y_m_d(self):
+        return {'year': self.datetime.strftime('%Y'), 'month': self.datetime.strftime('%m'), 'day': self.datetime.strftime('%d')}
+
+    @property
+    def Y_m_d_tuple(self):
+        return (int(self.datetime.strftime('%Y')), int(self.datetime.strftime('%m')), int(self.datetime.strftime('%d')))
 
     @property
     def remaining_days_this_year(self):

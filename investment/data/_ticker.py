@@ -38,8 +38,8 @@ import requests
 
 ###########################################################################################
 
-tickers_with_no_volume = ['^W5000','^VVIX','^VIX','^TNX','^TYX','^FVX','^IRX','^VXN','EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','DX-Y.NYB','^TWII','^TWDOWD','^HSI','^N225','^GDAXI','^FCHI','000001.SS','399001.SZ','^STOXX50E']
-tickers_with_no_PT = ['^NDX','^GSPC','000001.SS','399001.SZ','NQ=F','YM=F','GC=F','ES=F','CL=F']
+tickers_with_no_volume = ['^W5000','^VVIX','^VIX','^TNX','^TYX','^FVX','^IRX','^VXN','EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','HKD=X','DX-Y.NYB','^TWII','^TWDOWD','^HSI','^N225','^GDAXI','^FCHI','000001.SS','399001.SZ','^STOXX50E']
+tickers_with_no_PT = ['^NDX','^GSPC','000001.SS','399001.SZ','NQ=F','YM=F','GC=F','ES=F','CL=F','DS-PB']
 
 ###########################################################################################
 
@@ -213,16 +213,20 @@ def load_nasdaqtrader_data(data_root_dir: str = None):
         #print('Creating preprocessed.h5 ...', end='')
         #
         nasdaqlisted_df = pd.read_csv(file1,sep='|',header=0,skipfooter=1,engine='python')
-        otherlisted_df = pd.read_csv(file2,sep='|',header=0,skipfooter=1,engine='python')
-        #options_df = pd.read_csv(file3,sep='|',header=0,skipfooter=1,engine='python')
+        otherlisted_df  = pd.read_csv(file2,sep='|',header=0,skipfooter=1,engine='python')
+        #options_df      = pd.read_csv(file3,sep='|',header=0,skipfooter=1,engine='python')
         #
         nasdaqlisted_df['ticker'] = nasdaqlisted_df['Symbol'].str.replace('\.','\-',regex=True).str.replace('\\','',regex=True)
         otherlisted_df['ticker'] = otherlisted_df['NASDAQ Symbol'].str.replace('\.','\-',regex=True).str.replace('\\','',regex=True).str.replace('ACIC=','ACIC-UN',regex=True).str.replace('AJAX=','AJAX-UN',regex=True).str.replace('PRIF-A','PRIF-PA',regex=True).str.replace('PRIF-B','PRIF-PB',regex=True).str.replace('PRIF-C','PRIF-PC',regex=True).str.replace('PRIF-D','PRIF-PD',regex=True).str.replace('PRIF-E','PRIF-PE',regex=True).str.replace('PRIF-F','PRIF-PF',regex=True)
-        #options_df['ticker'] = options_df['Underlying Symbol'].str.replace('\.','\-').str.replace('\\','')
+        #options_df['ticker'] = options_df['Underlying Symbol'].str.replace('\.','\-',regex=True).str.replace('\\','',regex=True)
         #
         nasdaqlisted_df = nasdaqlisted_df[ (nasdaqlisted_df['Test Issue'] == 'N') & (nasdaqlisted_df['NextShares'] == 'N') ].drop(['Test Issue','Symbol','NextShares','Round Lot Size'], axis=1)
         otherlisted_df = otherlisted_df[ otherlisted_df['Test Issue'] == 'N' ].drop(['Test Issue','NASDAQ Symbol','ACT Symbol','CQS Symbol','Round Lot Size'], axis=1)
-        #options_df = options_df.drop(['Underlying Symbol'], axis=1)
+        #options_df = options_df[(options_df['Options Closing Type'] == 'N') & (options_df['Pending'] == 'N')].drop(['Options Closing Type', 'Underlying Symbol','Root Symbol','Pending','Underlying Issue Name'], axis=1).rename(columns={"Options Type": "option_type", "Expiration Date": "expiration_date", "Explicit Strike Price": "strike_price"}) # 'Options Closing Type': N (Normal Hours) or L (Late Hours)
+        #
+        #options_df['expiration_date'] = pd.to_datetime(options_df['expiration_date'], format="%m/%d/%Y")
+        #options_df = options_df[['ticker','option_type','expiration_date','strike_price']]
+        #options_df has no premium info -- this df is not that useful at all
         #
         data_store = pd.HDFStore(preprocessed_file)
         data_store['nasdaqlisted_df'] = nasdaqlisted_df
@@ -256,22 +260,25 @@ ticker_group_dict = {'All': [],
                      'Technology': ['AAPL','ADBE','AMD','AYX','CLDR','CRM','CRWD','CSCO','ENPH','FEYE','IBM','INTC','MSFT','NVDA','NVMI','NLOK','ONTO','QCOM','SPLK','TSM','UBER','FIT','SQ','CTXS','DOCU','LRCX','MCHP','MU','NXPI','SHOP','STMP','TXN','NOW','SNE','WDAY','XLK'],
                      'Utilities': ['PCG','D','DUK','XEL','NRG','ES','XLU'],
                      'Real Estate': ['AMT','CCI','PLD','BPYU','BDN','CSGP','XLRE'],
-                     'Dividend Stocks (11/2020)': ['BMY','WMT','HD','AAPL','MSFT'],
-                     'Growth Stocks': ['ALGN','FIVE','LGIH','MELI','PTON', 'KEYS', 'AMD', 'FLGT', 'GNRC'],
-                     'Biden Stocks': ['TLRY','RUN',],
-                     'Warren Buffett Stocks (Q4/2020)': ['VZ', 'CVX','MMC','SSP','ABBV','MRK','BMY','KR','RH','TMUS','AAPL','USB','GM','WFC','SU','LILAK','PNC','JPM','MTB','GOLD','PFE'],
+                     'Dividend stocks (11/2020)': ['BMY','WMT','HD','AAPL','MSFT'],
+                     'Growth stocks': ['ALGN','FIVE','LGIH','MELI','PTON', 'KEYS', 'AMD', 'FLGT', 'GNRC'],
+                     'Biden stocks': ['TLRY','RUN',],
+                     'Warren Buffett stocks (Q4/2020)': ['VZ', 'CVX','MMC','SSP','ABBV','MRK','BMY','KR','RH','TMUS','AAPL','USB','GM','WFC','SU','LILAK','PNC','JPM','MTB','GOLD','PFE'],
                      'Marijuana': ['YOLO','CNBS','TLRY','TOKE','THCX','EVVLF','MJ','XXII','ATTBF','ABBV','AERO','MO','ERBB','ACAN','APH','ARNA','AXIM','BLPG','CBDS','CGRW','CNTTQ','CARA','CGRA','CLSH','CRBP','CRON','CVSI','DBCCF','DIGP','EDXC','ENRT','EVIO','GBLX','CANN','GRNH','GRWC','PHOT','GWPH','HEMP','IGC','IIPR','KAYS','KSHB','MSRT','BTZI','MJNA','SHWZ','VIVO','POTN','SWM','SMG','SRNA','TER','TRTC','TCNNF','TRST','TPB','TURV','UBQU','CNABQ','UVV','VPOR','VGR','ZYNE'],
-                     'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','AAL','ZM','AZN','ARCT','QDEL','ABT','HOLX','DGX','PROG','GME','CHWY','AMC','USO','JETS','TRIP','LVS','HLT','H','MAR'],
+                     'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','AAL','ZM','AZN','ARCT','QDEL','ABT','HOLX','DGX','PROG','GME','CHWY','AMC','CNK','PEJ','USO','JETS','TRIP','LVS','HLT','H','MAR','CAR','HTZGQ','ZIP','KIRK','ULTA','TLYS'],
                      'Inflation': ['VTIP','LTPZ','IVOL','SPIP'],
                      'Cyber Security': ['SWI','CYBR','CHKP','PANW','ZS','CRWD','FEYE','SCWX','VMW','MSFT','FTNT','MIME','HACK','PFPT','QLYS','RPD','TENB','VRNS','CIBR','NET'],
+                     'Chinese stocks': ['YINN', 'YANG', 'CHA', 'CHL', 'CHU', '0728.HK', '0941.HK', '0762.HK'],
                      '5G': ['AAPL','TMUS','VZ','T','QCOM','QRVO','ERIC','TSM','NVDA','SWKS','ADI','MRVL','AVGO','XLNX'],
+                     'ADR': ['TSM','BABA','PDD','TM','SNE','JD','AZN','BIDU','BP','NIO','UBS','NOK','TCOM','IQ','TTM','WB','YY'],
+                     'Cloud': ['TWLO','AYX','SPLK'],
                      'ASD': ['BNGO','ZYNE',],
                      'Cryptocurrencies': ['GBTC','RIOT','MARA','BTC-USD'],
-                     'Currencies': ['EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','DX-Y.NYB'],
+                     'Currencies': ['EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','DX-Y.NYB','HKD=X'],
                      'Commodities': ['GC=F','CL=F'],
-                     'Boom': ['ROKU','AMD','SHOP','NIO','MRNA','NVDA','QS'],
+                     'Boom': ['ROKU','AMD','SHOP','NIO','MRNA','NVDA','QS','TKAT'],
                      'Space': ['SPCE','SRAC','MAXR','LMT','BA','NOC','UFO','HOL','SRAC','VGAC','NPA','MAXR'],
-                     'Gene therapy': ['ABEO', 'CAPR', 'AVRO', 'EDIT', 'QURE'],
+                     'Gene therapy': ['ABEO', 'CAPR', 'AVRO', 'EDIT', 'QURE', 'BLUE', 'PBE', 'GNOM'],
                      'Data Science and A.I.': ['THNQ','JSMD','IVES','QTUM','AYX','PLTR'],
                      'ETF': ['JETS', 'ONEQ', 'IEMG', 'VTHR', 'IWB', 'IWM', 'IWV', 'IWF', 'VTV', 'SCHD', 'USMV', 'VEA', 'VWO', 'AGG', 'LQD', 'GLD', 'VTI', 'DIA', 'OILU', 'OILD', 'TQQQ', 'SQQQ', 'UDOW', 'SDOW', 'UVXY', 'SVXY', 'KORU', 'YANG', 'YINN', 'QQQ', 'VOO','SPY','IVV','TMF','TMV','TBF','TLT','ESPO','GDX','XLC','XLI','XLF','XLE','XLV','XLB','XLK','XLU','XLP','XLY','XLRE'],
                      'ETF database': [],
@@ -292,7 +299,7 @@ ticker_group_dict = {'All': [],
                      'Equity database': [],
                      'Volatility': ['^VVIX','^VIX','VIXY','VXX','^VXN',],
                      'Treasury Bonds Yield': ['^TNX','^TYX','^FVX','^IRX','SHV','TIP','FLOT','VUT','BND','TMV','TLT','EDV','ZROZ','TBT'],
-                     'OTC Market': ['JCPNQ','TGLO',],
+                     'OTC Market': ['JCPNQ','TGLO','HTZGQ'],
                      'ARK Investments': ['ARKK','ARKQ','ARKW','ARKG','ARKF','IZRL','PRNT'],
                      'ARK Innovation ETF': [x for x in ARK_df_dict['ARKK']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK Autonomous Tech. & Robotics ETF': [x for x in ARK_df_dict['ARKQ']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
@@ -301,7 +308,7 @@ ticker_group_dict = {'All': [],
                      'ARK Fintech Innovation ETF': [x for x in ARK_df_dict['ARKF']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK The 3D Printing ETF': [x for x in ARK_df_dict['PRNT']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK Israel Innovative Technology ETF': [x for x in ARK_df_dict['IZRL']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
-                     'Others': ['JWN','KSS','HMC','BRK-A','PROG','DS','OBSV']}
+                     'Others': ['JWN','KSS','HMC','BRK-A','PROG','DS','DS-PB','OBSV']}
 
 ticker_group_dict['Russell 3000'] = sorted(ticker_group_dict['Russell 1000'] + ticker_group_dict['Russell 2000'])
 
@@ -490,15 +497,18 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Technology': f"Businesses that sell goods and services in electronics, software, computers, artificial intelligence, and other industries related to information technology (IT).",
                    'Utilities': f"Companies that provide electricity, natural gas, water, sewage, and other services to homes and businesses.",
                    'Real Estate': f"Companies that allow individual investors to buy shares in real estate portfolios that receive income from a variety of properties.",
-                   'Dividend Stocks (11/2020)': f"Dividend Stocks (11/2020)",
-                   'Growth Stocks': f"https://www.investopedia.com/investing/best-growth-stocks/<br>November 2020: ALGN, FIVE, LGIH, MELI, PTON<br/>February 2021 (Updated Jan 26, 2021): KEYS, AMD, FLGT, GNRC, PTON",
-                   'Biden Stocks': f"Stocks that would be supported by President Joe Biden's policy, such as weeds, solar energy, etc.",
-                   'Warren Buffett Stocks (Q4/2020)': f"https://www.fool.com/investing/2021/02/18/here-are-all-10-stocks-warren-buffett-has-been-buy/<br/><br/>-- During Q4 2020 --<br/><br/>1. 4 new stocks in Berkshire's portfolio: VZ, CVX, MMC, SSP<br/><br/>2. 6 stocks Berkshire bought more of: ABBV, MRK, BMY, KR, RH, TMUS<br/><br/>3. 6 stocks Berkshire reduced: AAPL, USB, GM, WFC, SU, LILAK<br/><br/>4. 5 stock positions Berkshire exited completely: PNC, JPM, MTB, GOLD, PFE",
+                   'Dividend stocks (11/2020)': f"Dividend Stocks (11/2020)",
+                   'Growth stocks': f"https://www.investopedia.com/investing/best-growth-stocks/<br>November 2020: ALGN, FIVE, LGIH, MELI, PTON<br/>February 2021 (Updated Jan 26, 2021): KEYS, AMD, FLGT, GNRC, PTON",
+                   'Biden stocks': f"Stocks that would be supported by President Joe Biden's policy, such as weeds, solar energy, etc.",
+                   'Warren Buffett stocks (Q4/2020)': f"https://www.fool.com/investing/2021/02/18/here-are-all-10-stocks-warren-buffett-has-been-buy/<br/><br/>-- During Q4 2020 --<br/><br/>1. 4 new stocks in Berkshire's portfolio: VZ, CVX, MMC, SSP<br/><br/>2. 6 stocks Berkshire bought more of: ABBV, MRK, BMY, KR, RH, TMUS<br/><br/>3. 6 stocks Berkshire reduced: AAPL, USB, GM, WFC, SU, LILAK<br/><br/>4. 5 stock positions Berkshire exited completely: PNC, JPM, MTB, GOLD, PFE",
                    'Marijuana': "Cannabis",
-                   'COVID-19': f"Vaccines: 'ALT','MRNA','INO','GILD','JNJ','PFE','AZN','ARCT'<br/><br/>COVID-19 testing: 'QDEL','ABT','HOLX','DGX','PROG'<br/><br/>Cruises: 'RCL','CCL','NCLH'<br/><br/>Pet food: 'CHWY'<br/><br/>Game: 'GME'<br/><br/>Energy: 'USO'<br/><br/>Travel: 'JETS','TRIP','LVS'<br/><br/>Hotel: 'HLT','H','MAR'",
-                   'Inflation': f"TIPS (U.S. Treasury Inflation-Protected Securities) ETF: https://www.investopedia.com/articles/investing/092215/top-5-tips-etfs.asp<br/><br/>House Price Index: http://www.freddiemac.com/research/indices/house-price-index.page<br/><br/>https://seekingalpha.com/article/4405852-stock-market-faces-moment-of-truth-inflation-rises-over-horizon",
+                   'COVID-19': f"Vaccines: 'ALT', 'MRNA', 'INO', 'GILD', 'JNJ', 'PFE', 'AZN', 'ARCT'<br/><br/>COVID-19 testing: 'QDEL', 'ABT', 'HOLX', 'DGX', 'PROG', 'CVS'<br/><br/>Movie: 'AMC', 'CNK', 'PEJ'<br/><br/>Cruises: 'RCL', 'CCL', 'NCLH'<br/><br/>Pet food: 'CHWY'<br/><br/>Game: 'GME'<br/><br/>Energy: 'USO', 'XLE', 'XOM'<br/><br/>Travel: 'JETS', 'TRIP', 'LVS'<br/><br/>Hotel: 'HLT', 'H', 'MAR'<br/><br/>Car rental: 'CAR', 'HTZGQ', 'ZIP'<br/><br/>Mall: 'KIRK', 'ULTA', 'TLYS'",
+                   'Inflation': f"- <a href='https://www.investopedia.com/articles/investing/092215/top-5-tips-etfs.asp'>TIPS</a> (U.S. Treasury Inflation-Protected Securities) ETF<br/><br/>- <a href='http://www.freddiemac.com/research/indices/house-price-index.page'>House Price Index</a><br/><br/>- <a href='https://seekingalpha.com/article/4405852-stock-market-faces-moment-of-truth-inflation-rises-over-horizon'>Inflation rises over the horizon</a><br/><br/>- <a href='https://www.bls.gov/data/inflation_calculator.htm'>Inflation calculator</a><br/><br/>- <a href='https://www.marketwatch.com/story/the-inflation-tantrum-scared-investors-here-are-eight-tech-stocks-to-buy-when-it-happens-again-soon-11614776551'>The inflation tantrum scared investors</a>",
                    'Cyber Security': f"One of the largest recent <a href='https://en.wikipedia.org/wiki/2020_United_States_federal_government_data_breach'>hacks</a>:<br/>On 12/14/2020, the news that SWI was used by Russia to back the U.S. governments went public.<br/>SWI tumbled and other cyber security firms soared because of the heightened need for years to come.<br/><br/>CRWD, CYBR, FEYE, PANW, ZS ... all jumped big within 2 weeks.",
+                   'Chinese stocks': f"NYSE-delisted 3 Chinese telecom stocks:<br/><br/>1. CHA: China Telecom Corporation Limited -> 0728.HK<br/>2. CHL: China Mobile Limited -> 0941.HK<br/>3. CHU: China Unicom (Hong Kong) Limited -> 0762.HK",
                    '5G': f"5G wireless networks",
+                   'ADR': f"<a href='https://www.investopedia.com/terms/a/adr.asp'><b>ADR</b></a> (American Depository Receipts)<br/><br/><a href='https://stockmarketmba.com/listofadrs.php'>List of ADR symbols</a><br/><br/><a href='https://www.fidelity.com/learning-center/investment-products/stocks/understanding-american-depositary-receipts'>Risk factors and expenses</a>:<br/>1. Exchange rate risk: e.g., when TWDUSD=X drops (depreciation of the TWD), the price of $TSM would drop too<br/>2. Political risk: the politics in that country might affect exchange rates or destabilize the company and its earnings.<br/>3. Inflation risk: inflation in that country will erode the value of that currency<br/><br/><a href='https://www.investing.com/equities/china-adrs'>China ADRs</a>",
+                   'Cloud': f"Cloud",
                    'ASD': f"Autism Spectrum Disorder stocks",
                    'Cryptocurrencies': f"A digital asset designed to work as a medium of exchange wherein individual coin ownership records are stored in a ledger existing in a form of computerized database using strong cryptography to secure transaction records, to control the creation of additional coins, and to verify the transfer of coin ownership.<br/><br><a href='https://www.investopedia.com/articles/investing/082914/basics-buying-and-investing-bitcoin.asp'>trading bitcoin</a>.",
                    'Currencies': f"Currencies",
@@ -509,7 +519,7 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Data Science and A.I.': "Data science, machine learning, and artifical intelligence",
                    'ETF': f"Exchange-traded fund (ETF) is a basket of securities that trade on an exchange. Unlike mutual funds (which only trade once a day after the market closes), ETF is just like a stock and share prices fluctuate all day as the ETF is bought and sold.\n\nExchange-traded note (ETN) is a basket of unsecured debt securities that track an underlying index of securities and trade on a major exchange like a stock.\n\nDifference: Investing ETF is investing in a fund that holds the asset it tracks. That asset may be stocks, bonds, gold or other commodities, or futures contracts. In contrast, ETN is more like a bond. It's an unsecured debt note issued by an institution. If the underwriter (usually a bank) were to go bankrupt, the investor would risk a total default.",
                    'ETF database': f"https://nasdaqtrader.com/",
-                   'Buffett Indicator': f"Divide the Wilshire 5000 Index (viewed as the total stock market) by the annual U.S. GDP. Before dot-com bubble burst, it was 159.2%.<br/><br/><a href='https://www.gurufocus.com/stock-market-valuations.php'>https://www.gurufocus.com/stock-market-valuations.php</a>",
+                   'Buffett Indicator': f"Divide the Wilshire 5000 Index (viewed as the total stock market) by the annual U.S. GDP (e.g., <a href='https://www.investing.com/economic-calendar/gdp-375'>https://www.investing.com/economic-calendar/gdp-375</a>). Before dot-com bubble burst, it was 159.2%.<br/><br/><a href='https://www.gurufocus.com/stock-market-valuations.php'>https://www.gurufocus.com/stock-market-valuations.php</a><br/><br/><a href='https://www.bea.gov/data/gdp/gross-domestic-product'>GDP</a>",
                    'Major Market Indexes': f"https://www.investing.com/indices/major-indices",
                    'Non-US World Market Indexes': f"<b>FTSE</b> (Financial Times Stock Exchange) 100 Index is a share index of the 100 companies listed on the <b>London Stock Exchange</b> with the highest market capitalisation.<br/><br/><b>HSI</b> is Hang Seng Index.<br/><br/><b>N225</b> is the Nikkei 225, the Nikkei Stock Average, is a stock market index for the Tokyo Stock Exchange.<br/><br/><b>GDAXI</b> is the DAX Performance Index, a blue chip stock market index consisting of the 30 major <b>German</b> companies trading on the Frankfurt Stock Exchange.<br/><br/><b>FCHI</b> is CAC 40, a benchmark <b>French stock market index</b>, representing a capitalization-weighted measure of the 40 most significant stocks among the 100 largest market caps on the Euronext Paris.<br/><br/><b>TWII</b> is the TSEC (Taiwan Stock Exchange Corporation) weighted index.<br/><br/><b>000001.SS</b> is the SSE (Shanghai Stock Exchange) Composite Index, currency in CNY.<br/><br/><b>399001.SZ</b> is the Shenzhen Component, currency in CNY.<br/><br/><b>^STOXX50E</b> is the EURO STOXX 50 index, dominated by France (36.4%) and Germany (35.2%) and providing a blue-chip representation of supersector leaders in the Eurozone.<br/><br/>",
                    'Futures': f"<b>NQ=F</b>: Nasdaq Futures<br/><br/><b>YM=F</b>: Dow Futures<br/><br/><b>ES=F</b>: S&P Futures<br/><br/><b>GC=F</b>: Gold Futures<br/><br/><b>CL=F</b>: Crude Oil Futures",
@@ -522,7 +532,7 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Russell 3000': f"The Russell 3000 Index, a market-capitalization-weighted equity index maintained by FTSE Russell, provides exposure to the entire U.S. stock market and represents about 98% of all U.S incorporated equity securities.\n\nRussell 3000 = Russell 1000 (larger cap) + Russell 2000 (smaller cap).",
                    'Equity database': f"https://nasdaqtrader.com/",
                    'Volatility': f"<a href='https://www.investopedia.com/articles/active-trading/070213/tracking-volatility-how-vix-calculated.asp'>https://www.investopedia.com/articles/active-trading/070213/tracking-volatility-how-vix-calculated.asp</a>",
-                   'Treasury Bonds Yield': f"<a href='https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield'>https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield</a><br/><br/>^IRX: 13 Week Treasury Bill<br/>^FVX: Treasury Yield 5 Years<br/>^TNX: Treasury Yield 10 Years<br/>^TYX: Treasury Yield 30 Years",
+                   'Treasury Bonds Yield': f"<a href='https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield'>https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield</a><br/><br/>^IRX: 13 Week Treasury Bill<br/>^FVX: Treasury Yield 5 Years<br/>^TNX: Treasury Yield 10 Years<br/>^TYX: Treasury Yield 30 Years<br/><br/><b>A sell-off in the US Government Bond could be considered a good thing</b>: investors sold safe US bonds to buy something more risky; in contrast, when there is great fear in stock markets, investors flee towards the US Treasuries, the safest asset class. When bond yield becomes higher, it means buyers are now less interested in the current yield level, so that the sellers need to increase its yield (lowering bond price) to attract buyers.<br/><br/>In general, <a href='https://www.investopedia.com/ask/answers/042215/what-are-risks-associated-investing-treasury-bond.asp'>the risks of buying US Treasury bonds (T-bonds)</a>:<br/><br/>1. <b>Inflation risk</b>: if the inflation rate is greater (e.g., > 2%) than T-bonds yield, investors lose money in buying power.<br/>2. <b>Yield risk</b>: when bond yield increases, investors who sell T-bonds before maturity date lose money.<br/>3. <b>Opportunity risk</b>: the return on investment could be higher in somewhere else other than buying T-bonds.",
                    'OTC Market': f"Over-the-counter Market<br/><br/><a href='https://www.otcmarkets.com/research/stock-screener'>https://www.otcmarkets.com/research/stock-screener</a>",
                    'ARK Investments': "<a href='https://ark-funds.com/'>https://ark-funds.com/</a> and <a href='https://ark-invest.com/'>https://ark-invest.com/</a><br/><br/>see also: <a href='https://cathiesark.com/'>https://cathiesark.com/</a><br/><hr><b>ARK Actively Managed Innovation ETFs:</b><br/><br/>ARKK - ARK Innovation ETF (171% gain)<br/>ARKQ - Autonomous Technology & Robotics ETF (125% gain)<br/>ARKW - Next Generation Internet ETF (155% gain)<br/>ARKG - Genomic Revolution ETF (210% gain)<br/>ARKF - Fintech Innovation ETF (104% gain)<br/><hr><b>ARK Indexed Innovation ETFs:</b><br/><br/>PRNT - The 3D Printing ETF (68% gain)<br/>IZRL - Israel Innovative Technology ETF (37% gain)",
                    'ARK Innovation ETF': ARK_df_dict['ARKK'][['ticker','company','weight(%)']].to_html(index=False),
@@ -838,15 +848,34 @@ class Ticker(object):
                 return self.ticker_data_dict['option_chain_dict'][expiration_date]
         return None
 
-    def option_info(self, expiration_date: str = None, type: str = None, strike_price: float = None):
+    def option_info(self, expiration_date: str = None, type: str = None, strike: float = None):
         assert type in ['puts','calls'], 'type must be either puts or calls'
         df = self.option_chain(expiration_date = expiration_date)
         if df is not None:
-            df1 = df[df['strike'] == strike_price]
+            df1 = df[(df['strike'] == strike) & (df['type'] == type)]
             if len(df1.index)>0:
-                ds = df[(df['strike'] == strike_price) & (df['type'] == type)].iloc[0]
+                ds = df[(df['strike'] == strike) & (df['type'] == type)].iloc[0]
                 return ds
         return None
+
+    def option_value_vs_time_remaining_until_expiration_date(self, eval_date: str = None, type: str = None, strike: float = None):
+        """
+        y: 'ask', 'bid', 'lastPrice'
+        """
+        if eval_date is None:
+            eval_date = timedata().Y_m_d_str # today, e.g., '2021-03-15'
+        assert type in ['puts','calls'], 'type must be either puts or calls'
+        expiration_dates_list = self.ticker_data_dict['option_chain_dict'].keys()
+        results_df = pd.DataFrame(columns=['time_remaining_days', 'ask', 'bid', 'lastPrice']) # y: option_value; x: time_remaining_days
+        for this_expiration_date in expiration_dates_list:
+            df = self.option_chain(expiration_date = this_expiration_date)
+            if df is not None:
+                df1 = df[(df['strike'] == strike) & (df['type'] == type)]
+                if len(df1.index)>0:
+                    ds = df[(df['strike'] == strike) & (df['type'] == type)].iloc[0]
+                    remaining_days = (timedata(Y_m_d_str = this_expiration_date).datetime - timedata(Y_m_d_str = eval_date).datetime).days + 1
+                    results_df = results_df.append({'time_remaining_days': int(remaining_days), 'ask': ds['ask'], 'bid': ds['bid'], 'lastPrice': ds['lastPrice']}, ignore_index = True)
+        return results_df
 
     @property
     def recommendations(self):
