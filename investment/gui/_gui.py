@@ -559,6 +559,7 @@ class download_data_dialog(QDialog):
         self.ARKW_checkbox = QCheckBox('ARK Next Generation Internet ETF (ARKW)', parent=self)
         self.ARKG_checkbox = QCheckBox('ARK Genomic Revolution ETF (ARKG)', parent=self)
         self.ARKF_checkbox = QCheckBox('ARK Fintech Innovation ETF (ARKF)', parent=self)
+        self.ARKX_checkbox = QCheckBox('ARK Space Exploration & Innovation ETF (ARKX)', parent=self)
         self.PRNT_checkbox = QCheckBox('ARK The 3D Printing ETF (PRNT)', parent=self)
         self.IZRL_checkbox = QCheckBox('ARK Israel Innovative Technology ETF (IZRL)', parent=self)
         self.etf_db_checkbox = QCheckBox('ETF database', parent=self)
@@ -575,6 +576,7 @@ class download_data_dialog(QDialog):
         self.ARKW_checkbox.setChecked(True)
         self.ARKG_checkbox.setChecked(True)
         self.ARKF_checkbox.setChecked(True)
+        self.ARKX_checkbox.setChecked(True)
         self.PRNT_checkbox.setChecked(True)
         self.IZRL_checkbox.setChecked(True)
         #
@@ -591,6 +593,7 @@ class download_data_dialog(QDialog):
         self.ARKW_checkbox.stateChanged.connect(self._update_download_selection)
         self.ARKG_checkbox.stateChanged.connect(self._update_download_selection)
         self.ARKF_checkbox.stateChanged.connect(self._update_download_selection)
+        self.ARKX_checkbox.stateChanged.connect(self._update_download_selection)
         self.PRNT_checkbox.stateChanged.connect(self._update_download_selection)
         self.IZRL_checkbox.stateChanged.connect(self._update_download_selection)
         self.etf_db_checkbox.stateChanged.connect(self._update_download_selection)
@@ -620,16 +623,17 @@ class download_data_dialog(QDialog):
         self.layout.addWidget(self.ARKW_checkbox, 12, 0)
         self.layout.addWidget(self.ARKG_checkbox, 13, 0)
         self.layout.addWidget(self.ARKF_checkbox, 14, 0)
-        self.layout.addWidget(self.PRNT_checkbox, 15, 0)
-        self.layout.addWidget(self.IZRL_checkbox, 16, 0)
-        self.layout.addWidget(self.etf_db_checkbox, 17, 0)
-        self.layout.addWidget(self.equity_db_checkbox, 18, 0)
-        self.layout.addWidget(self.options_label, 19, 0)
-        self.layout.addWidget(self.checkbox_smart_redownload, 20, 0)
-        self.layout.addWidget(self.checkbox_reverse_order_download, 21, 0)
-        self.layout.addWidget(self.download_progressbar, 22, 0)
-        self.layout.addWidget(self.download_button, 23, 0)
-        self.layout.addWidget(self.close_button, 24, 0)
+        self.layout.addWidget(self.ARKX_checkbox, 15, 0)
+        self.layout.addWidget(self.PRNT_checkbox, 16, 0)
+        self.layout.addWidget(self.IZRL_checkbox, 17, 0)
+        self.layout.addWidget(self.etf_db_checkbox, 18, 0)
+        self.layout.addWidget(self.equity_db_checkbox, 19, 0)
+        self.layout.addWidget(self.options_label, 20, 0)
+        self.layout.addWidget(self.checkbox_smart_redownload, 21, 0)
+        self.layout.addWidget(self.checkbox_reverse_order_download, 22, 0)
+        self.layout.addWidget(self.download_progressbar, 23, 0)
+        self.layout.addWidget(self.download_button, 24, 0)
+        self.layout.addWidget(self.close_button, 25, 0)
         self.setLayout(self.layout)
         self.download_button.clicked.connect(self._download_button_clicked)
         self.close_button.clicked.connect(self._close_button_clicked)
@@ -664,6 +668,8 @@ class download_data_dialog(QDialog):
             self.tickers_to_download += ticker_group_dict['ARK Genomic Revolution ETF']
         if self.ARKF_checkbox.isChecked():
             self.tickers_to_download += ticker_group_dict['ARK Fintech Innovation ETF']
+        if self.ARKX_checkbox.isChecked():
+            self.tickers_to_download += ticker_group_dict['ARK Space Exploration & Innovation ETF']
         if self.PRNT_checkbox.isChecked():
             self.tickers_to_download += ticker_group_dict['ARK The 3D Printing ETF']
         if self.IZRL_checkbox.isChecked():
