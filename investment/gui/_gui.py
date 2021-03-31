@@ -1448,9 +1448,9 @@ class UI_control(object):
             canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI'], color='#baf1b2',   linewidth=1.0)
             canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI'], color='#efb663',   linewidth=1.0)
             canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA255'], color='tab:green', linestyle="dashed", linewidth=1.0)
-            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='tab:green', linestyle="dashed", linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='tab:orange', linestyle="dashed", linewidth=1.0)
             canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='tab:green',                     linewidth=1.0)
-            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='tab:green',                     linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='tab:orange',                     linewidth=1.0)
             #################################################
             canvas.figure.autofmt_xdate()
             if self.index_options_selection_index == 1:
