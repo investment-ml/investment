@@ -10,8 +10,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from datetime import datetime, date, timedelta, timezone
-import os
-from os.path import join
 import pathlib
 import pickle
 import shutil
@@ -367,27 +365,27 @@ def get_ticker_data_dict(ticker: str = None,
     if data_root_dir is None:
         data_root_dir = global_data_root_dir
     
-    data_dir = join(data_root_dir, "ticker_data/yfinance")
-    data_backup_dir = join(data_dir, "backup")
+    data_dir = data_root_dir / "ticker_data/yfinance"
+    data_backup_dir = data_dir / "backup"
 
-    if not os.path.exists(data_dir):
+    if not data_dir.exists():
         try:
-            pathlib.Path(data_dir).mkdir(parents=True, exist_ok=True)
+            data_dir.mkdir(parents=True, exist_ok=True)
             #os.makedirs(data_dir)
         except:
             raise IOError(f"cannot create data dir: {data_dir}")
 
-    if not os.path.exists(data_backup_dir):
+    if not data_backup_dir.exists():
         try:
-            pathlib.Path(data_backup_dir).mkdir(parents=True, exist_ok=True)
+            data_backup_dir.mkdir(parents=True, exist_ok=True)
             #os.makedirs(data_backup_dir)
         except:
             raise IOError(f"cannot create data backup dir: {data_backup_dir}")
 
-    ticker_history_df_file = join(data_dir, f"{ticker}_history.csv")
-    ticker_info_dict_file = join(data_dir, f"{ticker}_info_dict.pkl")
+    ticker_history_df_file = data_dir / f"{ticker}_history.csv"
+    ticker_info_dict_file = data_dir / f"{ticker}_info_dict.pkl"
 
-    if (not os.path.isfile(ticker_history_df_file)) or (not os.path.isfile(ticker_info_dict_file)):
+    if (not ticker_history_df_file.is_file()) or (not ticker_info_dict_file.is_file()):
 
         try:
             ticker_history_df = download_ticker_history_df(ticker = ticker, verbose = verbose, download_today_data = download_today_data, auto_retry = auto_retry)
@@ -471,7 +469,10 @@ def get_ticker_data_dict(ticker: str = None,
     if last_date is not None:
         history_df = history_df[history_df['Date']<=last_date]
     #
-    info_dict = pickle.load( open( ticker_info_dict_file, "rb" ) )
+    try:
+        info_dict = pickle.load( open( ticker_info_dict_file, "rb" ) )
+    except:
+        raise RuntimeError(f"ticker = {ticker}")
     if 'info' not in info_dict.keys():
         raise KeyError(f"for ticker = [{ticker}], 'info' is not in the info_dict keys")
     info_dict['history'] = history_df
@@ -791,10 +792,16 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
             #calls.drop(columns=['type'], inplace=True)
             puts = df[df['type'] == 'puts'].drop(columns=['type']).copy()
             #puts.drop(columns=['type'], inplace=True)
+            for idx, row in calls.iterrows():
+                calls.loc[idx,'percentChange'] = f"{(calls.loc[idx,'percentChange']):.2f}%"
+                calls.loc[idx,'impliedVolatility'] = f"{(calls.loc[idx,'impliedVolatility']*100):+,.2f}%"
+            for idx, row in puts.iterrows():
+                puts.loc[idx,'percentChange'] = f"{(puts.loc[idx,'percentChange']):.2f}%"
+                puts.loc[idx,'impliedVolatility'] = f"{(puts.loc[idx,'impliedVolatility']*100):+,.2f}%"
             if use_html:
-                options_info += f"<br/><br/>The most recent one:<br/><br/>calls:{calls.to_html(index=False)}<br/><br/>puts:{puts.to_html(index=False)}"
+                options_info += f"<br/><br/>The most recent one (expiration: {this_ticker.options[0]}):<br/><br/>calls:{calls.to_html(index=False)}<br/><br/>puts:{puts.to_html(index=False)}"
             else:
-                options_info += f"\n\nThe most recent one:\n\ncalls:{calls.to_string(index=False)}\n\nputs:{puts.to_string(index=False)}"
+                options_info += f"\n\nThe most recent one (expiration: {this_ticker.options[0]}):\n\ncalls:{calls.to_string(index=False)}\n\nputs:{puts.to_string(index=False)}"
 
     # recommendations
     if use_html:

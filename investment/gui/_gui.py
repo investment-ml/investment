@@ -33,9 +33,6 @@ from PySide2.QtCore import Qt, QThread, Signal, QUrl, QSortFilterProxyModel
 
 import copy
 
-import pathlib
-from os.path import join
-
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 import matplotlib.pyplot as plt
 
@@ -1206,7 +1203,7 @@ class UI_control(object):
         self.time_last_date = pd.to_datetime(date.today(), utc=True)
         self.timeframe_selection_index = list(self.timeframe_dict).index('1 year') + 1
         self.index_options_selection_index = 1
-        self.index_selection_index = 2
+        self.index_selection_index = 7 # BB
         self._group_selected = None
         self._index_selected = None
         self._UI.group_selection.setCurrentIndex(1) # 'All'
@@ -1230,11 +1227,11 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("RSI 14")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'MACD':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>MACD</b> (Moving Average Convergence Divergence) is a lagging momentum indicator. When <b><span style='color:blue'>MACD</span></b> crosses <b>above</b> (or below) its 9-day EMA <b><span style='color:orange'>signal</span></b> line, it's a <b>buy</b> (or sell).<br/><br/>Common interpretations: crossovers, divergences, and rapid rises/falls.<br/><br/><a href='https://www.investopedia.com/terms/m/macd.asp'>https://www.investopedia.com/terms/m/macd.asp</a></body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>MACD</b> (Moving Average Convergence Divergence) is a lagging (trend-following) momentum indicator. When <b><span style='color:blue'>MACD</span></b>(EMA12 minus EMA26) crosses <b>above</b> (or below) its own 9-day EMA <b><span style='color:orange'>signal</span></b> line, it's a <b>buy</b> (or sell).<br/><br/>Common interpretations: crossovers, divergences, and rapid rises/falls.<br/><br/><a href='https://www.investopedia.com/terms/m/macd.asp'>https://www.investopedia.com/terms/m/macd.asp</a></body>")
                 self._UI.index_canvas_options.addItem("MACD: EMA12 vs. EMA26")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'OBV':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>OBV</b> (On-Balance Volume) is a leading (as opposed to lagging) momentum indicator to predict changes in stock price.<br/><br/>The author viewed OBV as \"a spring being wound tightly.\" and believed that when volume increases sharply (<b>positive OBV slope</b>) without a significant change in the stock's price (<b>relatively flat price slope</b>), the price will eventually jump upward or fall downward.<br/><br/><a href='https://www.investopedia.com/terms/o/onbalancevolume.asp'>https://www.investopedia.com/terms/o/onbalancevolume.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp'>https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp</a></body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>OBV</b> (On-Balance Volume) is a leading (as opposed to lagging) momentum indicator to predict changes in stock price.<br/><br/><b>The moving-average slope of the OBV line carries all of the weight of analysis.</b><br/><br/>It appears that as institutions begin to buy into an issue that retail investors are still selling, volume increases as the price is still slightly falling or leveling out.<br/><br/>The author viewed OBV as \"a spring being wound tightly.\" and believed that when OBV uptrends without a significant change in the stock's price, <b><span style='color:green;'>probably institutions are buying</span></b> and the price will eventually jump upward.<br/><br/>Similarly, if OBV downtrends sharply but the price stays flat, it is likely that <b><span style='color:red;'>the institutions are selling</span></b> and the price will eventually drop.<br/><br/>- 1. If OBV is rising and the price isn't, it's likely that the price will follow the OBV in the future and start rising.<br/>- 2. If the price is rising and OBV is flat-lining or falling, the price may be near a top.<br/>- 3. the price is falling and OBV is flat-lining or rising, the price could be nearing a bottom.<br/><br/><a href='https://www.investopedia.com/terms/o/onbalancevolume.asp'>https://www.investopedia.com/terms/o/onbalancevolume.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp'>https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp</a></body>")
                 self._UI.index_canvas_options.addItem("OBV")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'Heat':
@@ -1355,7 +1352,7 @@ class UI_control(object):
                 self._UI.index_selection.addItem("Bollinger Band")
                 self._UI.index_selection.addItem("RSI")
                 self._UI.index_selection.addItem("MACD")
-                self.index_selection_index = 1
+                self.index_selection_index = 1 # BB
                 self._UI.index_selection.setCurrentIndex(self.index_selection_index)
             else:
                 self._UI.index_selection.addItem("PVI and NVI")
@@ -1395,7 +1392,7 @@ class UI_control(object):
         #
         #ticker_plotline, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close'], color='tab:blue',                    linewidth=1)
         canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA255'],             color='#9ed5f7', linestyle="dashed", linewidth=1)
-        canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA9'],               color='#9ed5f7',                     linewidth=1)
+        canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA9'],               color='tab:red',                     linewidth=1) # #9ed5f7
         canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close'],                    color='tab:blue',                    linewidth=1)
         canvas.axes.set_xlabel('Date', fontsize=10.0)
         canvas.axes.set_ylabel('Close Price (EMA9, 255)', fontsize=10.0)
@@ -1442,12 +1439,12 @@ class UI_control(object):
             #
             #index_plotline_PVI, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI'], color='tab:green',    linewidth=1.0)
             #index_plotline_NVI, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI'], color='tab:orange',   linewidth=1.0)
-            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA255'], color='#baf1b2', linestyle="dashed", linewidth=1.0)
-            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='#efb663', linestyle="dashed", linewidth=1.0)
-            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='#baf1b2',                     linewidth=1.0)
-            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='#efb663',                     linewidth=1.0)
-            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI'], color='tab:green',    linewidth=1.0)
-            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI'], color='tab:orange',   linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI'], color='#baf1b2',   linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI'], color='#efb663',   linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA255'], color='tab:green', linestyle="dashed", linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA255'], color='tab:green', linestyle="dashed", linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI_EMA9'],   color='tab:green',                     linewidth=1.0)
+            canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI_EMA9'],   color='tab:green',                     linewidth=1.0)
             #################################################
             canvas.figure.autofmt_xdate()
             if self.index_options_selection_index == 1:
@@ -1476,7 +1473,7 @@ class UI_control(object):
             y70 = np.empty(n_ticks); y70.fill(70)
             y30 = np.empty(n_ticks); y30.fill(30)
             y50 = np.empty(n_ticks); y50.fill(50)
-            canvas.axes.set_ylabel('RSI 14', fontsize=10.0)
+            canvas.axes.set_ylabel('RSI 14 (EMA 9)', fontsize=10.0)
             canvas.axes.set_ylim(0, 100)
             y = self.ticker_data_dict_in_effect['history']['RSI14']
             canvas.axes.plot(x, y30, '--', color='black', linewidth=0.5)
@@ -1488,6 +1485,8 @@ class UI_control(object):
             canvas.axes.fill_between(x, y,   y30, where=(y<y30),   color='tab:red',   alpha=0.5,  interpolate=True)
             #index_plotline, = canvas.axes.plot(x, y, color='tab:blue', linewidth=1)
             canvas.axes.plot(x, y, color='tab:blue', linewidth=1)
+            y_EMA9 = moving_average(periods=9).exponential(y)
+            canvas.axes.plot(x, y_EMA9, color='tab:red', linewidth=1)
             #
             canvas.figure.autofmt_xdate()
             index_plotline = None
@@ -1542,7 +1541,7 @@ class UI_control(object):
             obv_9 = self.ticker_data_dict_in_effect['history']['OBV_EMA9']
             color_obv = '#3A6CA8'
             canvas.axes.plot(x, obv_255, color='#9ed5f7', linestyle="dashed", linewidth=1)
-            canvas.axes.plot(x, obv_9,   color='#9ed5f7',                     linewidth=1)
+            canvas.axes.plot(x, obv_9,   color='tab:red',                     linewidth=1) # #9ed5f7
             canvas.axes.plot(x, obv,     color=color_obv, linewidth=1)
             #
             canvas.figure.autofmt_xdate()

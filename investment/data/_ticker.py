@@ -17,8 +17,6 @@ import socket
 
 import ftplib
 
-import os
-from os.path import join
 import pathlib
 
 import shutil
@@ -38,15 +36,18 @@ import requests
 
 ###########################################################################################
 
-tickers_with_no_volume = ['^W5000','^VVIX','^VIX','^TNX','^TYX','^FVX','^IRX','^VXN','EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','HKD=X','DX-Y.NYB','^TWII','^TWDOWD','^HSI','^N225','^GDAXI','^FCHI','000001.SS','399001.SZ','^STOXX50E']
-tickers_with_no_PT = ['^NDX','^GSPC','000001.SS','399001.SZ','NQ=F','YM=F','GC=F','ES=F','CL=F','DS-PB']
+tickers_with_no_volume = ['^W5000','^VVIX','^VIX','^TNX','^TYX','^FVX','^IRX','^VXN','EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','HKD=X','DX-Y.NYB','^TWII','^TWDOWD','^HSI','^N225','^GDAXI','^FCHI','000001.SS','399001.SZ','^STOXX50E','^CASE30']
+tickers_with_no_PT = ['^NDX','^GSPC','000001.SS','399001.SZ','NQ=F','YM=F','GC=F','ES=F','CL=F','DS-PB','^CASE30','ARKK','ARKQ','ARKW','ARKF','ARKG','ARKX']
+tickers_likely_delisted = ['AAC=','AAQC=','ACIC+','ACII=','ALMDG','AKE','ADYEN','ACND+','ACND=','ACR-C','ADEX+','ADEX=','ADF=','ADRA=','AMTD','BEZQ','BATM','SERV','TCO','WPX','PLSN','PE','OERL','BIMCM','BSEN','CTL','NBL','MYL','MLTM','EMCO','DNKN','LVGO','LOGM','FTAL','ETFC','GLIBA','HAML','LM','KSPI','HEXAB','HDS','IMMU','WMGI','VSLR','WRTC','SBBX','TERP','TRWH','RUBI','RTRX','RST','RESI','PUB','PTLA','PRSC','PRNB','RTIX','POL','PFNX','PDLI','AMAG','AKCA','AIMT','ADSW','ADRO','CETV','CATS','BSTC','BREW','BMCH','BFYT','BBX','CVTI','DBCP','EE','ERI','EROS','FIT','NGHC','AMRH']
+tickers_problematic = ['ACEVW','ACKIW','ADERW','ADILW','ADNWW','ADOCR','ADOCW','ADVWW','AEACW','TIF','STMN','INCR','DANE','ABNB','THCB','MACU']
+tradable_tickers = []
 
 ###########################################################################################
 
 nasdaqlisted_df = pd.DataFrame()
 otherlisted_df = pd.DataFrame()
 options_df = pd.DataFrame()
-global_data_root_dir = join(str(pathlib.Path.home()), ".investment")
+global_data_root_dir = pathlib.Path.home() / ".investment"
 
 ARK_df_dict = {}
 
@@ -68,18 +69,18 @@ def download_and_load_ARK_data(data_root_dir: str = None):
     if data_root_dir is None:
          raise ValueError("Error: data_root_dir cannot be None")
 
-    data_dir = join(data_root_dir, "ticker_data/ARK")
-    ARK_historical_dir = join(data_root_dir, "ticker_data/ARK/historical")
+    data_dir = data_root_dir / "ticker_data/ARK"
+    ARK_historical_dir = data_root_dir / "ticker_data/ARK/historical"
 
-    if not os.path.exists(data_dir):
+    if not data_dir.exists():
         try:
-            pathlib.Path(data_dir).mkdir(parents=True, exist_ok=True)
+            data_dir.mkdir(parents=True, exist_ok=True)
         except:
             raise IOError(f"cannot create data dir: {data_dir}")
 
-    if not os.path.exists(ARK_historical_dir):
+    if not ARK_historical_dir.exists():
         try:
-            pathlib.Path(ARK_historical_dir).mkdir(parents=True, exist_ok=True)
+            ARK_historical_dir.mkdir(parents=True, exist_ok=True)
         except:
             raise IOError(f"cannot create ARK historical dir: {ARK_historical_dir}")
     
@@ -88,25 +89,24 @@ def download_and_load_ARK_data(data_root_dir: str = None):
              'ARKW': 'ARK_NEXT_GENERATION_INTERNET_ETF_ARKW_HOLDINGS.csv',
              'ARKG': 'ARK_GENOMIC_REVOLUTION_MULTISECTOR_ETF_ARKG_HOLDINGS.csv',
              'ARKF': 'ARK_FINTECH_INNOVATION_ETF_ARKF_HOLDINGS.csv',
+             'ARKX': 'ARK_SPACE_EXPLORATION_&_INNOVATION_ETF_ARKX_HOLDINGS.csv',
              'PRNT': 'THE_3D_PRINTING_ETF_PRNT_HOLDINGS.csv',
              'IZRL': 'ARK_ISRAEL_INNOVATIVE_TECHNOLOGY_ETF_IZRL_HOLDINGS.csv'}
 
     global ARK_df_dict
 
     for ETF_name in pairs.keys():
-        filename = join(data_dir, ETF_name + ".csv")
-
-        file1 = pathlib.Path(filename)
+        filename = data_dir / f"{ETF_name}.csv"
 
         to_download = True
 
-        if file1.exists():
-            if timedata().now.datetime - timedata(time_stamp=file1.stat().st_ctime).datetime < timedelta(days=1): # creation time
+        if filename.exists():
+            if timedata().now.datetime - timedata(time_stamp=filename.stat().st_ctime).datetime < timedelta(days=1): # creation time
                 to_download = False
 
         if not Internet_connection_available():
             to_download = False
-            if not file1.exists():
+            if not filename.exists():
                 raise RuntimeError("Internet is unavailable but the system depends on certain ark-invest.com files to run")
 
         if to_download:
@@ -117,7 +117,7 @@ def download_and_load_ARK_data(data_root_dir: str = None):
             if r.status_code == 200:
                 with open(filename, 'wb') as outfile:
                     outfile.write(r.content)
-                filename_to = join(ARK_historical_dir, ETF_name + "-" + timedata(time_stamp=file1.stat().st_ctime).datetime.astimezone().strftime("%Y%m%d") + ".csv") # astimezone() -> local time zone
+                filename_to = ARK_historical_dir / f"{ETF_name}-{timedata(time_stamp=filename.stat().st_ctime).datetime.astimezone().strftime('%Y%m%d')}.csv" # astimezone() -> local time zone
                 shutil.copy(filename, filename_to)
                 print(f' Successful [status code: {r.status_code}]')
             else:
@@ -144,10 +144,10 @@ def download_nasdaqtrader_data(data_root_dir: str = None):
     if data_root_dir is None:
          raise ValueError("Error: data_root_dir cannot be None")
 
-    data_dir = join(data_root_dir, "ticker_data/nasdaqtrader")
-    if not os.path.exists(data_dir):
+    data_dir = data_root_dir / "ticker_data/nasdaqtrader"
+    if not data_dir.exists():
         try:
-            pathlib.Path(data_dir).mkdir(parents=True, exist_ok=True)
+            data_dir.mkdir(parents=True, exist_ok=True)
         except:
             raise IOError(f"cannot create data dir: {data_dir}")
     ftp_server = 'ftp.nasdaqtrader.com'
@@ -155,9 +155,9 @@ def download_nasdaqtrader_data(data_root_dir: str = None):
     ftp_password = 'anonymous'
     ftp = ftplib.FTP(ftp_server)
     ftp.login(ftp_username, ftp_password)
-    files = [('SymbolDirectory/nasdaqlisted.txt', join(data_dir, 'nasdaqlisted.txt')), 
-             ('SymbolDirectory/otherlisted.txt',  join(data_dir, 'otherlisted.txt' )),
-             ('SymbolDirectory/options.txt',      join(data_dir, 'options.txt'     ))]
+    files = [('SymbolDirectory/nasdaqlisted.txt', data_dir / 'nasdaqlisted.txt'), 
+             ('SymbolDirectory/otherlisted.txt',  data_dir / 'otherlisted.txt' ),
+             ('SymbolDirectory/options.txt',      data_dir / 'options.txt'     )]
     for file_ in files:
         with open(file_[1], "wb") as f:
             ftp.retrbinary("RETR " + file_[0], f.write)
@@ -169,9 +169,9 @@ def load_nasdaqtrader_data(data_root_dir: str = None):
     if data_root_dir is None:
         raise ValueError("Error: data_root_dir cannot be None")
 
-    file1 = pathlib.Path(join(data_root_dir, "ticker_data/nasdaqtrader/nasdaqlisted.txt"))
-    file2 = pathlib.Path(join(data_root_dir, "ticker_data/nasdaqtrader/otherlisted.txt"))
-    file3 = pathlib.Path(join(data_root_dir, "ticker_data/nasdaqtrader/options.txt"))
+    file1 = data_root_dir / "ticker_data/nasdaqtrader/nasdaqlisted.txt"
+    file2 = data_root_dir / "ticker_data/nasdaqtrader/otherlisted.txt"
+    file3 = data_root_dir / "ticker_data/nasdaqtrader/options.txt"
 
     to_download = False
 
@@ -208,7 +208,7 @@ def load_nasdaqtrader_data(data_root_dir: str = None):
     global options_df
 
     #
-    preprocessed_file = pathlib.Path(join(data_root_dir, "ticker_data/nasdaqtrader/preprocessed.h5"))
+    preprocessed_file = data_root_dir / "ticker_data/nasdaqtrader/preprocessed.h5"
     if to_download or (not preprocessed_file.exists()):
         #print('Creating preprocessed.h5 ...', end='')
         #
@@ -270,21 +270,24 @@ ticker_group_dict = {'All': [],
                      'Cyber Security': ['SWI','CYBR','CHKP','PANW','ZS','CRWD','FEYE','SCWX','VMW','MSFT','FTNT','MIME','HACK','PFPT','QLYS','RPD','TENB','VRNS','CIBR','NET'],
                      'Chinese stocks': ['YINN', 'YANG', 'CHA', 'CHL', 'CHU', '0728.HK', '0941.HK', '0762.HK'],
                      '5G': ['AAPL','TMUS','VZ','T','QCOM','QRVO','ERIC','TSM','NVDA','SWKS','ADI','MRVL','AVGO','XLNX'],
-                     'ADR': ['TSM','BABA','PDD','TM','SNE','JD','AZN','BIDU','BP','NIO','UBS','NOK','TCOM','IQ','TTM','WB','YY'],
+                     'ADR': ['TSM','BABA','PDD','TM','SNE','JD','AZN','BIDU','BILI','BP','NIO','UBS','NOK','TCOM','IQ','TTM','WB','YY'],
                      'Cloud': ['TWLO','AYX','SPLK'],
                      'ASD': ['BNGO','ZYNE',],
+                     'High Implied Volatility': ['AMC', 'BBBY', 'BBIG', 'BTU', 'CLDX', 'CVM', 'EBON', 'FREQ', 'FUTU', 'GME', 'GNUS', 'GSX', 'HGEN', 'IDRA', 'ITP', 'MRKR', 'NXTD', 'OCGN', 'ODT', 'OEG', 'PRQR', 'RIOT', 'RLX', 'SNDL', 'SOS', 'STON', 'WPG', 'WVE', 'XNET', 'GUSH', 'SOXL', 'SOXS', 'SQQQ', 'SRTY', 'TNA', 'TQQQ', 'UVXY', 'VXX'],
+                     'SPACs': ['VGAC','CCIV','DKNG','QS','UWMC','OPEN','LAZR','SKLZ','SPCE','VRT','CHPT','NKLA'],
+                     'Heavy drops': ['VIAC','DISCA','LKNCY','GME','ARKK','ARKG','NIO','IQ','GSX','NMR','CS'],
                      'Cryptocurrencies': ['GBTC','RIOT','MARA','BTC-USD'],
                      'Currencies': ['EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','DX-Y.NYB','HKD=X'],
                      'Commodities': ['GC=F','CL=F'],
-                     'Boom': ['ROKU','AMD','SHOP','NIO','MRNA','NVDA','QS','TKAT'],
+                     'Boom': ['ROKU','AMD','SHOP','NIO','MRNA','NVDA','QS','TKAT','UPST','MOON','HOFV','EYES'],
                      'Space': ['SPCE','SRAC','MAXR','LMT','BA','NOC','UFO','HOL','SRAC','VGAC','NPA','MAXR'],
                      'Gene therapy': ['ABEO', 'CAPR', 'AVRO', 'EDIT', 'QURE', 'BLUE', 'PBE', 'GNOM'],
-                     'Data Science and A.I.': ['THNQ','JSMD','IVES','QTUM','AYX','PLTR'],
+                     'Data Science and A.I.': ['THNQ','JSMD','IVES','QTUM','AYX','PLTR','UPST'],
                      'ETF': ['JETS', 'ONEQ', 'IEMG', 'VTHR', 'IWB', 'IWM', 'IWV', 'IWF', 'VTV', 'SCHD', 'USMV', 'VEA', 'VWO', 'AGG', 'LQD', 'GLD', 'VTI', 'DIA', 'OILU', 'OILD', 'TQQQ', 'SQQQ', 'UDOW', 'SDOW', 'UVXY', 'SVXY', 'KORU', 'YANG', 'YINN', 'QQQ', 'VOO','SPY','IVV','TMF','TMV','TBF','TLT','ESPO','GDX','XLC','XLI','XLF','XLE','XLV','XLB','XLK','XLU','XLP','XLY','XLRE'],
                      'ETF database': [],
                      'Buffett Indicator': ['^W5000',],
                      'Major Market Indexes': ['^DJI','^NDX','^GSPC','^IXIC','^RUT','^VIX','DIA','SPLG','IVV','VOO','SPY','QQQ','ONEQ','IWM','VTWO','VXX'],
-                     'Non-US World Market Indexes': ['^FTSE','^HSI','^N225','^GDAXI','^FCHI','^TWII','^TWDOWD','000001.SS','399001.SZ','^STOXX50E'],
+                     'Non-US World Market Indexes': ['^FTSE','^HSI','^N225','^GDAXI','^FCHI','^TWII','^TWDOWD','000001.SS','399001.SZ','^STOXX50E','^CASE30'],
                      'Futures': ['NQ=F','YM=F','ES=F','GC=F','CL=F'],
                      'DOW 30': ['^DJI', 'GS','WMT','MCD','CRM','DIS','NKE','CAT','TRV','VZ','JPM','IBM','HD','INTC','AAPL','MMM','MSFT','JNJ','CSCO','V','DOW','MRK','PG','AXP','KO','AMGN','HON','UNH','WBA','CVX','BA'],
                      'NASDAQ 100': ['^NDX', 'AAPL', 'ADBE', 'ADI', 'ADP', 'ADSK', 'ALGN', 'ALXN', 'AMAT', 'AMD', 'AMGN', 'AMZN', 'ANSS', 'ASML', 'ATVI', 'AVGO', 'BIDU', 'BIIB', 'BKNG', 'BMRN', 'CDNS', 'CDW', 'CERN', 'CHKP', 'CHTR', 'CMCSA', 'COST', 'CPRT', 'CSCO', 'CSX', 'CTAS', 'CTSH', 'CTXS', 'DLTR', 'DOCU', 'DXCM', 'EA', 'EBAY', 'EXC', 'EXPE', 'FAST', 'FB', 'FISV', 'FOX', 'FOXA', 'GILD', 'GOOG', 'GOOGL', 'IDXX', 'ILMN', 'INCY', 'INTC', 'INTU', 'ISRG', 'JD', 'KDP', 'KHC', 'KLAC', 'LBTYA', 'LBTYK', 'LRCX', 'LULU', 'MAR', 'MCHP', 'MDLZ', 'MELI', 'MNST', 'MRNA', 'MSFT', 'MU', 'MXIM', 'NFLX', 'NTES', 'NVDA', 'NXPI', 'ORLY', 'PAYX', 'PCAR', 'PDD', 'PEP', 'PYPL', 'QCOM', 'REGN', 'ROST', 'SBUX', 'SGEN', 'SIRI', 'SNPS', 'SPLK', 'SWKS', 'TCOM', 'TMUS', 'TSLA', 'TTWO', 'TXN', 'ULTA', 'VRSK', 'VRSN', 'VRTX', 'WBA', 'WDAY', 'XEL', 'XLNX', 'ZM'],
@@ -300,12 +303,13 @@ ticker_group_dict = {'All': [],
                      'Volatility': ['^VVIX','^VIX','VIXY','VXX','^VXN',],
                      'Treasury Bonds Yield': ['^TNX','^TYX','^FVX','^IRX','SHV','TIP','FLOT','VUT','BND','TMV','TLT','EDV','ZROZ','TBT'],
                      'OTC Market': ['JCPNQ','TGLO','HTZGQ'],
-                     'ARK Investments': ['ARKK','ARKQ','ARKW','ARKG','ARKF','IZRL','PRNT'],
+                     'ARK Investments': ['ARKK','ARKQ','ARKW','ARKG','ARKF','ARKX','IZRL','PRNT'],
                      'ARK Innovation ETF': [x for x in ARK_df_dict['ARKK']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK Autonomous Tech. & Robotics ETF': [x for x in ARK_df_dict['ARKQ']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK Next Generation Internet ETF': [x for x in ARK_df_dict['ARKW']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK Genomic Revolution ETF': [x for x in ARK_df_dict['ARKG']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK Fintech Innovation ETF': [x for x in ARK_df_dict['ARKF']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
+                     'ARK Space Exploration & Innovation ETF': [x for x in ARK_df_dict['ARKX']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK The 3D Printing ETF': [x for x in ARK_df_dict['PRNT']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK Israel Innovative Technology ETF': [x for x in ARK_df_dict['IZRL']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'Others': ['JWN','KSS','HMC','BRK-A','PROG','DS','DS-PB','OBSV']}
@@ -317,8 +321,8 @@ ticker_group_dict['Russell 3000'] = sorted(ticker_group_dict['Russell 1000'] + t
 df1 = nasdaqlisted_df[['ticker', 'ETF']]
 df2 = otherlisted_df[['ticker', 'ETF']]        
 df = pd.concat([df1, df2],axis=0)[['ticker', 'ETF']].reset_index().drop(['index'],axis=1) # axis=0 (1): row (column)
-ticker_group_dict['ETF database'] = df[ df['ETF'] == 'Y' ]['ticker'].tolist()
-ticker_group_dict['Equity database'] = df[ df['ETF'] == 'N' ]['ticker'].tolist()
+ticker_group_dict['ETF database'] = [ticker for ticker in df[ df['ETF'] == 'Y' ]['ticker'].tolist() if ticker not in list(set(tickers_likely_delisted + tickers_problematic))]
+ticker_group_dict['Equity database'] = [ticker for ticker in df[ df['ETF'] == 'N' ]['ticker'].tolist() if ticker not in list(set(tickers_likely_delisted + tickers_problematic))]
 
 ###########################################################################################
 
@@ -510,6 +514,9 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'ADR': f"<a href='https://www.investopedia.com/terms/a/adr.asp'><b>ADR</b></a> (American Depository Receipts)<br/><br/><a href='https://stockmarketmba.com/listofadrs.php'>List of ADR symbols</a><br/><br/><a href='https://www.fidelity.com/learning-center/investment-products/stocks/understanding-american-depositary-receipts'>Risk factors and expenses</a>:<br/>1. Exchange rate risk: e.g., when TWDUSD=X drops (depreciation of the TWD), the price of $TSM would drop too<br/>2. Political risk: the politics in that country might affect exchange rates or destabilize the company and its earnings.<br/>3. Inflation risk: inflation in that country will erode the value of that currency<br/><br/><a href='https://www.investing.com/equities/china-adrs'>China ADRs</a>",
                    'Cloud': f"Cloud",
                    'ASD': f"Autism Spectrum Disorder stocks",
+                   'High Implied Volatility': f"<a href='https://www.barchart.com/options/highest-implied-volatility'>https://www.barchart.com/options/highest-implied-volatility</a>",
+                   'SPACs': f"Special Purpose Acquisition Companies (SPACs)<br/><br/><a href='https://www.cnbc.com/2021/01/30/what-is-a-spac.html'>https://www.cnbc.com/2021/01/30/what-is-a-spac.html</a><br/><br/>SPAC (sponsors) is a shell company. Its only assets are the money raised in its own IPO (usually $10/share). The goal of the SPAC sponsors is to eventually acquire another company, typically within 2 years of the IPO. But during IPO, investors do not know what the eventual acquisition target is - they invest in the unknown; that is why SPACs are often called a 'blank check company'.<br/><br/>Once an acquisition is completed (with SPAC shareholders voting to approve the deal), the SPAC’s investors can either swap their shares for shares of the merged company or redeem their SPAC shares to get back their original investment, plus the interest accrued while that money was in trust.<br/><br/>Example of <a href='https://spactrack.net/closedspacs/'>completed SPACs</a> (sorted by Market Cap):<br/>- DEAC -> DKNG<br/>- KCAC -> QS<br/>- GHIV -> UWMC<br/>- IPOB -> OPEN<br/>- GMHI -> LAZR<br/>- FEAC -> SKLZ<br/>- IPOA -> SPCE<br/>- GSAH -> VRT<br/>- SBE -> CHPT<br/>- VTIQ -> NKLA<br/><br/><a href='https://spactrack.net/activespacs/'>Active SPACs</a>:<br/>- CCIV -> Lucid Motors<br/>- VGAC -> 23andme",
+                   'Heavy drops': f"Those tickers were once showing heavy drops in share prices for various reasons<br/><br/>News:<br/>- <a href='https://markets.businessinsider.com/news/stocks/archegos-capital-margin-call-20-billion-liquidation-8-stocks-plummeted-2021-3-1030254795'>Archegos margin calls</a>",
                    'Cryptocurrencies': f"A digital asset designed to work as a medium of exchange wherein individual coin ownership records are stored in a ledger existing in a form of computerized database using strong cryptography to secure transaction records, to control the creation of additional coins, and to verify the transfer of coin ownership.<br/><br><a href='https://www.investopedia.com/articles/investing/082914/basics-buying-and-investing-bitcoin.asp'>trading bitcoin</a>.",
                    'Currencies': f"Currencies",
                    'Commodities': f"Commodities",
@@ -521,7 +528,7 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'ETF database': f"https://nasdaqtrader.com/",
                    'Buffett Indicator': f"Divide the Wilshire 5000 Index (viewed as the total stock market) by the annual U.S. GDP (e.g., <a href='https://www.investing.com/economic-calendar/gdp-375'>https://www.investing.com/economic-calendar/gdp-375</a>). Before dot-com bubble burst, it was 159.2%.<br/><br/><a href='https://www.gurufocus.com/stock-market-valuations.php'>https://www.gurufocus.com/stock-market-valuations.php</a><br/><br/><a href='https://www.bea.gov/data/gdp/gross-domestic-product'>GDP</a>",
                    'Major Market Indexes': f"https://www.investing.com/indices/major-indices",
-                   'Non-US World Market Indexes': f"<b>FTSE</b> (Financial Times Stock Exchange) 100 Index is a share index of the 100 companies listed on the <b>London Stock Exchange</b> with the highest market capitalisation.<br/><br/><b>HSI</b> is Hang Seng Index.<br/><br/><b>N225</b> is the Nikkei 225, the Nikkei Stock Average, is a stock market index for the Tokyo Stock Exchange.<br/><br/><b>GDAXI</b> is the DAX Performance Index, a blue chip stock market index consisting of the 30 major <b>German</b> companies trading on the Frankfurt Stock Exchange.<br/><br/><b>FCHI</b> is CAC 40, a benchmark <b>French stock market index</b>, representing a capitalization-weighted measure of the 40 most significant stocks among the 100 largest market caps on the Euronext Paris.<br/><br/><b>TWII</b> is the TSEC (Taiwan Stock Exchange Corporation) weighted index.<br/><br/><b>000001.SS</b> is the SSE (Shanghai Stock Exchange) Composite Index, currency in CNY.<br/><br/><b>399001.SZ</b> is the Shenzhen Component, currency in CNY.<br/><br/><b>^STOXX50E</b> is the EURO STOXX 50 index, dominated by France (36.4%) and Germany (35.2%) and providing a blue-chip representation of supersector leaders in the Eurozone.<br/><br/>",
+                   'Non-US World Market Indexes': f"<b>FTSE</b> (Financial Times Stock Exchange) 100 Index is a share index of the 100 companies listed on the <b>London Stock Exchange</b> with the highest market capitalisation.<br/><br/><b>HSI</b> is Hang Seng Index.<br/><br/><b>N225</b> is the Nikkei 225, the Nikkei Stock Average, is a stock market index for the Tokyo Stock Exchange.<br/><br/><b>GDAXI</b> is the DAX Performance Index, a blue chip stock market index consisting of the 30 major <b>German</b> companies trading on the Frankfurt Stock Exchange.<br/><br/><b>FCHI</b> is CAC 40, a benchmark <b>French stock market index</b>, representing a capitalization-weighted measure of the 40 most significant stocks among the 100 largest market caps on the Euronext Paris.<br/><br/><b>TWII</b> is the TSEC (Taiwan Stock Exchange Corporation) weighted index.<br/><br/><b>000001.SS</b> is the SSE (Shanghai Stock Exchange) Composite Index, currency in CNY.<br/><br/><b>399001.SZ</b> is the Shenzhen Component, currency in CNY.<br/><br/><b>^STOXX50E</b> is the EURO STOXX 50 index, dominated by France (36.4%) and Germany (35.2%) and providing a blue-chip representation of supersector leaders in the Eurozone.<br/><br/><b>^CASE30</b> is the stock market index for securities in Egypt.<br/><br/>",
                    'Futures': f"<b>NQ=F</b>: Nasdaq Futures<br/><br/><b>YM=F</b>: Dow Futures<br/><br/><b>ES=F</b>: S&P Futures<br/><br/><b>GC=F</b>: Gold Futures<br/><br/><b>CL=F</b>: Crude Oil Futures",
                    'DOW 30': f"Dow Jones Industrial Average 30 Components",
                    'NASDAQ 100': f"A stock market index made up of 103 equity securities issued by 100 of the largest non-financial companies listed on the Nasdaq stock market.\n\nThe complete index, NASDAQ Composite (COMP), has 2,667 securities as of February 2020.\n\nBecause the index is weighted by market capitalization, the index is rather top-heavy. In fact, the top 10 stocks in the Nasdaq Composite account for one-third of the index’s performance.",
@@ -534,12 +541,13 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Volatility': f"<a href='https://www.investopedia.com/articles/active-trading/070213/tracking-volatility-how-vix-calculated.asp'>https://www.investopedia.com/articles/active-trading/070213/tracking-volatility-how-vix-calculated.asp</a>",
                    'Treasury Bonds Yield': f"<a href='https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield'>https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield</a><br/><br/>^IRX: 13 Week Treasury Bill<br/>^FVX: Treasury Yield 5 Years<br/>^TNX: Treasury Yield 10 Years<br/>^TYX: Treasury Yield 30 Years<br/><br/><b>A sell-off in the US Government Bond could be considered a good thing</b>: investors sold safe US bonds to buy something more risky; in contrast, when there is great fear in stock markets, investors flee towards the US Treasuries, the safest asset class. When bond yield becomes higher, it means buyers are now less interested in the current yield level, so that the sellers need to increase its yield (lowering bond price) to attract buyers.<br/><br/>In general, <a href='https://www.investopedia.com/ask/answers/042215/what-are-risks-associated-investing-treasury-bond.asp'>the risks of buying US Treasury bonds (T-bonds)</a>:<br/><br/>1. <b>Inflation risk</b>: if the inflation rate is greater (e.g., > 2%) than T-bonds yield, investors lose money in buying power.<br/>2. <b>Yield risk</b>: when bond yield increases, investors who sell T-bonds before maturity date lose money.<br/>3. <b>Opportunity risk</b>: the return on investment could be higher in somewhere else other than buying T-bonds.",
                    'OTC Market': f"Over-the-counter Market<br/><br/><a href='https://www.otcmarkets.com/research/stock-screener'>https://www.otcmarkets.com/research/stock-screener</a>",
-                   'ARK Investments': "<a href='https://ark-funds.com/'>https://ark-funds.com/</a> and <a href='https://ark-invest.com/'>https://ark-invest.com/</a><br/><br/>see also: <a href='https://cathiesark.com/'>https://cathiesark.com/</a><br/><hr><b>ARK Actively Managed Innovation ETFs:</b><br/><br/>ARKK - ARK Innovation ETF (171% gain)<br/>ARKQ - Autonomous Technology & Robotics ETF (125% gain)<br/>ARKW - Next Generation Internet ETF (155% gain)<br/>ARKG - Genomic Revolution ETF (210% gain)<br/>ARKF - Fintech Innovation ETF (104% gain)<br/><hr><b>ARK Indexed Innovation ETFs:</b><br/><br/>PRNT - The 3D Printing ETF (68% gain)<br/>IZRL - Israel Innovative Technology ETF (37% gain)",
+                   'ARK Investments': "<a href='https://ark-funds.com/'>https://ark-funds.com/</a> and <a href='https://ark-invest.com/'>https://ark-invest.com/</a><br/><br/>see also: <a href='https://cathiesark.com/'>https://cathiesark.com/</a><br/><hr><b>ARK Actively Managed Innovation ETFs:</b><br/><br/>ARKK - ARK Innovation ETF (171% gain)<br/>ARKQ - Autonomous Technology & Robotics ETF (125% gain)<br/>ARKW - Next Generation Internet ETF (155% gain)<br/>ARKG - Genomic Revolution ETF (210% gain)<br/>ARKF - Fintech Innovation ETF (104% gain)<br/>ARKX - Space Exploration & Innovation ETF<br/><hr><b>ARK Indexed Innovation ETFs:</b><br/><br/>PRNT - The 3D Printing ETF (68% gain)<br/>IZRL - Israel Innovative Technology ETF (37% gain)",
                    'ARK Innovation ETF': ARK_df_dict['ARKK'][['ticker','company','weight(%)']].to_html(index=False),
                    'ARK Autonomous Tech. & Robotics ETF': ARK_df_dict['ARKQ'][['ticker','company','weight(%)']].to_html(index=False),
                    'ARK Next Generation Internet ETF': ARK_df_dict['ARKW'][['ticker','company','weight(%)']].to_html(index=False),
                    'ARK Genomic Revolution ETF': ARK_df_dict['ARKG'][['ticker','company','weight(%)']].to_html(index=False),
                    'ARK Fintech Innovation ETF': ARK_df_dict['ARKF'][['ticker','company','weight(%)']].to_html(index=False),
+                   'ARK Space Exploration & Innovation ETF': ARK_df_dict['ARKX'][['ticker','company','weight(%)']].to_html(index=False),
                    'ARK The 3D Printing ETF': ARK_df_dict['PRNT'][['ticker','company','weight(%)']].to_html(index=False),
                    'ARK Israel Innovative Technology ETF': ARK_df_dict['IZRL'][['ticker','company','weight(%)']].to_html(index=False),
                    'Others': f"Others"}
@@ -559,6 +567,7 @@ def ticker_preprocessing():
     # make the ticker elements unique and sorted in ticker_group_dict
     for group in ticker_group_dict.keys():
         ticker_group_dict[group] = sorted(list(set(ticker_group_dict[group])))
+        ticker_group_dict[group] = [ticker for ticker in ticker_group_dict[group] if (ticker not in list(set(tickers_likely_delisted + tickers_problematic)))] # clean up tickers
 
     ticker_group_dict['All'] = sorted(list(set([item for sublist in ticker_group_dict.values() for item in sublist])))
 
@@ -574,6 +583,8 @@ def ticker_preprocessing():
         subgroup_group_dict[group].insert(0, 'All')
 
 ticker_preprocessing()
+
+tradable_tickers = [ticker for ticker in ticker_group_dict['All'] if (ticker not in list(set(tickers_with_no_volume + tickers_with_no_PT + tickers_likely_delisted + tickers_problematic))) and (ticker[0] != '^')]
 
 ###########################################################################################
 
@@ -839,8 +850,29 @@ class Ticker(object):
             return None
 
     @property
+    def options_strike_prices(self):
+        all_strike_prices = set()
+        all_expiration_dates = self.options_expiration_dates
+        if all_expiration_dates is not None:
+            for this_expiration_date in all_expiration_dates:
+                df = self.option_chain(expiration_date = this_expiration_date)
+                if df is not None:
+                    if len(df.index)>0:
+                        for idx, row in df.iterrows():
+                            all_strike_prices.add(row['strike'])
+        return sorted(list(all_strike_prices))
+
+    @property
+    def options_expiration_dates(self):
+        return self.options
+
+    # option date
+    @property
     def options(self):
-        return self.ticker_data_dict['options']
+        if 'options' in self.ticker_data_dict.keys():
+            return self.ticker_data_dict['options']
+        else:
+            return None
 
     def option_chain(self, expiration_date: str = None):
         if 'option_chain_dict' in self.ticker_data_dict.keys():
@@ -858,10 +890,53 @@ class Ticker(object):
                 return ds
         return None
 
-    def option_value_vs_time_remaining_until_expiration_date(self, eval_date: str = None, type: str = None, strike: float = None):
+    # for calculating APY and premium across strike price on a specific expiration date
+    def option_value_vs_strike_prices(self, type: str = None, expiration_date: str = None, max_n_strikes_from_last_price: int = 999, share_last_close_price: float = None):
+        """
+        y: 'ask', 'bid', 'lastPrice', 'ask-ITM-adjusted', 'bid-ITM-adjusted', 'lastPrice-ITM-adjusted'
+        share_last_close_price: for determining ITM and offseting
+        """
+        if expiration_date is None:
+            raise ValueError('expiration_date cannot be None')
+        if share_last_close_price is None:
+            share_last_close_price = self.last_close_price # use the last known
+        assert type in ['puts','calls'], 'type must be either puts or calls'
+        strike_prices_list = self.options_strike_prices
+        strike_prices_list = sorted(strike_prices_list, key = lambda x: abs(x - share_last_close_price))
+        strike_prices_list = sorted(strike_prices_list[0:max_n_strikes_from_last_price])
+        results_df = pd.DataFrame(columns=['strike', 'ask', 'bid', 'lastPrice', 'ask-ITM-adjusted', 'bid-ITM-adjusted', 'lastPrice-ITM-adjusted'])
+        df = self.option_chain(expiration_date = expiration_date)
+        if df is not None:
+            for this_strike_price in strike_prices_list:
+                df1 = df[(df['strike'] == this_strike_price) & (df['type'] == type)]
+                if len(df1.index) > 1:
+                    raise RuntimeError('Error. There should be just 1 row of strike-price related info here.')
+                elif len(df1.index) == 1:
+                    offset = 0
+                    if type == 'puts':
+                        if this_strike_price > share_last_close_price: # ITM
+                            offset = this_strike_price - share_last_close_price
+                    if type == 'calls':
+                        if this_strike_price < share_last_close_price: # ITM
+                            offset = share_last_close_price - this_strike_price
+                    ds = df[(df['strike'] == this_strike_price) & (df['type'] == type)].iloc[0]
+                    results_df = results_df.append({'strike': this_strike_price, 
+                                                    'ask': ds['ask'],
+                                                    'bid': ds['bid'],
+                                                    'lastPrice': ds['lastPrice'],
+                                                    'ask-ITM-adjusted': ds['ask']-offset,
+                                                    'bid-ITM-adjusted': ds['bid']-offset,
+                                                    'lastPrice-ITM-adjusted': ds['lastPrice']-offset}, ignore_index = True)
+        return results_df
+
+    # for calculating APY and premium for a specific strike price across all expiration dates
+    def option_value_vs_time_remaining_until_expiration_date(self, type: str = None, strike: float = None, max_days_until_expiration: int = 999, eval_date: str = None):
         """
         y: 'ask', 'bid', 'lastPrice'
+        eval_date: for determining remaining days
         """
+        if strike is None:
+            raise ValueError('strike cannot be None')
         if eval_date is None:
             eval_date = timedata().Y_m_d_str # today, e.g., '2021-03-15'
         assert type in ['puts','calls'], 'type must be either puts or calls'
@@ -874,7 +949,8 @@ class Ticker(object):
                 if len(df1.index)>0:
                     ds = df[(df['strike'] == strike) & (df['type'] == type)].iloc[0]
                     remaining_days = (timedata(Y_m_d_str = this_expiration_date).datetime - timedata(Y_m_d_str = eval_date).datetime).days + 1
-                    results_df = results_df.append({'time_remaining_days': int(remaining_days), 'ask': ds['ask'], 'bid': ds['bid'], 'lastPrice': ds['lastPrice']}, ignore_index = True)
+                    if remaining_days <= max_days_until_expiration:
+                        results_df = results_df.append({'time_remaining_days': int(remaining_days), 'ask': ds['ask'], 'bid': ds['bid'], 'lastPrice': ds['lastPrice']}, ignore_index = True)
         return results_df
 
     @property
@@ -891,6 +967,13 @@ class Ticker(object):
     @property
     def ticker_history(self):
         return self.ticker_data_dict['history']
+
+    @property
+    def data_download_time(self):
+        if 'data_download_time' in self.ticker_data_dict.keys():
+            return self.ticker_data_dict['data_download_time']
+        else:
+            return None
 
     @property
     def fifty_two_weeks_high(self):
@@ -929,9 +1012,13 @@ class Ticker(object):
     def highest_price_in_the_recent_past(self, days=90):
         if self.ticker_data_dict['history'] is not None:
             history_df = self.ticker_data_dict['history'][['Date','High']]
-            last_date = history_df['Date'].iloc[-1]
-            history_df = history_df[history_df['Date'] >= (last_date - timedelta(days=days))]
-            return history_df['High'].max()
+            if len(history_df.index) > 0:
+                last_date = history_df['Date'].iloc[-1]
+                history_df = history_df[history_df['Date'] >= (last_date - timedelta(days=days))]
+                return history_df['High'].max()
+            else:
+                print(f"ticker [{self.ticker}] has no history_df['Date'] records.")
+                return None
 
     def max_diff_pct(self, ticker_history: pd.DataFrame, days=None):
         #print(f'max_diff_pct, days=[{days}]')

@@ -7,6 +7,7 @@
 import pandas as pd
 import numpy as np
 
+
 class volatility_indicator(object):
     def __init__(self):
         super().__init__()
@@ -31,9 +32,23 @@ class volatility_indicator(object):
         BOLD = MA - n_std_dev * sigma
         return MA, BOLU, BOLD
 
+
 class momentum_indicator(object):
     def __init__(self):
         super().__init__()
+
+    def trends(self, typical_price: np.ndarray, n_smoothing_periods: int = 20):
+        if type(typical_price) == pd.Series:
+            typical_price = typical_price.to_numpy()
+        n_periods = typical_price.shape[0]
+        if n_periods == 0:
+            raise ValueError(f"n_periods cannot be zero")
+        EMA = moving_average(periods = n_smoothing_periods).exponential(data_series = typical_price)
+        distance_scalar = (EMA.max() - EMA.min()) / EMA.size
+        if EMA.size >= 3: # to calculate a numerical gradient, at least (edge_order + 1) elements are required.
+            EMA_grad = np.gradient(EMA, distance_scalar, edge_order=2)
+        else:
+            EMA_grad = None            
 
     def RSI(self, close_price: np.ndarray, RSI_periods: int = 14):
         """
