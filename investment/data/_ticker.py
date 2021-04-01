@@ -904,7 +904,7 @@ class Ticker(object):
         strike_prices_list = self.options_strike_prices
         strike_prices_list = sorted(strike_prices_list, key = lambda x: abs(x - share_last_close_price))
         strike_prices_list = sorted(strike_prices_list[0:max_n_strikes_from_last_price])
-        results_df = pd.DataFrame(columns=['strike', 'ask', 'bid', 'lastPrice', 'ask-ITM-adjusted', 'bid-ITM-adjusted', 'lastPrice-ITM-adjusted'])
+        results_df = pd.DataFrame(columns=['strike', 'ask', 'bid', 'lastPrice', 'ask-ITM-adjusted', 'bid-ITM-adjusted', 'lastPrice-ITM-adjusted', 'share_value_for_APY_calc'])
         df = self.option_chain(expiration_date = expiration_date)
         if df is not None:
             for this_strike_price in strike_prices_list:
@@ -913,12 +913,15 @@ class Ticker(object):
                     raise RuntimeError('Error. There should be just 1 row of strike-price related info here.')
                 elif len(df1.index) == 1:
                     offset = 0
+                    share_value_for_APY_calc = this_strike_price
                     if type == 'puts':
                         if this_strike_price > share_last_close_price: # ITM
                             offset = this_strike_price - share_last_close_price
+                            share_value_for_APY_calc = share_last_close_price
                     if type == 'calls':
                         if this_strike_price < share_last_close_price: # ITM
                             offset = share_last_close_price - this_strike_price
+                            share_value_for_APY_calc = share_last_close_price
                     ds = df[(df['strike'] == this_strike_price) & (df['type'] == type)].iloc[0]
                     results_df = results_df.append({'strike': this_strike_price, 
                                                     'ask': ds['ask'],
@@ -926,7 +929,8 @@ class Ticker(object):
                                                     'lastPrice': ds['lastPrice'],
                                                     'ask-ITM-adjusted': ds['ask']-offset,
                                                     'bid-ITM-adjusted': ds['bid']-offset,
-                                                    'lastPrice-ITM-adjusted': ds['lastPrice']-offset}, ignore_index = True)
+                                                    'lastPrice-ITM-adjusted': ds['lastPrice']-offset,
+                                                    'share_value_for_APY_calc': share_value_for_APY_calc}, ignore_index = True)
         return results_df
 
     # for calculating APY and premium for a specific strike price across all expiration dates
