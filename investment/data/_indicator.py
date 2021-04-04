@@ -46,6 +46,8 @@ class trend_indicator(object):
         Average Directional Index (ADX)
         https://www.investopedia.com/articles/trading/07/adx-trend-indicator.asp
         https://www.investopedia.com/terms/a/adx.asp
+
+        DI = Directional Indicator (i.e., DMI+, DMI-)
         """
         if type(high_price) == pd.Series:
             high_price = high_price.to_numpy()
@@ -78,6 +80,7 @@ class trend_indicator(object):
                           high_price[idx]-close_price[idx-1],
                           low_price[idx]-close_price[idx-1])
         TR_rma = moving_average(periods = DI_len).rma(data_series = np.array(TR[1:]))
+        TR_rma[TR_rma == 0] = np.nan
         plus = 100 * moving_average(periods = DI_len).rma(data_series = np.array(DM_plus[1:])) / TR_rma
         minus = 100 * moving_average(periods = DI_len).rma(data_series = np.array(DM_minus[1:])) / TR_rma
         plus_and_minus = plus + minus
@@ -113,6 +116,8 @@ class trend_indicator(object):
                 strength = 'confirmed strong'
             elif 50 <  adx[idx]:
                 strength = 'extremely strong'
+            else:
+                strength = 'unknown strength'
             #
             trend_reading[idx] = f"{strength} {trend}"
         #
