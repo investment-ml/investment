@@ -1115,7 +1115,7 @@ class app_menu(object):
 
 
 class app_window(QMainWindow):
-    def __init__(self, app=None, appmenu=None, web_scraper=None, *args, **kwargs):
+    def __init__(self, app=None, appmenu=None, web_scraper=None, default_indicator=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app = app
 
@@ -1126,7 +1126,7 @@ class app_window(QMainWindow):
         self.height = screen.availableGeometry().height() * 0.80
             
         # central widget
-        self.UI = UI(parent=self, app_window=self, dpi=dpi)
+        self.UI = UI(parent=self, app_window=self, dpi=dpi, default_indicator=default_indicator)
         self.setCentralWidget(self.UI)
         # others
         self.setWindowTitle(f"{App_name}")
@@ -1143,7 +1143,7 @@ class app_window(QMainWindow):
 
 
 class UI(QWidget):
-    def __init__(self, app_window=None, dpi=72, *args, **kwargs):
+    def __init__(self, app_window=None, dpi=72, default_indicator=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         #
@@ -1191,12 +1191,12 @@ class UI(QWidget):
         self.setLayout(self.layout)
 
         # control
-        self.control = UI_control(UI = self)
+        self.control = UI_control(UI = self, default_indicator=default_indicator)
 
 
 class UI_control(object):
 
-    def __init__(self, UI):
+    def __init__(self, UI=None, default_indicator=None):
         super().__init__()
         self._UI = UI
         # connect signals
@@ -1222,7 +1222,14 @@ class UI_control(object):
         self.time_last_date = pd.to_datetime(date.today(), utc=True)
         self.timeframe_selection_index = list(self.timeframe_dict).index('1 year') + 1
         self.index_options_selection_index = 1
-        self.index_selection_index = 8 # ADX
+        self.default_indicator = default_indicator
+        if self.default_indicator is not None:
+            if self.default_indicator == 'ADX':
+                self.index_selection_index = 8 # ADX
+            else:
+                raise RuntimeError(f'Undefined: [{self.default_indicator}]')
+        else:
+            self.index_selection_index = 2 # RSI
         self._group_selected = None
         self._index_selected = None
         self._UI.group_selection.setCurrentIndex(1) # 'All'
@@ -1380,7 +1387,13 @@ class UI_control(object):
                 self._UI.index_selection.addItem("ADX")
                 self._UI.index_selection.addItem("RSI")
                 self._UI.index_selection.addItem("MACD")
-                self.index_selection_index = 2 # ADX
+                if self.default_indicator is not None:
+                    if self.default_indicator == 'ADX':
+                        self.index_selection_index = 2 # ADX
+                    else:
+                        RuntimeError(f'Undefined: [{self.default_indicator}]')
+                else:
+                    self.index_selection_index = 3 # RSI
                 self._UI.index_selection.setCurrentIndex(self.index_selection_index)
             else:
                 self._UI.index_selection.addItem("PVI and NVI")
@@ -1929,10 +1942,10 @@ class UI_control(object):
         self._UI.message_dialog.hide()
 
 
-def main(appmenu=None, web_scraper=None):
+def main(appmenu=None, web_scraper=None, default_indicator=None):
     app = QApplication(sys.argv)
     app.setStyleSheet(StyleSheet)
-    window = app_window(app=app, appmenu=appmenu, web_scraper=web_scraper)
+    window = app_window(app=app, appmenu=appmenu, web_scraper=web_scraper, default_indicator=default_indicator)
     window.show()
     app.exec_()
 
