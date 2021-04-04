@@ -38,8 +38,16 @@ import requests
 
 tickers_with_no_volume = ['^W5000','^VVIX','^VIX','^TNX','^TYX','^FVX','^IRX','^VXN','EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','HKD=X','DX-Y.NYB','^TWII','^TWDOWD','^HSI','^N225','^GDAXI','^FCHI','000001.SS','399001.SZ','^STOXX50E','^CASE30']
 tickers_with_no_PT = ['^NDX','^GSPC','000001.SS','399001.SZ','NQ=F','YM=F','GC=F','ES=F','CL=F','DS-PB','^CASE30','ARKK','ARKQ','ARKW','ARKF','ARKG','ARKX']
-tickers_likely_delisted = ['AAC=','AAQC=','ACIC+','ACII=','ALMDG','AKE','ADYEN','ACND+','ACND=','ACR-C','ADEX+','ADEX=','ADF=','ADRA=','AMTD','BEZQ','BATM','SERV','TCO','WPX','PLSN','PE','OERL','BIMCM','BSEN','CTL','NBL','MYL','MLTM','EMCO','DNKN','LVGO','LOGM','FTAL','ETFC','GLIBA','HAML','LM','KSPI','HEXAB','HDS','IMMU','WMGI','VSLR','WRTC','SBBX','TERP','TRWH','RUBI','RTRX','RST','RESI','PUB','PTLA','PRSC','PRNB','RTIX','POL','PFNX','PDLI','AMAG','AKCA','AIMT','ADSW','ADRO','CETV','CATS','BSTC','BREW','BMCH','BFYT','BBX','CVTI','DBCP','EE','ERI','EROS','FIT','NGHC','AMRH']
-tickers_problematic = ['ACEVW','ACKIW','ADERW','ADILW','ADNWW','ADOCR','ADOCW','ADVWW','AEACW','TIF','STMN','INCR','DANE','ABNB','THCB','MACU']
+tickers_likely_delisted = ['AAC+','AAC=','AAQC=','ACIC+','ACII=','ALMDG','AKE','ADYEN','ACND+','ACND=','ACR-C','ADEX+','ADEX=','ADF=','ADRA=','AMTD','BEZQ','BATM','SERV','TCO','WPX','PLSN','PE','OERL','BIMCM','BSEN','CTL','NBL','MYL','EIDX','PIH','PRCP','DRAD','CXO',
+                           'MLTM','EMCO','DNKN','LVGO','LOGM','FTAL','ETFC','GLIBA','HAML','LM','KSPI','HEXAB','HDS','IMMU','WMGI','VSLR','WRTC','SBBX','TERP','TRWH','RUBI','RTRX','RST','RESI','PUB','PTLA','PRSC','PRNB','RTIX','POL','PFNX','PDLI','AMAG','AKCA','AIMT',
+                           'ADSW','ADRO','CETV','CATS','BSTC','BREW','BMCH','BFYT','BBX','CVTI','DBCP','EE','ERI','EROS','FIT','NGHC','AMRH','AAXN','ACAM','TZAC','TOTA','SMMC','SAMA','ARA','CFBI','PRVL','PTAC','PTI','PECK','PEIX','NVUS','OPES','FBM','FRAN','NOVS','MYOK',
+                           'MR','FSB','FSCT','GCAP','GEC','GHIV','GPOR','GRIF','GSB','HCAC','MNK','MNCL','MJCO','MINI','MGEN','MNTA','MNLO','HTZ','HUD','HYAC','IBKC','SQM^','CELG^','MEET','MCEP','LSAC','INTL','LFAC','LCA','IRET','JCAP','KTOV','RCLF']
+tickers_problematic = ['ACEVW','ACKIW','ADERW','ADILW','ADNWW','ADOCR','ADOCW','ADVWW','AEACW','TIF','STMN','INCR','DANE','ABNB','THCB','MACU','APRZ','ACVF','XTAP','XDSQ','XDQQ','XDAP','XBAP','TWIO','PSFM','PSCW','PSMR','QTAP','ZWRKW','ZWRK','AGAC=','AGAC+','AGBAW',
+                       'WPCB=','WPF+','WPF=','WPG-H','WPG-I','WRB-D','WRB-E','WRB-F','WRB-G','WRB-H','AEVA+','ADRA+','AACQW','AAIC-B','AAIC-C','ABR-A','ABR-B','ABR-C','ACAC','ACACW','AEL-A','AEL-B','AGBAR','AGM-D','AGM-C','AGM-F','AGM-E','WFC-R','WFC-Q','WFC-C','WFC-L',
+                       'WFC-O','WFC-X','WFC-Y','WFC-Z','WFC-A','YCBD-A','WFC-N','YSACW','ZGYHR','ZGYHW','AGO-B','AGO-E','AHACW','AHH-A','AHL-D','AHL-C','AHL-E','WBS-F','WCC-A','AGO-F','AHT-D','AIRTW','ALACW','AKICW','VTAQR','VTAQW','ATNFW','VACQW','VCKAW','VERBW','VRMEW',
+                       'VOSOW','ASLEW','ASAXW','ARVLW','ARTLW','AMHCW','VHAQ^','UKOMW','TZPSW','TWCTW','TLMDW','THWWW','THMAW','THCBW','THCAW','THBRW','TDACW','TBCPW','SYTAW','SWETW','BTRSW','BTAQW','BRPAW','BROGW','BRLIW','BRLIR','BREZW','BREZR','BNGOW','BLUWW','BLTSW',
+                       'BIOTW','BHSEW','BFIIW','BEEMW','BCYPW','BCTXW','BCDAW','ANDAR','ANDAW','APOPW','APPHW','APXTW','ARBGW','ARKOW','AUUDW','AVCTW','BLNKW','BWACW','CAHCW','CAPAW','VMACW','VKTXW','VINCW','VIIAW','VIHAW','VIEWW','USWSW','TRITW','TMTSW','TMPMW','TMKRW',
+                       'SVSVW','CHEKZ','CLRBZ','SHIPZ','DHCNL','SFB']
 tradable_tickers = []
 
 ###########################################################################################
@@ -568,6 +576,10 @@ def ticker_preprocessing():
     for group in ticker_group_dict.keys():
         ticker_group_dict[group] = sorted(list(set(ticker_group_dict[group])))
         ticker_group_dict[group] = [ticker for ticker in ticker_group_dict[group] if (ticker not in list(set(tickers_likely_delisted + tickers_problematic)))] # clean up tickers
+        ticker_group_dict[group] = [ticker for ticker in ticker_group_dict[group] if (('+' not in ticker) and ('=' not in ticker) and ('^' not in ticker[-1]))] # clean up tickers
+
+    ticker_group_dict['ETF database'] = [ticker for ticker in ticker_group_dict['ETF database'] if (('-' not in ticker) and ((ticker + 'ABCDE')[4] != 'W'))]
+    ticker_group_dict['Equity database'] = [ticker for ticker in ticker_group_dict['Equity database'] if (('-' not in ticker) and ((ticker + 'ABCDE')[4] != 'W'))]
 
     ticker_group_dict['All'] = sorted(list(set([item for sublist in ticker_group_dict.values() for item in sublist])))
 
@@ -931,6 +943,45 @@ class Ticker(object):
                                                     'bid-ITM-adjusted': ds['bid']-offset,
                                                     'lastPrice-ITM-adjusted': ds['lastPrice']-offset,
                                                     'share_value_for_APY_calc': share_value_for_APY_calc}, ignore_index = True)
+            # interpolate 'share_last_close_price' as one of the strike prices
+            if share_last_close_price not in strike_prices_list:
+                # step 1: find the sweet spot (crossing the strike price)
+                pre_crossing_idx = None
+                for idx, row in results_df.iterrows():
+                    if row['strike'] < share_last_close_price:
+                        pre_crossing_idx = idx
+                    if (row['strike'] > share_last_close_price) and (pre_crossing_idx is not None):
+                        # crossing found. processing!
+                        pre_crossing_strike                    = results_df.loc[pre_crossing_idx,   'strike']
+                        pre_crossing_ask                       = results_df.loc[pre_crossing_idx,   'ask']
+                        pre_crossing_bid                       = results_df.loc[pre_crossing_idx,   'bid']
+                        pre_crossing_lastPrice                 = results_df.loc[pre_crossing_idx,   'lastPrice']
+                        pre_crossing_ask_ITM_adjusted          = results_df.loc[pre_crossing_idx,   'ask-ITM-adjusted']
+                        pre_crossing_bid_ITM_adjusted          = results_df.loc[pre_crossing_idx,   'bid-ITM-adjusted']
+                        pre_crossing_lastPrice_ITM_adjusted    = results_df.loc[pre_crossing_idx,   'lastPrice-ITM-adjusted']
+                        pre_crossing_share_value_for_APY_calc  = results_df.loc[pre_crossing_idx,   'share_value_for_APY_calc']
+                        #
+                        post_crossing_strike                   = results_df.loc[pre_crossing_idx+1, 'strike']
+                        post_crossing_ask                      = results_df.loc[pre_crossing_idx+1, 'ask']
+                        post_crossing_bid                      = results_df.loc[pre_crossing_idx+1, 'bid']
+                        post_crossing_lastPrice                = results_df.loc[pre_crossing_idx+1, 'lastPrice']
+                        post_crossing_ask_ITM_adjusted         = results_df.loc[pre_crossing_idx+1, 'ask-ITM-adjusted']
+                        post_crossing_bid_ITM_adjusted         = results_df.loc[pre_crossing_idx+1, 'bid-ITM-adjusted']
+                        post_crossing_lastPrice_ITM_adjusted   = results_df.loc[pre_crossing_idx+1, 'lastPrice-ITM-adjusted']
+                        post_crossing_share_value_for_APY_calc = results_df.loc[pre_crossing_idx+1, 'share_value_for_APY_calc']
+                        #
+                        left_wt  = (share_last_close_price - pre_crossing_strike)  / (post_crossing_strike - pre_crossing_strike)
+                        right_wt = (post_crossing_strike - share_last_close_price) / (post_crossing_strike - pre_crossing_strike)
+                        results_df = results_df.append({'strike':                   share_last_close_price, 
+                                                        'ask':                      (pre_crossing_ask                      * left_wt) + (post_crossing_ask                      * right_wt),
+                                                        'bid':                      (pre_crossing_bid                      * left_wt) + (post_crossing_bid                      * right_wt),
+                                                        'lastPrice':                (pre_crossing_lastPrice                * left_wt) + (post_crossing_lastPrice                * right_wt),
+                                                        'ask-ITM-adjusted':         (pre_crossing_ask                      * left_wt) + (post_crossing_ask                      * right_wt), # (pre_crossing_ask_ITM_adjusted         * left_wt) + (post_crossing_ask_ITM_adjusted         * right_wt),
+                                                        'bid-ITM-adjusted':         (pre_crossing_bid                      * left_wt) + (post_crossing_bid                      * right_wt), # (pre_crossing_bid_ITM_adjusted         * left_wt) + (post_crossing_bid_ITM_adjusted         * right_wt),
+                                                        'lastPrice-ITM-adjusted':   (pre_crossing_lastPrice                * left_wt) + (post_crossing_lastPrice                * right_wt), # (pre_crossing_lastPrice_ITM_adjusted   * left_wt) + (post_crossing_lastPrice_ITM_adjusted   * right_wt),
+                                                        'share_value_for_APY_calc': (pre_crossing_share_value_for_APY_calc * left_wt) + (post_crossing_share_value_for_APY_calc * right_wt)}, ignore_index = True)                        
+                        results_df.sort_values(by=['strike'],inplace=True)
+                        break
         return results_df
 
     # for calculating APY and premium for a specific strike price across all expiration dates

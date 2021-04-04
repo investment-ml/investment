@@ -7,6 +7,8 @@
 import math
 from scipy.special import expit
 from scipy.stats import norm, chisquare
+import statsmodels.api as sm
+from csaps import csaps
 
 def sigmoid(z):
     return expit(z) # 1.0 / (1.0 + np.exp(-z)) # to cope with the overflow problem with np.exp()
@@ -42,3 +44,22 @@ def two_sample_proportion_z_test(num1, num2, denom1, denom2):
 
 def chisq_test(num1, num2):
     return chisquare([num1, num2])
+
+def Locally_Weighted_Scatterplot_Smoothing(y, x, frac):
+    """
+    https://www.statsmodels.org/stable/generated/statsmodels.nonparametric.smoothers_lowess.lowess.html?highlight=lowess
+    https://stackoverflow.com/questions/36252434/predicting-on-new-data-using-locally-weighted-regression-loess-lowesspip
+    https://www.displayr.com/how-to-add-trend-lines-in-r-using-plotly/
+    """
+    lowess = sm.nonparametric.lowess(endog=y, exog=x, frac=frac)
+    lowess_y = list(zip(*lowess))[1]
+    lowess_x = list(zip(*lowess))[0]
+    return lowess_y, lowess_x
+
+def Cubic_Spline_Approximation_Smoothing(y, x, smooth = None):
+    xi = x # i = interpolation
+    if smooth is None:
+        y_csaps, smooth = csaps(x, y, xi)
+    else:
+        y_csaps = csaps(x, y, xi, smooth=smooth)
+    return y_csaps, smooth

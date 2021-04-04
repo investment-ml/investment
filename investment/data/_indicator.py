@@ -33,11 +33,96 @@ class volatility_indicator(object):
         return MA, BOLU, BOLD
 
 
-class momentum_indicator(object):
+class trend_indicator(object):
     def __init__(self):
         super().__init__()
 
-    def trends(self, typical_price: np.ndarray, n_smoothing_periods: int = 20):
+    def ADX(self, high_price: np.ndarray, 
+                  low_price: np.ndarray,
+                  close_price: np.ndarray,
+                  ADX_smoothing_len: int = 14,
+                  DI_len: int = 14):
+        """
+        Average Directional Index (ADX)
+        https://www.investopedia.com/articles/trading/07/adx-trend-indicator.asp
+        https://www.investopedia.com/terms/a/adx.asp
+        """
+        if type(high_price) == pd.Series:
+            high_price = high_price.to_numpy()
+        if type(low_price) == pd.Series:
+            low_price = low_price.to_numpy()
+        if type(close_price) == pd.Series:
+            close_price = close_price.to_numpy()
+        n_periods = close_price.shape[0]
+        if n_periods <= 1:
+            raise ValueError(f"n_periods cannot be <= 1")
+        if (high_price.shape[0] != low_price.shape[0]) or (high_price.shape[0] != close_price.shape[0]) or (low_price.shape[0] != close_price.shape[0]):
+            raise RuntimeError(f"The lengths of high_price [{high_price.shape[0]}], low_price [{low_price.shape[0]}], close_price [{close_price.shape[0]}] are different")
+        higher_highs = list(np.diff(high_price))
+        lower_lows = list(-np.diff(low_price))
+        higher_highs.insert(0, None)
+        lower_lows.insert(0, None)
+        DM_plus = [None] * n_periods # Directional Movement
+        DM_minus = [None] * n_periods
+        TR = [None] * n_periods # True Range
+        for idx in range(1, n_periods):
+            if higher_highs[idx] > lower_lows[idx] and higher_highs[idx] > 0:
+                DM_plus[idx] = higher_highs[idx]
+            else:
+                DM_plus[idx] = 0
+            if lower_lows[idx] > higher_highs[idx] and lower_lows[idx] > 0:
+                DM_minus[idx] = lower_lows[idx]
+            else:
+                DM_minus[idx] = 0
+            TR[idx] = max(high_price[idx]-low_price[idx],
+                          high_price[idx]-close_price[idx-1],
+                          low_price[idx]-close_price[idx-1])
+        TR_rma = moving_average(periods = DI_len).rma(data_series = np.array(TR[1:]))
+        plus = 100 * moving_average(periods = DI_len).rma(data_series = np.array(DM_plus[1:])) / TR_rma
+        minus = 100 * moving_average(periods = DI_len).rma(data_series = np.array(DM_minus[1:])) / TR_rma
+        plus_and_minus = plus + minus
+        adx = abs(plus - minus)
+        for idx in range(n_periods-1):
+            if plus_and_minus[idx] != 0:
+                adx[idx] /= plus_and_minus[idx]
+        adx *= 100
+        adx_smoothed = moving_average(periods = ADX_smoothing_len).rma(data_series = adx)
+        plus_smoothed = moving_average(periods = ADX_smoothing_len).rma(data_series = plus)
+        minus_smoothed = moving_average(periods = ADX_smoothing_len).rma(data_series = minus)
+        #
+        trend_reading = [None] * (n_periods-1)
+        for idx in range(n_periods-1):
+            if plus[idx] > minus[idx]:
+                trend = 'uptrend'
+            elif plus[idx] < minus[idx]:
+                trend = 'downtrend'
+            else:
+                trend = 'non-trend'
+            #
+            if adx[idx] < 10:
+                strength = 'extremely weak'
+            elif 10 <= adx[idx] and adx[idx] <= 19:
+                strength = 'weak'
+            elif 19 <  adx[idx] and adx[idx] <  21:
+                strength = 'emerging'
+            elif 21 <= adx[idx] and adx[idx] <= 39:
+                strength = 'confirmed'
+            elif 39 <  adx[idx] and adx[idx] <  41:
+                strength = 'emerging strong'
+            elif 41 <= adx[idx] and adx[idx] <= 50:
+                strength = 'confirmed strong'
+            elif 50 <  adx[idx]:
+                strength = 'extremely strong'
+            #
+            trend_reading[idx] = f"{strength} {trend}"
+        #
+        return [None] + list(adx), [None] + list(plus), [None] + list(minus), [None] + list(adx_smoothed), [None] + list(plus_smoothed), [None] + list(minus_smoothed), [None] + trend_reading
+
+    """
+    def trends(self, high_price: np.ndarray, low_price: np.ndarray, close_price: np.ndarray,):
+        # Work in Progress
+        ADX, Plus, Minus, ADX14, Plus14, Minus14 = self.ADX(high_price = high_price, low_price = low_price, close_price = close_price)
+        for 
         if type(typical_price) == pd.Series:
             typical_price = typical_price.to_numpy()
         n_periods = typical_price.shape[0]
@@ -48,7 +133,13 @@ class momentum_indicator(object):
         if EMA.size >= 3: # to calculate a numerical gradient, at least (edge_order + 1) elements are required.
             EMA_grad = np.gradient(EMA, distance_scalar, edge_order=2)
         else:
-            EMA_grad = None            
+            EMA_grad = None
+    """
+
+
+class momentum_indicator(object):
+    def __init__(self):
+        super().__init__()
 
     def RSI(self, close_price: np.ndarray, RSI_periods: int = 14):
         """
@@ -264,7 +355,15 @@ class moving_average(object):
                 SMMA[idx] = ((self.periods-1)*SMMA[idx-1] + data_series[idx])/self.periods
             return SMMA
 
-    def exponential(self, data_series: np.ndarray):
+    def rma(self, data_series: np.ndarray):
+        """
+        see rma in https://www.tradingview.com/pine-script-reference/
+        """
+        return np.array(self.exponential(data_series = data_series, use_default_alpha = False, alpha = 1 / self.periods))
+
+    def exponential(self, data_series: np.ndarray, use_default_alpha: bool = True, alpha = None):
+        if use_default_alpha:
+            alpha = self.multiplier
         if type(data_series) in [pd.Series, pd.DataFrame]:
             data_series = data_series.to_numpy()
         n_periods = data_series.shape[0]
@@ -273,7 +372,7 @@ class moving_average(object):
         EMA = np.zeros(shape=n_periods, dtype=float)
         EMA[0] = data_series[0]
         for idx in range(1, n_periods):
-            EMA[idx] = (data_series[idx] * self.multiplier) + (EMA[idx-1] * (1-self.multiplier))
+            EMA[idx] = (data_series[idx] * alpha) + (EMA[idx-1] * (1-alpha))
         return EMA
 
     def simple(self, data_series: np.ndarray):

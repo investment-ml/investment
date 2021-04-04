@@ -38,7 +38,8 @@ import matplotlib.pyplot as plt
 
 from datetime import date, datetime, timedelta, timezone
 
-from ..data import Ticker, get_ticker_data_dict, get_formatted_ticker_data, volatility_indicator, momentum_indicator, volume_indicator, moving_average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict, global_data_root_dir, nasdaqlisted_df, otherlisted_df, tickers_with_no_volume
+from ..data import Ticker, get_ticker_data_dict, get_formatted_ticker_data, volatility_indicator, momentum_indicator, trend_indicator, volume_indicator, moving_average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict, global_data_root_dir, nasdaqlisted_df, otherlisted_df, tickers_with_no_volume
+from ..math_and_stats import Locally_Weighted_Scatterplot_Smoothing, Cubic_Spline_Approximation_Smoothing
 
 import numpy as np
 import pandas as pd
@@ -151,7 +152,7 @@ class ExtendedComboBox(QComboBox):
 # https://matplotlib.org/3.3.0/gallery/misc/cursor_demo.html
 # https://matplotlib.org/users/event_handling.html
 class SnappingCursor(Cursor):
-    def __init__(self, plotline=None, actual_x_data=None, x_index=None, y_data=None, name=None, UI=None, *args, **kwargs):
+    def __init__(self, plotline=None, actual_x_data=None, x_index=None, y_data=None, name=None, UI=None, supporting_info=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if plotline is None:
             self.x, self.y = x_index, y_data
@@ -161,6 +162,13 @@ class SnappingCursor(Cursor):
             self.x, self.y = plotline.get_data()
             self.actual_x_data = None
             self.use_x_index = False
+        #
+        if supporting_info is None:
+            self.use_supporting_info = False
+            self.supporting_info = None
+        else:
+            self.use_supporting_info = True
+            self.supporting_info = supporting_info        
         dy = (self.y.max() - self.y.min()) / self.y.size
         if self.y.size >= 3: # to calculate a numerical gradient, at least (edge_order + 1) elements are required.
             self.y_grad = np.gradient(self.y, dy, edge_order=2)
@@ -189,10 +197,15 @@ class SnappingCursor(Cursor):
                 event.ydata = self.y[index]
                 event.ydata_grad = self.y_grad[index]
 
-                if self.use_x_index:
-                    text_str = f"{pd.to_datetime(self.actual_x_data[index], utc=True).date()}, {event.ydata:.2f}, slope={event.ydata_grad:.2f}"
+                if self.use_supporting_info:
+                    supporting_info = f", {self.supporting_info[index]}"
                 else:
-                    text_str = f"{pd.to_datetime(event.xdata, utc=True).date()}, {event.ydata:.2f}, slope={event.ydata_grad:.2f}"
+                    supporting_info = ""
+
+                if self.use_x_index:
+                    text_str = f"{pd.to_datetime(self.actual_x_data[index], utc=True).date()}, {event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}"
+                else:
+                    text_str = f"{pd.to_datetime(event.xdata, utc=True).date()}, {event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}"
 
                 if self.name == 'ticker_canvas_cursor':
                     self.UI.ticker_canvas_coord_label.setText(text_str)
@@ -1170,11 +1183,11 @@ class UI(QWidget):
         self.layout.addWidget(self.ticker_timeframe_selection, 0, 3)
         self.layout.addWidget(self.ticker_lastdate_pushbutton, 0, 4)
         self.layout.addWidget(self.ticker_download_latest_data_from_yfinance_pushbutton, 0, 5)
-        self.layout.addWidget(self.ticker_canvas_coord_label, 0, 6)
-        self.layout.addWidget(self.ticker_canvas, 1, 3, 2, 4)
+        self.layout.addWidget(self.ticker_canvas_coord_label, 0, 6, 1, 2)
+        self.layout.addWidget(self.ticker_canvas, 1, 3, 2, 5)
         self.layout.addWidget(self.index_canvas_options,     3, 3)
         self.layout.addWidget(self.index_canvas_coord_label, 3, 4)
-        self.layout.addWidget(self.index_canvas,  4, 3, 2, 4)
+        self.layout.addWidget(self.index_canvas,  4, 3, 2, 5)
         self.setLayout(self.layout)
 
         # control
@@ -1209,7 +1222,7 @@ class UI_control(object):
         self.time_last_date = pd.to_datetime(date.today(), utc=True)
         self.timeframe_selection_index = list(self.timeframe_dict).index('1 year') + 1
         self.index_options_selection_index = 1
-        self.index_selection_index = 7 # BB
+        self.index_selection_index = 8 # ADX
         self._group_selected = None
         self._index_selected = None
         self._UI.group_selection.setCurrentIndex(1) # 'All'
@@ -1230,7 +1243,7 @@ class UI_control(object):
                 self.index_options_selection_index = 1
             elif self._index_selected == 'RSI':
                 self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>RSI</b> (Relative Strength Index) is a leading <b>momentum</b> indicator reflecting a possible oversold (RSI &lt; 30) or overbought (RSI &gt; 70) trend.<br/><br/>RSI = 50 means no trend; thus, long periods of RSI &gt; 50 (or &lt; 50) suggests continuous uptrend (or downtrend).<br/><br/><a href='https://www.investopedia.com/terms/r/rsi.asp'>https://www.investopedia.com/terms/r/rsi.asp</a></body>")
-                self._UI.index_canvas_options.addItem("RSI 14")
+                self._UI.index_canvas_options.addItem("RSI14")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'MACD':
                 self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>MACD</b> (Moving Average Convergence Divergence) is a lagging (trend-following) momentum indicator. When <b><span style='color:blue'>MACD</span></b>(EMA12 minus EMA26) crosses <b>above</b> (or below) its own 9-day EMA <b><span style='color:orange'>signal</span></b> line, it's a <b>buy</b> (or sell).<br/><br/>Common interpretations: crossovers, divergences, and rapid rises/falls.<br/><br/><a href='https://www.investopedia.com/terms/m/macd.asp'>https://www.investopedia.com/terms/m/macd.asp</a></body>")
@@ -1259,6 +1272,14 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("Bollinger Band (Medium term)")
                 self._UI.index_canvas_options.addItem("Bollinger Band (Long term)")
                 self.index_options_selection_index = 2
+            elif self._index_selected == 'ADX':
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><a href='https://en.wikipedia.org/wiki/Average_directional_movement_index'>Average Directional Index</a>-14 is a <b>lagging</b> indicator of <b>the trend strength</b>, while the raw (unsmoothed) version is not lagging.<br/><br/>When <b><span style='color:green;'>DMI+</span></b> (Positive <a href='https://www.investopedia.com/terms/d/dmi.asp'>Directional Movement Indicator</a>) is above <b><span style='color:red;'>DMI-</span></b> (Negative Directional Movement Indicator), there is more <b>upward pressure</b> than <b>downward pressure</b> on the price; when DMI- is above DMI+, there is more downward pressure than upward pressure on the price.<br/><br/>- <b><span style='color:green;'>DMI+</span></b> indicates <b>upward pressure</b> on price;<br/>- <b><span style='color:red;'>DMI-</span></b> indicates <b>downward pressure</b> on price;<br/>- The spread between DMI+ and DMI- is the trend strength.<br/><br/>When <b><span style='color:blue;'>ADX</span></b>:<br/>- below 10, extremely weak trend;<br/>- between 10 and 20, weak trend;<br/>- crossing above 20, emerging trend;<br/>- between 20 and 40, further confirmation of an emerging trend;<br/>- crossing above 40, emerging strong trend;<br/>- between 40 and 50, strong trend;<br>- above 50, extremely strong trend.</body>")
+                self._UI.index_canvas_options.addItem("ADX, DMI+, DMI-")
+                self._UI.index_canvas_options.addItem("ADX")
+                self._UI.index_canvas_options.addItem("ADX14, DMI+14, DMI-14")
+                self._UI.index_canvas_options.addItem("ADX14")
+                self._UI.index_canvas_options.addItem("ADX, DMI+, DMI- (smoothed)")
+                self.index_options_selection_index = 5                
 
             self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index) 
             self._calc_index()
@@ -1356,9 +1377,10 @@ class UI_control(object):
             self._UI.index_selection.reset()
             if self.selected_ticker in tickers_with_no_volume:
                 self._UI.index_selection.addItem("Bollinger Band")
+                self._UI.index_selection.addItem("ADX")
                 self._UI.index_selection.addItem("RSI")
                 self._UI.index_selection.addItem("MACD")
-                self.index_selection_index = 1 # BB
+                self.index_selection_index = 2 # ADX
                 self._UI.index_selection.setCurrentIndex(self.index_selection_index)
             else:
                 self._UI.index_selection.addItem("PVI and NVI")
@@ -1368,6 +1390,7 @@ class UI_control(object):
                 self._UI.index_selection.addItem("OBV")
                 self._UI.index_selection.addItem("A/D")
                 self._UI.index_selection.addItem("Bollinger Band")
+                self._UI.index_selection.addItem("ADX")
                 self._UI.index_selection.addItem("Heat")
                 self._UI.index_selection.setCurrentIndex(self.index_selection_index)
 
@@ -1408,8 +1431,10 @@ class UI_control(object):
         actual_x_data = dates
         x_index = x
         y_data = self.ticker_data_dict_in_effect['history']['Close'].values
+        #
+        trend_reading_values = self.ticker_data_dict_in_effect['history']['trend_reading'].values
         #################################################
-        self.ticker_canvas_cursor = SnappingCursor(plotline=ticker_plotline, actual_x_data=actual_x_data, x_index=x_index, y_data=y_data, ax=canvas.axes, useblit=True, color='black', linestyle='dashed', linewidth=1, name='ticker_canvas_cursor', UI=self._UI)
+        self.ticker_canvas_cursor = SnappingCursor(plotline=ticker_plotline, actual_x_data=actual_x_data, x_index=x_index, y_data=y_data, ax=canvas.axes, useblit=True, color='black', linestyle='dashed', linewidth=1, name='ticker_canvas_cursor', UI=self._UI, supporting_info=trend_reading_values)
         canvas.mpl_connect('motion_notify_event',  self.ticker_canvas_cursor.onmove) # mpl = matplotlib
         #################################################
         canvas.mpl_connect('button_press_event',   canvas.button_pressed)
@@ -1467,6 +1492,113 @@ class UI_control(object):
                 y_data = self.ticker_data_dict_in_effect['history']['NVI'].values
             else:
                 raise ValueError("index options selection index not within range")
+
+        elif self._index_selected == 'ADX':
+            # to skip non-existent dates on the plot
+            dates = self.ticker_data_dict_in_effect['history']['Date'].values
+            formatter = DateFormatter(dates)
+            canvas.axes.xaxis.set_major_formatter(formatter)
+            x = np.arange(len(dates))
+            #
+            if self.index_options_selection_index == 1:
+                adx = self.ticker_data_dict_in_effect['history']['ADX']
+                plus = self.ticker_data_dict_in_effect['history']['DMI+']
+                minus = self.ticker_data_dict_in_effect['history']['DMI-']
+            elif self.index_options_selection_index == 2:
+                adx = self.ticker_data_dict_in_effect['history']['ADX']
+                plus = None
+                minus = None
+                lowess_frac = .1
+                adx_lowess, x_lowess = Locally_Weighted_Scatterplot_Smoothing(y=adx, x=x, frac=lowess_frac)
+                adx_smooth = 0.90
+                adx_csaps, adx_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=adx, smooth=adx_smooth)
+            elif self.index_options_selection_index == 3:
+                adx = self.ticker_data_dict_in_effect['history']['ADX14']
+                plus = self.ticker_data_dict_in_effect['history']['DMI+14']
+                minus = self.ticker_data_dict_in_effect['history']['DMI-14']
+            elif self.index_options_selection_index == 4:
+                adx = self.ticker_data_dict_in_effect['history']['ADX14']
+                plus = None
+                minus = None
+            elif self.index_options_selection_index == 5:
+                adx = self.ticker_data_dict_in_effect['history']['ADX']
+                plus = self.ticker_data_dict_in_effect['history']['DMI+']
+                minus = self.ticker_data_dict_in_effect['history']['DMI-']
+                adx_smooth = plus_smooth = minus_smooth = 0.90
+                adx_csaps, adx_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=adx, smooth=adx_smooth)
+                plus_csaps, plus_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=plus, smooth=plus_smooth)
+                minus_csaps, minus_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=minus, smooth=minus_smooth)
+            else:
+                raise RuntimeError('Error')
+            #
+            canvas.axes.set_ylabel('Average Directional Index', fontsize=10.0)
+            if self.index_options_selection_index in [1, 3]:
+                the_max = max(adx.max(), plus.max(), minus.max())
+                the_min = min(adx.min(), plus.min(), minus.min())
+            elif self.index_options_selection_index in [2, 4]:
+                the_max = adx.max()
+                the_min = adx.min()
+            elif self.index_options_selection_index == 5:
+                the_max = max(adx_csaps.max(), plus_csaps.max(), minus_csaps.max())
+                the_min = min(adx_csaps.min(), plus_csaps.min(), minus_csaps.min())
+            canvas.axes.set_ylim(0, 60 if the_max <= 50 else min(the_max + the_min, 100))
+            #
+            n_ticks = len(x)
+            y_very_weak_trend   = np.empty(n_ticks); y_very_weak_trend.fill(10)
+            y_weak_trend        = np.empty(n_ticks); y_weak_trend.fill(20)
+            y_strong_trend      = np.empty(n_ticks); y_strong_trend.fill(40)
+            y_very_strong_trend = np.empty(n_ticks); y_very_strong_trend.fill(50)
+            #
+            for g in range(100):
+                canvas.axes.fill_between(x, g, g+1, color='gold', edgecolor=None, alpha=min(g/100, 1), interpolate=False)
+            #
+            canvas.axes.grid(True, color='silver', linewidth=0.5)
+            #
+            if self.index_options_selection_index in [1, 3]:
+                canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_strong_trend,      '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_very_strong_trend, '--', color='black', linewidth=2)
+                plus_line,  = canvas.axes.plot(x, plus,  color='limegreen', linewidth=2)
+                minus_line, = canvas.axes.plot(x, minus, color='orangered', linewidth=2)
+                adx_line,   = canvas.axes.plot(x, adx,   color='royalblue', linewidth=2)
+                if self.index_options_selection_index == 1:
+                    canvas.axes.legend([adx_line, plus_line, minus_line,], ['ADX', 'DMI+', 'DMI-',])
+                elif self.index_options_selection_index == 3:
+                    canvas.axes.legend([adx_line, plus_line, minus_line,], ['ADX14', 'DMI+14', 'DMI-14',])
+                else:
+                    raise RuntimeError('Error')    
+            elif self.index_options_selection_index in [2, 4]:
+                canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_strong_trend,      '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_very_strong_trend, '--', color='black', linewidth=2)
+                adx_line,   = canvas.axes.plot(x, adx, color='royalblue', linewidth=2)
+                if self.index_options_selection_index == 2:
+                    adx_lowess_line, = canvas.axes.plot(x, adx_lowess, color='lightcoral', linewidth=2)
+                    adx_csaps_line, = canvas.axes.plot(x, adx_csaps, color='seagreen', linewidth=2)
+                    canvas.axes.legend([adx_line,adx_lowess_line,adx_csaps_line,], ['ADX',f"ADX_lowess (frac={lowess_frac:.2f})", f"ADX_csaps (smooth={adx_smooth:.2f})"])
+                elif self.index_options_selection_index == 4:
+                    canvas.axes.legend([adx_line,], ['ADX14',])
+                else:
+                    raise RuntimeError('Error')
+            elif self.index_options_selection_index == 5:
+                canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_strong_trend,      '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_very_strong_trend, '--', color='black', linewidth=2)
+                plus_csaps_line,  = canvas.axes.plot(x, plus_csaps,  color='limegreen', linewidth=2)
+                minus_csaps_line, = canvas.axes.plot(x, minus_csaps, color='orangered', linewidth=2)
+                adx_csaps_line,   = canvas.axes.plot(x, adx_csaps,   color='royalblue', linewidth=2)
+                canvas.axes.legend([adx_csaps_line, plus_csaps_line, minus_csaps_line,], [f"ADX (smooth={adx_smooth:.2f})", f"DMI+ (smooth={plus_smooth:.2f})", f"DMI- (smooth={minus_smooth:.2f})",])
+            else:
+                raise RuntimeError('Error')
+            #
+            canvas.figure.autofmt_xdate()
+            index_plotline = None
+            actual_x_data = dates
+            x_index = x
+            y_data = adx.values
 
         elif self._index_selected == 'RSI':
             # to skip non-existent dates on the plot
@@ -1541,6 +1673,8 @@ class UI_control(object):
             formatter = DateFormatter(dates)
             canvas.axes.xaxis.set_major_formatter(formatter)
             x = np.arange(len(dates))
+            canvas.axes.grid(True, color='silver', linewidth=0.5)
+            #
             canvas.axes.set_ylabel('On-Balance Volume (EMA9, EMA255)', fontsize=10.0)
             obv = self.ticker_data_dict_in_effect['history']['OBV']
             obv_255 = self.ticker_data_dict_in_effect['history']['OBV_EMA255']
@@ -1562,6 +1696,7 @@ class UI_control(object):
             formatter = DateFormatter(dates)
             canvas.axes.xaxis.set_major_formatter(formatter)
             x = np.arange(len(dates))
+            canvas.axes.grid(True, color='silver', linewidth=0.5)
             #
             n_ticks = len(x)
             y0 = np.empty(n_ticks); y0.fill(0)
@@ -1588,13 +1723,14 @@ class UI_control(object):
             formatter = DateFormatter(dates)
             canvas.axes.xaxis.set_major_formatter(formatter)
             x = np.arange(len(dates))
+            canvas.axes.grid(True, color='silver', linewidth=0.5)
             #
             canvas.axes.set_ylabel('Accumulation/Distribution', fontsize=10.0)
             if self.index_options_selection_index == 1:
                 ad = self.ticker_data_dict_in_effect['history']['Accumulation_Distribution']
             elif self.index_options_selection_index == 2:
                 ad = self.ticker_data_dict_in_effect['history']['Accumulation_Distribution_Zscore']
-            color_ad = '#B4B469'
+            color_ad = 'tab:red' # '#B4B469'
             canvas.axes.plot(x, ad, color=color_ad, linewidth=1)
             #
             canvas.figure.autofmt_xdate()
@@ -1636,6 +1772,7 @@ class UI_control(object):
             formatter = DateFormatter(dates)
             canvas.axes.xaxis.set_major_formatter(formatter)
             x = np.arange(len(dates))
+            canvas.axes.grid(True, color='silver', linewidth=0.5)
             #
             Typical_price = self.ticker_data_dict_in_effect['history']['Typical']
             if self.index_options_selection_index == 1:
@@ -1724,6 +1861,9 @@ class UI_control(object):
         ######################
         history_all_df['RSI14'] = momentum_indicator().RSI(close_price=history_all_df['Close'], RSI_periods=14)
         history_df['RSI14'] = history_all_df[history_all_df['Date'].isin(history_df['Date'])]['RSI14']
+        ######################
+        history_all_df['ADX'], history_all_df['DMI+'], history_all_df['DMI-'], history_all_df['ADX14'], history_all_df['DMI+14'], history_all_df['DMI-14'], history_all_df['trend_reading'] = trend_indicator().ADX(high_price=history_all_df['High'], low_price=history_all_df['Low'], close_price=history_all_df['Close'])
+        history_df[['ADX', 'DMI+', 'DMI-', 'ADX14', 'DMI+14', 'DMI-14', 'trend_reading']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['ADX', 'DMI+', 'DMI-', 'ADX14', 'DMI+14', 'DMI-14', 'trend_reading']]        
         ######################
         history_all_df['MACD_macd'], history_all_df['MACD_signal'], history_all_df['MACD_histogram'] = momentum_indicator().MACD(close_price=history_all_df['Close'], fast_period=12, slow_period=26, signal_period=9)
         history_df[['MACD_macd','MACD_signal','MACD_histogram']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['MACD_macd','MACD_signal','MACD_histogram']]
