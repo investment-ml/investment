@@ -47,7 +47,7 @@ tickers_problematic = ['ACEVW','ACKIW','ADERW','ADILW','ADNWW','ADOCR','ADOCW','
                        'WFC-O','WFC-X','WFC-Y','WFC-Z','WFC-A','YCBD-A','WFC-N','YSACW','ZGYHR','ZGYHW','AGO-B','AGO-E','AHACW','AHH-A','AHL-D','AHL-C','AHL-E','WBS-F','WCC-A','AGO-F','AHT-D','AIRTW','ALACW','AKICW','VTAQR','VTAQW','ATNFW','VACQW','VCKAW','VERBW','VRMEW',
                        'VOSOW','ASLEW','ASAXW','ARVLW','ARTLW','AMHCW','VHAQ^','UKOMW','TZPSW','TWCTW','TLMDW','THWWW','THMAW','THCBW','THCAW','THBRW','TDACW','TBCPW','SYTAW','SWETW','BTRSW','BTAQW','BRPAW','BROGW','BRLIW','BRLIR','BREZW','BREZR','BNGOW','BLUWW','BLTSW',
                        'BIOTW','BHSEW','BFIIW','BEEMW','BCYPW','BCTXW','BCDAW','ANDAR','ANDAW','APOPW','APPHW','APXTW','ARBGW','ARKOW','AUUDW','AVCTW','BLNKW','BWACW','CAHCW','CAPAW','VMACW','VKTXW','VINCW','VIIAW','VIHAW','VIEWW','USWSW','TRITW','TMTSW','TMPMW','TMKRW',
-                       'SVSVW','CHEKZ','CLRBZ','SHIPZ','DHCNL','SFB','PAVMZ']
+                       'SVSVW','CHEKZ','CLRBZ','SHIPZ','DHCNL','SFB','PAVMZ','EVOJ']
 tradable_tickers = []
 
 ###########################################################################################

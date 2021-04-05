@@ -1286,7 +1286,9 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("ADX14, DMI+14, DMI-14")
                 self._UI.index_canvas_options.addItem("ADX14")
                 self._UI.index_canvas_options.addItem("ADX, DMI+, DMI- (smoothed)")
-                self.index_options_selection_index = 5                
+                self._UI.index_canvas_options.addItem("ADX, DMI+, DMI- (smoothed x2)")
+                self._UI.index_canvas_options.addItem("DMI+, DMI- (smoothed x2)")
+                self.index_options_selection_index = 6                
 
             self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index) 
             self._calc_index()
@@ -1541,6 +1543,27 @@ class UI_control(object):
                 adx_csaps, adx_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=adx, smooth=adx_smooth)
                 plus_csaps, plus_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=plus, smooth=plus_smooth)
                 minus_csaps, minus_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=minus, smooth=minus_smooth)
+            elif self.index_options_selection_index == 6:
+                adx = self.ticker_data_dict_in_effect['history']['ADX']
+                plus = self.ticker_data_dict_in_effect['history']['DMI+']
+                minus = self.ticker_data_dict_in_effect['history']['DMI-']
+                adx_smooth = plus_smooth = minus_smooth = 0.90
+                adx_smooth2 = plus_smooth2 = minus_smooth2 = 0.10
+                adx_csaps, adx_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=adx, smooth=adx_smooth)
+                plus_csaps, plus_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=plus, smooth=plus_smooth)
+                minus_csaps, minus_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=minus, smooth=minus_smooth)
+                adx_csaps2, adx_smooth2 = Cubic_Spline_Approximation_Smoothing(x=x, y=adx_csaps, smooth=adx_smooth2)
+                plus_csaps2, plus_smooth2 = Cubic_Spline_Approximation_Smoothing(x=x, y=plus_csaps, smooth=plus_smooth2)
+                minus_csaps2, minus_smooth2 = Cubic_Spline_Approximation_Smoothing(x=x, y=minus_csaps, smooth=minus_smooth2)
+            elif self.index_options_selection_index == 7:
+                plus = self.ticker_data_dict_in_effect['history']['DMI+']
+                minus = self.ticker_data_dict_in_effect['history']['DMI-']
+                plus_smooth = minus_smooth = 0.90
+                plus_smooth2 = minus_smooth2 = 0.10
+                plus_csaps, plus_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=plus, smooth=plus_smooth)
+                minus_csaps, minus_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=minus, smooth=minus_smooth)
+                plus_csaps2, plus_smooth2 = Cubic_Spline_Approximation_Smoothing(x=x, y=plus_csaps, smooth=plus_smooth2)
+                minus_csaps2, minus_smooth2 = Cubic_Spline_Approximation_Smoothing(x=x, y=minus_csaps, smooth=minus_smooth2)
             else:
                 raise RuntimeError('Error')
             #
@@ -1554,6 +1577,15 @@ class UI_control(object):
             elif self.index_options_selection_index == 5:
                 the_max = max(adx_csaps.max(), plus_csaps.max(), minus_csaps.max())
                 the_min = min(adx_csaps.min(), plus_csaps.min(), minus_csaps.min())
+            elif self.index_options_selection_index == 6:
+                the_max = max(adx_csaps2.max(), plus_csaps2.max(), minus_csaps2.max())
+                the_min = min(adx_csaps2.min(), plus_csaps2.min(), minus_csaps2.min())
+            elif self.index_options_selection_index == 7:
+                the_max = max(plus_csaps2.max(), minus_csaps2.max())
+                the_min = min(plus_csaps2.min(), minus_csaps2.min())
+            else:
+                raise RuntimeError('Undefined')
+            #
             canvas.axes.set_ylim(0, 60 if the_max <= 50 else min(the_max + the_min, 100))
             #
             n_ticks = len(x)
@@ -1580,7 +1612,8 @@ class UI_control(object):
                 elif self.index_options_selection_index == 3:
                     canvas.axes.legend([adx_line, plus_line, minus_line,], ['ADX14', 'DMI+14', 'DMI-14',])
                 else:
-                    raise RuntimeError('Error')    
+                    raise RuntimeError('Error')
+                y_data = adx.values    
             elif self.index_options_selection_index in [2, 4]:
                 canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
                 canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
@@ -1595,6 +1628,7 @@ class UI_control(object):
                     canvas.axes.legend([adx_line,], ['ADX14',])
                 else:
                     raise RuntimeError('Error')
+                y_data = adx.values
             elif self.index_options_selection_index == 5:
                 canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
                 canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
@@ -1604,6 +1638,26 @@ class UI_control(object):
                 minus_csaps_line, = canvas.axes.plot(x, minus_csaps, color='orangered', linewidth=2)
                 adx_csaps_line,   = canvas.axes.plot(x, adx_csaps,   color='royalblue', linewidth=2)
                 canvas.axes.legend([adx_csaps_line, plus_csaps_line, minus_csaps_line,], [f"ADX (smooth={adx_smooth:.2f})", f"DMI+ (smooth={plus_smooth:.2f})", f"DMI- (smooth={minus_smooth:.2f})",])
+                y_data = adx_csaps
+            elif self.index_options_selection_index == 6:
+                canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_strong_trend,      '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_very_strong_trend, '--', color='black', linewidth=2)
+                plus_csaps2_line,  = canvas.axes.plot(x, plus_csaps2,  color='limegreen', linewidth=2)
+                minus_csaps2_line, = canvas.axes.plot(x, minus_csaps2, color='orangered', linewidth=2)
+                adx_csaps2_line,   = canvas.axes.plot(x, adx_csaps2,   color='royalblue', linewidth=2)
+                canvas.axes.legend([adx_csaps2_line, plus_csaps2_line, minus_csaps2_line,], [f"ADX (smooth1, 2={adx_smooth:.2f}, {adx_smooth2:.2f})", f"DMI+ (smooth1, 2={plus_smooth:.2f}, {plus_smooth2:.2f})", f"DMI- (smooth1, 2={minus_smooth:.2f}, {minus_smooth2:.2f})",])
+                y_data = adx_csaps2
+            elif self.index_options_selection_index == 7:
+                canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_strong_trend,      '--', color='black', linewidth=2)
+                canvas.axes.plot(x, y_very_strong_trend, '--', color='black', linewidth=2)
+                plus_csaps2_line,  = canvas.axes.plot(x, plus_csaps2,  color='limegreen', linewidth=2)
+                minus_csaps2_line, = canvas.axes.plot(x, minus_csaps2, color='orangered', linewidth=2)
+                canvas.axes.legend([plus_csaps2_line, minus_csaps2_line,], [f"DMI+ (smooth1, 2={plus_smooth:.2f}, {plus_smooth2:.2f})", f"DMI- (smooth1, 2={minus_smooth:.2f}, {minus_smooth2:.2f})",])
+                y_data = plus_csaps2
             else:
                 raise RuntimeError('Error')
             #
@@ -1611,7 +1665,6 @@ class UI_control(object):
             index_plotline = None
             actual_x_data = dates
             x_index = x
-            y_data = adx.values
 
         elif self._index_selected == 'RSI':
             # to skip non-existent dates on the plot
@@ -1876,7 +1929,7 @@ class UI_control(object):
         history_df['RSI14'] = history_all_df[history_all_df['Date'].isin(history_df['Date'])]['RSI14']
         ######################
         history_all_df['ADX'], history_all_df['DMI+'], history_all_df['DMI-'], history_all_df['ADX14'], history_all_df['DMI+14'], history_all_df['DMI-14'], history_all_df['trend_reading'] = trend_indicator().ADX(high_price=history_all_df['High'], low_price=history_all_df['Low'], close_price=history_all_df['Close'])
-        history_df[['ADX', 'DMI+', 'DMI-', 'ADX14', 'DMI+14', 'DMI-14', 'trend_reading']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['ADX', 'DMI+', 'DMI-', 'ADX14', 'DMI+14', 'DMI-14', 'trend_reading']]        
+        history_df[['ADX', 'DMI+', 'DMI-', 'ADX14', 'DMI+14', 'DMI-14', 'trend_reading']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['ADX', 'DMI+', 'DMI-', 'ADX14', 'DMI+14', 'DMI-14', 'trend_reading']].fillna(method='backfill')      
         ######################
         history_all_df['MACD_macd'], history_all_df['MACD_signal'], history_all_df['MACD_histogram'] = momentum_indicator().MACD(close_price=history_all_df['Close'], fast_period=12, slow_period=26, signal_period=9)
         history_df[['MACD_macd','MACD_signal','MACD_histogram']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['MACD_macd','MACD_signal','MACD_histogram']]
