@@ -1380,3 +1380,21 @@ class Ticker(object):
     def curr_trend_reading(self):
         adx, plus, minus, adx14, plus14, minus14, trend_reading = self.ADX
         return trend_reading[-1]
+
+    @property
+    def curr_trend_slope(self):
+        from ..math_and_stats import Cubic_Spline_Approximation_Smoothing
+        adx, plus, minus, adx14, plus14, minus14, trend_reading = self.ADX
+        adx = adx[1:]
+        # spline smoothed
+        x = np.arange(len(adx))
+        adx_smooth = 0.90
+        adx_csaps, adx_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=adx, smooth=adx_smooth)
+        #
+        if adx_csaps[-1] > adx_csaps[-2]:
+            adx_slope = 'inc.' # increasing
+        elif adx_csaps[-1] == adx_csaps[-2]:
+            adx_slope = 'unc.' # unchanged
+        else:
+            adx_slope = 'dec.' # decreasing
+        return adx_slope
