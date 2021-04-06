@@ -1265,7 +1265,7 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("Heat")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'A/D':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Accumulation/Distribution indicator.<br/><br/>It is a <a href='https://en.wikipedia.org/wiki/Accumulation/distribution_index'>leading</a> indicator of price movements, which gauges supply and demand.<br/><br/><a href='https://www.investopedia.com/terms/a/accumulationdistribution.asp'>https://www.investopedia.com/terms/a/accumulationdistribution.asp</a>; <a href='https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/accumulation-distribution'>https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/accumulation-distribution</a><br/><br/>Rising (or falling) A/D means high (or low) underlying <b>demand</b> (strength), while the price level is the <b>supply</b>.<br/><br/>Thus, if rising price but falling A/D, it signals a potential decline is upcoming. Conversely, if falling price but rising A/D, it signals a reversal is upcoming.<br/><br/>If the movement of price and A/D are in the same direction, further uptrend or downtrend is likely.</body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Accumulation/Distribution indicator.<br/><br/>Accumulation = Buy at a bargain/discount; Distribution = Sell at a profit.<br/><br/>It is a <a href='https://en.wikipedia.org/wiki/Accumulation/distribution_index'>leading</a> indicator of price movements, which gauges supply and demand.<br/><br/><a href='https://www.investopedia.com/terms/a/accumulationdistribution.asp'>https://www.investopedia.com/terms/a/accumulationdistribution.asp</a>; <a href='https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/accumulation-distribution'>https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/accumulation-distribution</a><br/><br/>Rising (or falling) A/D means high (or low) underlying <b>demand</b> (strength), while the price level is the <b>supply</b>.<br/><br/>Thus, if rising price but falling A/D, it signals a potential decline is upcoming. Conversely, if falling price but rising A/D, it signals a reversal is upcoming.<br/><br/>If the movement of price and A/D are in the same direction, further uptrend or downtrend is likely.</body>")
                 self._UI.index_canvas_options.addItem("A/D (raw-score)")
                 self._UI.index_canvas_options.addItem("A/D (Z-score)")
                 self.index_options_selection_index = 2
@@ -1280,7 +1280,7 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("Bollinger Band (Long term)")
                 self.index_options_selection_index = 2
             elif self._index_selected == 'ADX':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><a href='https://en.wikipedia.org/wiki/Average_directional_movement_index'>Average Directional Index</a>-14 is a <b>lagging</b> indicator of <b>the trend strength</b>, while the raw (unsmoothed) version is not lagging.<br/><br/>When <b><span style='color:green;'>DMI+</span></b> (Positive <a href='https://www.investopedia.com/terms/d/dmi.asp'>Directional Movement Indicator</a>) is above <b><span style='color:red;'>DMI-</span></b> (Negative Directional Movement Indicator), there is more <b>upward pressure</b> than <b>downward pressure</b> on the price; when DMI- is above DMI+, there is more downward pressure than upward pressure on the price.<br/><br/>- <b><span style='color:green;'>DMI+</span></b> indicates <b>upward pressure</b> on price;<br/>- <b><span style='color:red;'>DMI-</span></b> indicates <b>downward pressure</b> on price;<br/>- The spread between DMI+ and DMI- is the trend strength.<br/><br/>When <b><span style='color:blue;'>ADX</span></b>:<br/>- below 10, extremely weak trend;<br/>- between 10 and 20, weak trend;<br/>- crossing above 20, emerging trend;<br/>- between 20 and 40, further confirmation of an emerging trend;<br/>- crossing above 40, emerging strong trend;<br/>- between 40 and 50, strong trend;<br>- above 50, extremely strong trend.</body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><a href='https://en.wikipedia.org/wiki/Average_directional_movement_index'>Average Directional Index</a>-14 is a <b>lagging</b> indicator of <b>the trend strength</b>, while the raw (unsmoothed) version is not lagging.<br/><br/>When <b><span style='color:green;'>DMI+</span></b> (Positive <a href='https://www.investopedia.com/terms/d/dmi.asp'>Directional Movement Indicator</a>) is above <b><span style='color:red;'>DMI-</span></b> (Negative Directional Movement Indicator), there is more <b>upward pressure</b> than <b>downward pressure</b> on the price; when DMI- is above DMI+, there is more downward pressure than upward pressure on the price.<br/><br/>- <b><span style='color:green;'>DMI+</span></b> indicates <b>upward pressure</b> on price;<br/>- <b><span style='color:red;'>DMI-</span></b> indicates <b>downward pressure</b> on price;<br/>- The spread between DMI+ and DMI- is the trend strength.<br/><br/>When <b><span style='color:blue;'>ADX</span></b>:<br/>- below 10, extremely weak trend;<br/>- between 10 and 20, weak trend;<br/>- crossing above 20, emerging trend;<br/>- between 20 and 40, further confirmation of an emerging trend;<br/>- crossing above 40, emerging strong trend;<br/>- between 40 and 50, strong trend;<br>- above 50, extremely strong trend.<br/><br/>When <b><span style='color:green;'>DMI+</span></b>, <b><span style='color:red;'>DMI-</span></b>:<br/>- between 0 and 20, weak trend;<br/>- between 20 and 40, strong trend;<br/>- above 40, very strong trend.</body>")
                 self._UI.index_canvas_options.addItem("ADX, DMI+, DMI-")
                 self._UI.index_canvas_options.addItem("ADX")
                 self._UI.index_canvas_options.addItem("ADX14, DMI+14, DMI-14")
@@ -1288,7 +1288,10 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("ADX, DMI+, DMI- (smoothed)")
                 self._UI.index_canvas_options.addItem("ADX, DMI+, DMI- (smoothed x2)")
                 self._UI.index_canvas_options.addItem("DMI+, DMI- (smoothed x2)")
-                self.index_options_selection_index = 6                
+                if self.default_indicator is None:
+                    self.index_options_selection_index = 3
+                else:
+                    self.index_options_selection_index = 7                
 
             self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index) 
             self._calc_index()
@@ -1586,24 +1589,32 @@ class UI_control(object):
             else:
                 raise RuntimeError('Undefined')
             #
-            canvas.axes.set_ylim(0, 60 if the_max <= 50 else min(the_max + the_min, 100))
+            if the_min < 0:
+                the_min = 0
+            canvas.axes.set_ylim(0, 60 if the_max <= 50 else min(the_max + the_min + 1, 100))
             #
             n_ticks = len(x)
             y_very_weak_trend   = np.empty(n_ticks); y_very_weak_trend.fill(10)
             y_weak_trend        = np.empty(n_ticks); y_weak_trend.fill(20)
+            y_moderate_trend    = np.empty(n_ticks); y_moderate_trend.fill(30)
             y_strong_trend      = np.empty(n_ticks); y_strong_trend.fill(40)
             y_very_strong_trend = np.empty(n_ticks); y_very_strong_trend.fill(50)
             #
-            for g in range(100):
-                canvas.axes.fill_between(x, g, g+1, color='gold', edgecolor=None, alpha=min(g/100, 1), interpolate=False)
+            for g in range(0,20): # weak
+                canvas.axes.fill_between(x, g, g+1, color='turquoise', edgecolor=None, alpha=min(g/100, 1), interpolate=False)
+            for g in range(20,40): # strong
+                canvas.axes.fill_between(x, g, g+1, color='gold',      edgecolor=None, alpha=min(g/100, 1), interpolate=False)
+            for g in range(40,100): # very strong
+                canvas.axes.fill_between(x, g, g+1, color='violet',    edgecolor=None, alpha=min(g/100, 1), interpolate=False)            
             #
             canvas.axes.grid(True, color='silver', linewidth=0.5)
+            canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
+            canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
+            canvas.axes.plot(x, y_moderate_trend,    '--', color='black', linewidth=2)
+            canvas.axes.plot(x, y_strong_trend,      '--', color='black', linewidth=2)
+            canvas.axes.plot(x, y_very_strong_trend, '--', color='black', linewidth=2)
             #
             if self.index_options_selection_index in [1, 3]:
-                canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_strong_trend,      '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_very_strong_trend, '--', color='black', linewidth=2)
                 plus_line,  = canvas.axes.plot(x, plus,  color='limegreen', linewidth=2)
                 minus_line, = canvas.axes.plot(x, minus, color='orangered', linewidth=2)
                 adx_line,   = canvas.axes.plot(x, adx,   color='royalblue', linewidth=2)
@@ -1615,10 +1626,6 @@ class UI_control(object):
                     raise RuntimeError('Error')
                 y_data = adx.values    
             elif self.index_options_selection_index in [2, 4]:
-                canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_strong_trend,      '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_very_strong_trend, '--', color='black', linewidth=2)
                 adx_line,   = canvas.axes.plot(x, adx, color='royalblue', linewidth=2)
                 if self.index_options_selection_index == 2:
                     adx_lowess_line, = canvas.axes.plot(x, adx_lowess, color='lightcoral', linewidth=2)
@@ -1630,30 +1637,18 @@ class UI_control(object):
                     raise RuntimeError('Error')
                 y_data = adx.values
             elif self.index_options_selection_index == 5:
-                canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_strong_trend,      '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_very_strong_trend, '--', color='black', linewidth=2)
                 plus_csaps_line,  = canvas.axes.plot(x, plus_csaps,  color='limegreen', linewidth=2)
                 minus_csaps_line, = canvas.axes.plot(x, minus_csaps, color='orangered', linewidth=2)
                 adx_csaps_line,   = canvas.axes.plot(x, adx_csaps,   color='royalblue', linewidth=2)
                 canvas.axes.legend([adx_csaps_line, plus_csaps_line, minus_csaps_line,], [f"ADX (smooth={adx_smooth:.2f})", f"DMI+ (smooth={plus_smooth:.2f})", f"DMI- (smooth={minus_smooth:.2f})",])
                 y_data = adx_csaps
             elif self.index_options_selection_index == 6:
-                canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_strong_trend,      '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_very_strong_trend, '--', color='black', linewidth=2)
                 plus_csaps2_line,  = canvas.axes.plot(x, plus_csaps2,  color='limegreen', linewidth=2)
                 minus_csaps2_line, = canvas.axes.plot(x, minus_csaps2, color='orangered', linewidth=2)
                 adx_csaps2_line,   = canvas.axes.plot(x, adx_csaps2,   color='royalblue', linewidth=2)
                 canvas.axes.legend([adx_csaps2_line, plus_csaps2_line, minus_csaps2_line,], [f"ADX (smooth1, 2={adx_smooth:.2f}, {adx_smooth2:.2f})", f"DMI+ (smooth1, 2={plus_smooth:.2f}, {plus_smooth2:.2f})", f"DMI- (smooth1, 2={minus_smooth:.2f}, {minus_smooth2:.2f})",])
                 y_data = adx_csaps2
             elif self.index_options_selection_index == 7:
-                canvas.axes.plot(x, y_very_weak_trend,   '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_weak_trend,        '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_strong_trend,      '--', color='black', linewidth=2)
-                canvas.axes.plot(x, y_very_strong_trend, '--', color='black', linewidth=2)
                 plus_csaps2_line,  = canvas.axes.plot(x, plus_csaps2,  color='limegreen', linewidth=2)
                 minus_csaps2_line, = canvas.axes.plot(x, minus_csaps2, color='orangered', linewidth=2)
                 canvas.axes.legend([plus_csaps2_line, minus_csaps2_line,], [f"DMI+ (smooth1, 2={plus_smooth:.2f}, {plus_smooth2:.2f})", f"DMI- (smooth1, 2={minus_smooth:.2f}, {minus_smooth2:.2f})",])

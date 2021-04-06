@@ -57,7 +57,8 @@ class trend_indicator(object):
             close_price = close_price.to_numpy()
         n_periods = close_price.shape[0]
         if n_periods <= 1:
-            raise ValueError(f"n_periods cannot be <= 1")
+            #raise ValueError(f"n_periods cannot be <= 1")
+            return [None,], [None,], [None,], [None,], [None,], [None,], [None,]
         if (high_price.shape[0] != low_price.shape[0]) or (high_price.shape[0] != close_price.shape[0]) or (low_price.shape[0] != close_price.shape[0]):
             raise RuntimeError(f"The lengths of high_price [{high_price.shape[0]}], low_price [{low_price.shape[0]}], close_price [{close_price.shape[0]}] are different")
         higher_highs = list(np.diff(high_price))
@@ -177,6 +178,8 @@ class momentum_indicator(object):
                 RSI[i] = 100
             elif up[i] == 0:
                 RSI[i] = 0
+            elif (up[i] is None) or (down[i] is None):
+                RSI[i] = None
             else:
                 RSI[i] = 100 - 100/(1+up[i]/down[i])
         return RSI
@@ -203,15 +206,19 @@ class momentum_indicator(object):
         positive_money_flow = np.zeros(shape=n_periods, dtype=float)
         negative_money_flow = np.zeros(shape=n_periods, dtype=float)
         MFI = np.zeros(shape=n_periods, dtype=float) # https://en.wikipedia.org/wiki/Money_flow_index
-        for today_idx in range(periods):
-            MFI[today_idx] = None
-        for today_idx in range(periods, n_periods):
-            for idx in range(periods):
-                if typical_price[today_idx-idx] > typical_price[today_idx-idx-1]:
-                    positive_money_flow[today_idx] += money_flow[today_idx-idx]
-                elif typical_price[today_idx-idx] < typical_price[today_idx-idx-1]:
-                    negative_money_flow[today_idx] += money_flow[today_idx-idx]
-            MFI[today_idx] = 100 * positive_money_flow[today_idx] / (positive_money_flow[today_idx]+negative_money_flow[today_idx])
+        if n_periods > periods:
+            for today_idx in range(periods):
+                MFI[today_idx] = None
+            for today_idx in range(periods, n_periods):
+                for idx in range(periods):
+                    if typical_price[today_idx-idx] > typical_price[today_idx-idx-1]:
+                        positive_money_flow[today_idx] += money_flow[today_idx-idx]
+                    elif typical_price[today_idx-idx] < typical_price[today_idx-idx-1]:
+                        negative_money_flow[today_idx] += money_flow[today_idx-idx]
+                MFI[today_idx] = 100 * positive_money_flow[today_idx] / (positive_money_flow[today_idx]+negative_money_flow[today_idx])
+        else:
+            for today_idx in range(n_periods):
+                MFI[today_idx] = None
         return MFI
         
     def MACD(self, close_price: np.ndarray, fast_period: int = 12, slow_period: int = 26, signal_period: int = 9):
@@ -291,7 +298,7 @@ class volume_indicator(object):
         else:
             ad[0] = ((close_price[0] - low_price[0]) - (high_price[0] - close_price[0])) / (high_price[0] - low_price[0]) * volume[0] # CMFV: Current money flow volume
         for today_idx in range(1, n_periods):
-            if low_price[today_idx] == high_price[today_idx]:
+            if high_price[today_idx] == low_price[today_idx]:
                 CMFV = 0
             else:
                 CMFV = ((close_price[today_idx] - low_price[today_idx]) - (high_price[today_idx] - close_price[today_idx])) / (high_price[today_idx] - low_price[today_idx]) * volume[today_idx]

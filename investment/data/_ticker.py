@@ -41,13 +41,14 @@ tickers_with_no_PT = ['^NDX','^GSPC','000001.SS','399001.SZ','NQ=F','YM=F','GC=F
 tickers_likely_delisted = ['AAC+','AAC=','AAQC=','ACIC+','ACII=','ALMDG','AKE','ADYEN','ACND+','ACND=','ACR-C','ADEX+','ADEX=','ADF=','ADRA=','AMTD','BEZQ','BATM','SERV','TCO','WPX','PLSN','PE','OERL','BIMCM','BSEN','CTL','NBL','MYL','EIDX','PIH','PRCP','DRAD','CXO',
                            'MLTM','EMCO','DNKN','LVGO','LOGM','FTAL','ETFC','GLIBA','HAML','LM','KSPI','HEXAB','HDS','IMMU','WMGI','VSLR','WRTC','SBBX','TERP','TRWH','RUBI','RTRX','RST','RESI','PUB','PTLA','PRSC','PRNB','RTIX','POL','PFNX','PDLI','AMAG','AKCA','AIMT',
                            'ADSW','ADRO','CETV','CATS','BSTC','BREW','BMCH','BFYT','BBX','CVTI','DBCP','EE','ERI','EROS','FIT','NGHC','AMRH','AAXN','ACAM','TZAC','TOTA','SMMC','SAMA','ARA','CFBI','PRVL','PTAC','PTI','PECK','PEIX','NVUS','OPES','FBM','FRAN','NOVS','MYOK',
-                           'MR','FSB','FSCT','GCAP','GEC','GHIV','GPOR','GRIF','GSB','HCAC','MNK','MNCL','MJCO','MINI','MGEN','MNTA','MNLO','HTZ','HUD','HYAC','IBKC','SQM^','CELG^','MEET','MCEP','LSAC','INTL','LFAC','LCA','IRET','JCAP','KTOV','RCLF','ENNV','ESSCR']
+                           'MR','FSB','FSCT','GCAP','GEC','GHIV','GPOR','GRIF','GSB','HCAC','MNK','MNCL','MJCO','MINI','MGEN','MNTA','MNLO','HTZ','HUD','HYAC','IBKC','SQM^','CELG^','MEET','MCEP','LSAC','INTL','LFAC','LCA','IRET','JCAP','KTOV','RCLF','ENNV','ESSCR','BITE',
+                           'BOAS']
 tickers_problematic = ['ACEVW','ACKIW','ADERW','ADILW','ADNWW','ADOCR','ADOCW','ADVWW','AEACW','TIF','STMN','INCR','DANE','ABNB','THCB','MACU','APRZ','ACVF','XTAP','XDSQ','XDQQ','XDAP','XBAP','TWIO','PSFM','PSCW','PSMR','QTAP','ZWRKW','ZWRK','AGAC=','AGAC+','AGBAW',
                        'WPCB=','WPF+','WPF=','WPG-H','WPG-I','WRB-D','WRB-E','WRB-F','WRB-G','WRB-H','AEVA+','ADRA+','AACQW','AAIC-B','AAIC-C','ABR-A','ABR-B','ABR-C','ACAC','ACACW','AEL-A','AEL-B','AGBAR','AGM-D','AGM-C','AGM-F','AGM-E','WFC-R','WFC-Q','WFC-C','WFC-L',
                        'WFC-O','WFC-X','WFC-Y','WFC-Z','WFC-A','YCBD-A','WFC-N','YSACW','ZGYHR','ZGYHW','AGO-B','AGO-E','AHACW','AHH-A','AHL-D','AHL-C','AHL-E','WBS-F','WCC-A','AGO-F','AHT-D','AIRTW','ALACW','AKICW','VTAQR','VTAQW','ATNFW','VACQW','VCKAW','VERBW','VRMEW',
                        'VOSOW','ASLEW','ASAXW','ARVLW','ARTLW','AMHCW','VHAQ^','UKOMW','TZPSW','TWCTW','TLMDW','THWWW','THMAW','THCBW','THCAW','THBRW','TDACW','TBCPW','SYTAW','SWETW','BTRSW','BTAQW','BRPAW','BROGW','BRLIW','BRLIR','BREZW','BREZR','BNGOW','BLUWW','BLTSW',
                        'BIOTW','BHSEW','BFIIW','BEEMW','BCYPW','BCTXW','BCDAW','ANDAR','ANDAW','APOPW','APPHW','APXTW','ARBGW','ARKOW','AUUDW','AVCTW','BLNKW','BWACW','CAHCW','CAPAW','VMACW','VKTXW','VINCW','VIIAW','VIHAW','VIEWW','USWSW','TRITW','TMTSW','TMPMW','TMKRW',
-                       'SVSVW','CHEKZ','CLRBZ','SHIPZ','DHCNL','SFB','PAVMZ','EVOJ']
+                       'SVSVW','CHEKZ','CLRBZ','SHIPZ','DHCNL','SFB','PAVMZ','EVOJ','GIG','GECCL','GBLIL','MCADR','GRNVR','HYMCZ','APGB','XPDI','CVII','CCVI','CHAA','FOA','IACB','LGAC','MSAC','TSIB','CTOS','SCLE','SCOB','SLAC','TCAC']
 tradable_tickers = []
 
 ###########################################################################################
@@ -1085,13 +1086,15 @@ class Ticker(object):
         low_to_high_max_pct = high_to_low_max_pct = 0
         for this_date in history_df['Date'].tolist():
             #
-            this_date_high = float(history_df[history_df['Date'] == this_date]['High'])
+            this_date_high_value = history_df[history_df['Date'] == this_date]['High']
+            this_date_high = float(this_date_high_value)
             subsequent_lowest = float(history_df[history_df['Date'] >= this_date]['Low'].min())
             high_to_low_pct = 100 * (subsequent_lowest - this_date_high) / this_date_high
             if high_to_low_pct < high_to_low_max_pct:
                 high_to_low_max_pct = high_to_low_pct
             #
-            this_date_low = float(history_df[history_df['Date'] == this_date]['Low'])
+            this_date_low_value = history_df[history_df['Date'] == this_date]['Low']
+            this_date_low = float(this_date_low_value)
             subsequent_highest = float(history_df[history_df['Date'] >= this_date]['High'].max())
             low_to_high_pct = 100 * (subsequent_highest - this_date_low) / this_date_low
             if low_to_high_pct > low_to_high_max_pct:
