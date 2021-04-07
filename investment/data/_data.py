@@ -437,10 +437,10 @@ def get_ticker_data_dict(ticker: str = None,
             new_last_date = datetime.strptime(new_last_date_str, "%Y-%m-%d").date()
 
             # making sure the new df always has a wider date coverage
-            if (curr_df.shape[0] - new_df.shape[0]) > 10:
+            if (curr_df.shape[0] - new_df.shape[0]) > 300:
                 #raise ValueError(f"for ticker [{ticker}], the redownloaded df has fewer rows than the current one")
                 print(f"ticker: [{ticker}]")
-                print(f"*** The redownloaded df's rows [n={new_df.shape[0]}] are so much fewer (#<10) than that of the current one [n={curr_df.shape[0]}] --> the current one will be used instead")
+                print(f"*** The redownloaded df's rows [n={new_df.shape[0]}] are so much fewer (#<300) than that of the current one [n={curr_df.shape[0]}] --> the current one will be used instead")
             elif (curr_first_date - new_first_date) < timedelta(days=0):
                 #raise ValueError(f"for ticker [{ticker}], the redownloaded df has a more recent start date: {new_first_date_str}, compared to the current one: {curr_first_date_str}")
                 print(f"ticker: [{ticker}]")
@@ -564,6 +564,16 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
         else:
             short_info = f"\n\nShort percent of float: {this_ticker.short_interest_of_float*100:.2f}%"
 
+    # valuation
+    if (this_ticker.BVPS is not None) and (this_ticker.PB_ratio is not None):
+        PB_ratio_str = f"{this_ticker.PB_ratio:.2f}"
+    else:
+        PB_ratio_str = "[N/A]"
+    if use_html:
+        valuation_info1 = f"<br/><hr>Valuation info (1)<br/><br/>The Price-to-Book ratio measures the market's valuation of a company relative to its book value. The current P/B ratio, dividing the current price by the most-recent-quarter (MRQ) BVPS, is <b>{PB_ratio_str}</b>.<br/><br/>The Price-to-Sales ratio reflects how much the market values every dollar of the company's sales. It takes a company's market share price and divide it by the company's total sales (or revenue) per share over the past 12 months. The lower the P/S ratio, the more attractive the investment.<br/><br/>This ratio can be effective in <b>valuing growth stocks that have yet to turn a profit</b> or have suffered a temporary setback.<br/><br/>As of today, check out <a href='https://www.gurufocus.com/term/ps/{this_ticker.symbol}/PS%252BRatio/'>gurufocus.com</a> and <a href='https://finance.yahoo.com/quote/{this_ticker.symbol}/key-statistics'>Yahoo Finance Valuation Measures</a> for details."
+    else:
+        valuation_info1 = f"\n\nValuation info (1)\n\nThe Price-to-Book ratio measures the market's valuation of a company relative to its book value. The current P/B ratio is {PB_ratio_str}."
+
     # earnings
     if use_html:
         earnings_info = f"<br/><hr>Earnings info unavailable"
@@ -639,11 +649,17 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                 marketCap_info = f"${marketCap/1e9:.2f} billions"
             else:
                 marketCap_info = f"${marketCap/1e6:.2f} millions"
-            if use_html:
-                shares_info = f"<br/><hr>Total number of shares issued: {sharesOutstanding_info} (<b><span style=\"color:blue;\">{floatShares/sharesOutstanding*100:.2f}%</span></b> freely tradable, which largely determines liquidity, while the other {100-floatShares/sharesOutstanding*100:.2f}% are held by institutions and insiders), and marketCap is {marketCap_info}."
+            if sharesOutstanding != 0:
+                if use_html:
+                    shares_info = f"<br/><hr>Total number of shares issued: {sharesOutstanding_info} (<b><span style=\"color:blue;\">{floatShares/sharesOutstanding*100:.2f}%</span></b> freely tradable, which largely determines liquidity, while the other {100-floatShares/sharesOutstanding*100:.2f}% are held by institutions and insiders), and marketCap is {marketCap_info}."
+                else:
+                    shares_info = f"\n\nTotal number of shares issued: {sharesOutstanding_info} ({floatShares/sharesOutstanding*100:.2f}% freely tradable, which largely determines liquidity, while the other {100-floatShares/sharesOutstanding*100:.2f}% are held by institutions and insiders), and marketCap is {marketCap_info}."
             else:
-                shares_info = f"\n\nTotal number of shares issued: {sharesOutstanding_info} ({floatShares/sharesOutstanding*100:.2f}% freely tradable, which largely determines liquidity, while the other {100-floatShares/sharesOutstanding*100:.2f}% are held by institutions and insiders), and marketCap is {marketCap_info}."
-
+                if use_html:
+                    shares_info = f"<br/><hr>Total number of shares issued: {sharesOutstanding_info}, and marketCap is {marketCap_info}."
+                else:
+                    shares_info = f"\n\nTotal number of shares issued: {sharesOutstanding_info}, and marketCap is {marketCap_info}."
+            
     # profitability
     if use_html:
         profitability_info = f"<br/><hr>Profitability info unavailable"
@@ -660,16 +676,16 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
     # valuation analysis
     # https://www.investopedia.com/terms/m/multiple.asp
     if use_html:
-        valuation_info = f"<br/><hr>Valuation info unavailable"
+        valuation_info2 = f"<br/><hr>Valuation info (2) unavailable"
     else:
-        valuation_info = f"/n/nValuation info unavailable"
+        valuation_info2 = f"/n/nValuation info (2) unavailable"
     # method1: cash flow (intrinsic valuation)
     # method2: multiple of performance (relative valuation)
     if this_ticker.EV_to_EBITDA is not None:
         if use_html:
-            valuation_info = f"<br/><hr>Valuation info. How much to buy a company? The firm's total value to its EBITDA (earnings before interest, taxes, depreciation, and amortization): <b><span style=\"color:blue;\">{this_ticker.EV_to_EBITDA:.2f}</span></b> (tends to be between 11-14, while below 10 is considered healthy; the lower, the better)"
+            valuation_info2 = f"<br/><hr>Valuation info (2)<br/><br/>How much to buy a company? The firm's total value to its EBITDA (earnings before interest, taxes, depreciation, and amortization): <b><span style=\"color:blue;\">{this_ticker.EV_to_EBITDA:.2f}</span></b> (tends to be between 11-14, while below 10 is considered healthy; the lower, the better)"
         else:
-            valuation_info = f"\n\nValuation info. How much to buy a company? The firm's total value to its EBITDA (earnings before interest, taxes, depreciation, and amortization): {this_ticker.EV_to_EBITDA:.2f} (which tends to be between 11-14, while below 10 is considered healthy; the lower, the better)"
+            valuation_info2 = f"\n\nValuation info (2)\n\nHow much to buy a company? The firm's total value to its EBITDA (earnings before interest, taxes, depreciation, and amortization): {this_ticker.EV_to_EBITDA:.2f} (which tends to be between 11-14, while below 10 is considered healthy; the lower, the better)"
 
     # institutions
     if use_html:
@@ -839,9 +855,9 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
                         logo = f"\n\nLogo: {ticker_info['logo_url']}"
 
     if use_html:
-        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{short_info}{earnings_info}{company_to_company_comparison_info}{shares_info}{institutions_holding_info}{profitability_info}{valuation_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{price_target_info}{logo}</body>"  
+        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{short_info}{valuation_info1}{valuation_info2}{earnings_info}{company_to_company_comparison_info}{shares_info}{institutions_holding_info}{profitability_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{price_target_info}{logo}</body>"  
     else:
-        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{short_info}{earnings_info}{company_to_company_comparison_info}{shares_info}{institutions_holding_info}{profitability_info}{valuation_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{price_target_info}{logo}"  
+        formatted_str += f"{ticker_name}{stock_exchange_info}{sector_info}{short_info}{valuation_info1}{valuation_info2}{earnings_info}{company_to_company_comparison_info}{shares_info}{institutions_holding_info}{profitability_info}{dividends_info}{risk_info}{options_info}{recommendations_info}{long_business_summary}{price_target_info}{logo}"  
     
     return formatted_str
 

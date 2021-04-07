@@ -7,6 +7,7 @@
 import pandas as pd
 import numpy as np
 
+from ..math_and_stats import Cubic_Spline_Approximation_Smoothing
 
 class volatility_indicator(object):
     def __init__(self):
@@ -93,36 +94,55 @@ class trend_indicator(object):
         adx_smoothed = moving_average(periods = ADX_smoothing_len).rma(data_series = adx)
         plus_smoothed = moving_average(periods = ADX_smoothing_len).rma(data_series = plus)
         minus_smoothed = moving_average(periods = ADX_smoothing_len).rma(data_series = minus)
+        # spline smoothed
+        x = np.arange(len(adx))
+        adx_smooth = 0.90
+        adx_csaps, adx_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=adx, smooth=adx_smooth)
         #
-        trend_reading = [None] * (n_periods-1)
-        for idx in range(n_periods-1):
+        trend = [None] * (n_periods-1)
+        trend_short = [None] * (n_periods-1)
+        for idx in range(len(adx)):
+            adx_slope = ''
+            adx_slope_short = ''
+            trend_strength = ''
+            trend_strength_short = ''
+            trend_direction = ''
+            trend_direction_short = ''
+            #
+            if idx > 0:
+                if adx_csaps[idx] > adx_csaps[idx-1]:
+                    adx_slope = 'continued' # increasing
+                    adx_slope_short = 'c.'
+                elif adx_csaps[idx] == adx_csaps[idx-1]:
+                    adx_slope = 'unchanged' # unchanged
+                    adx_slope_short = 'u.'
+                else:
+                    adx_slope = 'faded' # decreasing
+                    adx_slope_short = 'f.'
+            #
+            if adx_csaps[idx] < 20:
+                trend_strength = 'weak'
+                trend_strength_short = 'w.'
+            elif 20 <= adx_csaps[idx] and adx_csaps[idx] <= 40:
+                trend_strength = 'moderate'
+                trend_strength_short = 'm.'
+            elif 40 < adx_csaps[idx]:
+                trend_strength = 'strong'
+                trend_strength_short = 's.'
+            #
             if plus[idx] > minus[idx]:
-                trend = 'uptrend'
+                trend_direction = 'uptrend'
+                trend_direction_short = 'up.'
             elif plus[idx] < minus[idx]:
-                trend = 'downtrend'
+                trend_direction = 'downtrend'
+                trend_direction_short = 'dn.'
             else:
-                trend = 'non-trend'
-            #
-            if adx[idx] < 10:
-                strength = 'extremely weak'
-            elif 10 <= adx[idx] and adx[idx] <= 19:
-                strength = 'weak'
-            elif 19 <  adx[idx] and adx[idx] <  21:
-                strength = 'emerging'
-            elif 21 <= adx[idx] and adx[idx] <= 39:
-                strength = 'confirmed'
-            elif 39 <  adx[idx] and adx[idx] <  41:
-                strength = 'emerging strong'
-            elif 41 <= adx[idx] and adx[idx] <= 50:
-                strength = 'confirmed strong'
-            elif 50 <  adx[idx]:
-                strength = 'extremely strong'
-            else:
-                strength = 'unknown strength'
-            #
-            trend_reading[idx] = f"{strength} {trend}"
+                trend_direction = 'nd-trend'
+                trend_direction_short = 'nt.'
+            trend[idx] = f"{adx_slope} {trend_strength} {trend_direction}"
+            trend_short[idx] = f"{adx_slope_short}{trend_strength_short}{trend_direction_short}"
         #
-        return [None] + list(adx), [None] + list(plus), [None] + list(minus), [None] + list(adx_smoothed), [None] + list(plus_smoothed), [None] + list(minus_smoothed), [None] + trend_reading
+        return [None] + list(adx), [None] + list(plus), [None] + list(minus), [None] + list(adx_smoothed), [None] + list(plus_smoothed), [None] + list(minus_smoothed), [None] + trend, [None] + trend_short
 
     """
     def trends(self, high_price: np.ndarray, low_price: np.ndarray, close_price: np.ndarray,):

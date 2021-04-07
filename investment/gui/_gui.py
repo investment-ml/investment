@@ -1280,7 +1280,7 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("Bollinger Band (Long term)")
                 self.index_options_selection_index = 2
             elif self._index_selected == 'ADX':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><a href='https://en.wikipedia.org/wiki/Average_directional_movement_index'>Average Directional Index</a>-14 is a <b>lagging</b> indicator of <b>the trend strength</b>, while the raw (unsmoothed) version is not lagging.<br/><br/>When <b><span style='color:green;'>DMI+</span></b> (Positive <a href='https://www.investopedia.com/terms/d/dmi.asp'>Directional Movement Indicator</a>) is above <b><span style='color:red;'>DMI-</span></b> (Negative Directional Movement Indicator), there is more <b>upward pressure</b> than <b>downward pressure</b> on the price; when DMI- is above DMI+, there is more downward pressure than upward pressure on the price.<br/><br/>- <b><span style='color:green;'>DMI+</span></b> indicates <b>upward pressure</b> on price;<br/>- <b><span style='color:red;'>DMI-</span></b> indicates <b>downward pressure</b> on price;<br/>- The spread between DMI+ and DMI- is the trend strength.<br/><br/>When <b><span style='color:blue;'>ADX</span></b>:<br/>- below 10, extremely weak trend;<br/>- between 10 and 20, weak trend;<br/>- crossing above 20, emerging trend;<br/>- between 20 and 40, confirmed trend;<br/>- crossing above 40, emerging strong trend;<br/>- between 40 and 50, confirmed strong trend;<br>- above 50, extremely strong trend.<br/><br/>When <b><span style='color:green;'>DMI+</span></b>, <b><span style='color:red;'>DMI-</span></b>:<br/>- between 0 and 20, weak trend;<br/>- between 20 and 40, strong trend;<br/>- above 40, very strong trend.</body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><a href='https://en.wikipedia.org/wiki/Average_directional_movement_index'>Average Directional Index</a>-14 is a <b>lagging</b> indicator of <b>the trend strength</b>, while the raw (unsmoothed) version is not lagging.<br/><br/>When <b><span style='color:green;'>DMI+</span></b> (Positive <a href='https://www.investopedia.com/terms/d/dmi.asp'>Directional Movement Indicator</a>) is above <b><span style='color:red;'>DMI-</span></b> (Negative Directional Movement Indicator), there is more <b>upward pressure</b> than <b>downward pressure</b> on the price; when DMI- is above DMI+, there is more downward pressure than upward pressure on the price.<br/><br/>- <b><span style='color:green;'>DMI+</span></b> indicates <b>upward pressure</b> on price;<br/>- <b><span style='color:red;'>DMI-</span></b> indicates <b>downward pressure</b> on price;<br/>- The spread between DMI+ and DMI- is the trend strength.<br/><br/>When <b><span style='color:blue;'>ADX</span></b>:<br/>- below 10, extremely weak trend;<br/>- between 10 and 20, weak trend;<br/>- crossing above 20, emerging trend;<br/>- between 20 and 40, confirmed trend;<br/>- crossing above 40, emerging strong trend;<br/>- between 40 and 50, confirmed strong trend;<br>- above 50, extremely strong trend.<br/><br/>When <b><span style='color:green;'>DMI+</span></b>, <b><span style='color:red;'>DMI-</span></b>:<br/>- between 0 and 20, weak trend;<br/>- between 20 and 40, moderate trend;<br/>- above 40, strong trend.</body>")
                 self._UI.index_canvas_options.addItem("ADX, DMI+, DMI-")
                 self._UI.index_canvas_options.addItem("ADX")
                 self._UI.index_canvas_options.addItem("ADX14, DMI+14, DMI-14")
@@ -1426,6 +1426,7 @@ class UI_control(object):
         formatter = DateFormatter(dates)
         canvas.axes.xaxis.set_major_formatter(formatter)
         x = np.arange(len(dates))
+        canvas.axes.grid(True, color='silver', linewidth=0.5)
         # volume bar
         volumes = self.ticker_data_dict_in_effect['history']['Volume'].values
         if volumes[0] is not None:
@@ -1450,9 +1451,9 @@ class UI_control(object):
         x_index = x
         y_data = self.ticker_data_dict_in_effect['history']['Close'].values
         #
-        trend_reading_values = self.ticker_data_dict_in_effect['history']['trend_reading'].values
+        trend_values = self.ticker_data_dict_in_effect['history']['trend'].values
         #################################################
-        self.ticker_canvas_cursor = SnappingCursor(plotline=ticker_plotline, actual_x_data=actual_x_data, x_index=x_index, y_data=y_data, ax=canvas.axes, useblit=True, color='black', linestyle='dashed', linewidth=1, name='ticker_canvas_cursor', UI=self._UI, supporting_info=trend_reading_values)
+        self.ticker_canvas_cursor = SnappingCursor(plotline=ticker_plotline, actual_x_data=actual_x_data, x_index=x_index, y_data=y_data, ax=canvas.axes, useblit=True, color='black', linestyle='dashed', linewidth=1, name='ticker_canvas_cursor', UI=self._UI, supporting_info=trend_values)
         canvas.mpl_connect('motion_notify_event',  self.ticker_canvas_cursor.onmove) # mpl = matplotlib
         #################################################
         canvas.mpl_connect('button_press_event',   canvas.button_pressed)
@@ -1923,8 +1924,8 @@ class UI_control(object):
         history_all_df['RSI14'] = momentum_indicator().RSI(close_price=history_all_df['Close'], RSI_periods=14)
         history_df['RSI14'] = history_all_df[history_all_df['Date'].isin(history_df['Date'])]['RSI14']
         ######################
-        history_all_df['ADX'], history_all_df['DMI+'], history_all_df['DMI-'], history_all_df['ADX14'], history_all_df['DMI+14'], history_all_df['DMI-14'], history_all_df['trend_reading'] = trend_indicator().ADX(high_price=history_all_df['High'], low_price=history_all_df['Low'], close_price=history_all_df['Close'])
-        history_df[['ADX', 'DMI+', 'DMI-', 'ADX14', 'DMI+14', 'DMI-14', 'trend_reading']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['ADX', 'DMI+', 'DMI-', 'ADX14', 'DMI+14', 'DMI-14', 'trend_reading']].fillna(method='backfill')      
+        history_all_df['ADX'], history_all_df['DMI+'], history_all_df['DMI-'], history_all_df['ADX14'], history_all_df['DMI+14'], history_all_df['DMI-14'], history_all_df['trend'], history_all_df['trend_short'] = trend_indicator().ADX(high_price=history_all_df['High'], low_price=history_all_df['Low'], close_price=history_all_df['Close'])
+        history_df[['ADX', 'DMI+', 'DMI-', 'ADX14', 'DMI+14', 'DMI-14', 'trend', 'trend_short']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['ADX', 'DMI+', 'DMI-', 'ADX14', 'DMI+14', 'DMI-14', 'trend', 'trend_short']].fillna(method='backfill')      
         ######################
         history_all_df['MACD_macd'], history_all_df['MACD_signal'], history_all_df['MACD_histogram'] = momentum_indicator().MACD(close_price=history_all_df['Close'], fast_period=12, slow_period=26, signal_period=9)
         history_df[['MACD_macd','MACD_signal','MACD_histogram']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['MACD_macd','MACD_signal','MACD_histogram']]

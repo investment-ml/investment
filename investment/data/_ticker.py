@@ -48,7 +48,8 @@ tickers_problematic = ['ACEVW','ACKIW','ADERW','ADILW','ADNWW','ADOCR','ADOCW','
                        'WFC-O','WFC-X','WFC-Y','WFC-Z','WFC-A','YCBD-A','WFC-N','YSACW','ZGYHR','ZGYHW','AGO-B','AGO-E','AHACW','AHH-A','AHL-D','AHL-C','AHL-E','WBS-F','WCC-A','AGO-F','AHT-D','AIRTW','ALACW','AKICW','VTAQR','VTAQW','ATNFW','VACQW','VCKAW','VERBW','VRMEW',
                        'VOSOW','ASLEW','ASAXW','ARVLW','ARTLW','AMHCW','VHAQ^','UKOMW','TZPSW','TWCTW','TLMDW','THWWW','THMAW','THCBW','THCAW','THBRW','TDACW','TBCPW','SYTAW','SWETW','BTRSW','BTAQW','BRPAW','BROGW','BRLIW','BRLIR','BREZW','BREZR','BNGOW','BLUWW','BLTSW',
                        'BIOTW','BHSEW','BFIIW','BEEMW','BCYPW','BCTXW','BCDAW','ANDAR','ANDAW','APOPW','APPHW','APXTW','ARBGW','ARKOW','AUUDW','AVCTW','BLNKW','BWACW','CAHCW','CAPAW','VMACW','VKTXW','VINCW','VIIAW','VIHAW','VIEWW','USWSW','TRITW','TMTSW','TMPMW','TMKRW',
-                       'SVSVW','CHEKZ','CLRBZ','SHIPZ','DHCNL','SFB','PAVMZ','EVOJ','GIG','GECCL','GBLIL','MCADR','GRNVR','HYMCZ','APGB','XPDI','CVII','CCVI','CHAA','FOA','IACB','LGAC','MSAC','TSIB','CTOS','SCLE','SCOB','SLAC','TCAC']
+                       'SVSVW','CHEKZ','CLRBZ','SHIPZ','DHCNL','SFB','PAVMZ','EVOJ','GIG','GECCL','GBLIL','MCADR','GRNVR','HYMCZ','APGB','XPDI','CVII','CCVI','CHAA','FOA','IACB','LGAC','MSAC','TSIB','CTOS','SCLE','SCOB','SLAC','TCAC','ABCL','AIN','RELV','OTTR','CHK',
+                       'AQB','ATMP','PYR','OTEL','WTS','NHLD','PICO']
 tradable_tickers = []
 
 ###########################################################################################
@@ -297,6 +298,8 @@ ticker_group_dict = {'All': [],
                      'Buffett Indicator': ['^W5000',],
                      'Major Market Indexes': ['^DJI','^NDX','^GSPC','^IXIC','^RUT','^VIX','DIA','SPLG','IVV','VOO','SPY','QQQ','ONEQ','IWM','VTWO','VXX'],
                      'Non-US World Market Indexes': ['^FTSE','^HSI','^N225','^GDAXI','^FCHI','^TWII','^TWDOWD','000001.SS','399001.SZ','^STOXX50E','^CASE30'],
+                     'The Stock Exchange of Hong Kong': ['9633.HK','0700.HK','9888.HK','9988.HK'],
+                     'World\'s Billionaires': ['AMZN','TSLA','LVMUY','MSFT','FB','BRK-B','ORCL','GOOGL','IDEXY','ITX.MC','LRLCF','LRLCY','OR.PA','MC.PA'],
                      'Futures': ['NQ=F','YM=F','ES=F','GC=F','CL=F'],
                      'DOW 30': ['^DJI', 'GS','WMT','MCD','CRM','DIS','NKE','CAT','TRV','VZ','JPM','IBM','HD','INTC','AAPL','MMM','MSFT','JNJ','CSCO','V','DOW','MRK','PG','AXP','KO','AMGN','HON','UNH','WBA','CVX','BA'],
                      'NASDAQ 100': ['^NDX', 'AAPL', 'ADBE', 'ADI', 'ADP', 'ADSK', 'ALGN', 'ALXN', 'AMAT', 'AMD', 'AMGN', 'AMZN', 'ANSS', 'ASML', 'ATVI', 'AVGO', 'BIDU', 'BIIB', 'BKNG', 'BMRN', 'CDNS', 'CDW', 'CERN', 'CHKP', 'CHTR', 'CMCSA', 'COST', 'CPRT', 'CSCO', 'CSX', 'CTAS', 'CTSH', 'CTXS', 'DLTR', 'DOCU', 'DXCM', 'EA', 'EBAY', 'EXC', 'EXPE', 'FAST', 'FB', 'FISV', 'FOX', 'FOXA', 'GILD', 'GOOG', 'GOOGL', 'IDXX', 'ILMN', 'INCY', 'INTC', 'INTU', 'ISRG', 'JD', 'KDP', 'KHC', 'KLAC', 'LBTYA', 'LBTYK', 'LRCX', 'LULU', 'MAR', 'MCHP', 'MDLZ', 'MELI', 'MNST', 'MRNA', 'MSFT', 'MU', 'MXIM', 'NFLX', 'NTES', 'NVDA', 'NXPI', 'ORLY', 'PAYX', 'PCAR', 'PDD', 'PEP', 'PYPL', 'QCOM', 'REGN', 'ROST', 'SBUX', 'SGEN', 'SIRI', 'SNPS', 'SPLK', 'SWKS', 'TCOM', 'TMUS', 'TSLA', 'TTWO', 'TXN', 'ULTA', 'VRSK', 'VRSN', 'VRTX', 'WBA', 'WDAY', 'XEL', 'XLNX', 'ZM'],
@@ -311,7 +314,7 @@ ticker_group_dict = {'All': [],
                      'Equity database': [],
                      'Volatility': ['^VVIX','^VIX','VIXY','VXX','^VXN',],
                      'Treasury Bonds Yield': ['^TNX','^TYX','^FVX','^IRX','SHV','TIP','FLOT','VUT','BND','TMV','TLT','EDV','ZROZ','TBT'],
-                     'OTC Market': ['JCPNQ','TGLO','HTZGQ'],
+                     'OTC Market': ['JCPNQ','TGLO','HTZGQ','TCTZF','LVMUY','IDEXY','LRLCF','LRLCY'],
                      'ARK Investments': ['ARKK','ARKQ','ARKW','ARKG','ARKF','ARKX','IZRL','PRNT'],
                      'ARK Innovation ETF': [x for x in ARK_df_dict['ARKK']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK Autonomous Tech. & Robotics ETF': [x for x in ARK_df_dict['ARKQ']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
@@ -538,6 +541,8 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Buffett Indicator': f"Divide the Wilshire 5000 Index (viewed as the total stock market) by the annual U.S. GDP (e.g., <a href='https://www.investing.com/economic-calendar/gdp-375'>https://www.investing.com/economic-calendar/gdp-375</a>). Before dot-com bubble burst, it was 159.2%.<br/><br/><a href='https://www.gurufocus.com/stock-market-valuations.php'>https://www.gurufocus.com/stock-market-valuations.php</a><br/><br/><a href='https://www.bea.gov/data/gdp/gross-domestic-product'>GDP</a>",
                    'Major Market Indexes': f"https://www.investing.com/indices/major-indices",
                    'Non-US World Market Indexes': f"<b>FTSE</b> (Financial Times Stock Exchange) 100 Index is a share index of the 100 companies listed on the <b>London Stock Exchange</b> with the highest market capitalisation.<br/><br/><b>HSI</b> is Hang Seng Index.<br/><br/><b>N225</b> is the Nikkei 225, the Nikkei Stock Average, is a stock market index for the Tokyo Stock Exchange.<br/><br/><b>GDAXI</b> is the DAX Performance Index, a blue chip stock market index consisting of the 30 major <b>German</b> companies trading on the Frankfurt Stock Exchange.<br/><br/><b>FCHI</b> is CAC 40, a benchmark <b>French stock market index</b>, representing a capitalization-weighted measure of the 40 most significant stocks among the 100 largest market caps on the Euronext Paris.<br/><br/><b>TWII</b> is the TSEC (Taiwan Stock Exchange Corporation) weighted index.<br/><br/><b>000001.SS</b> is the SSE (Shanghai Stock Exchange) Composite Index, currency in CNY.<br/><br/><b>399001.SZ</b> is the Shenzhen Component, currency in CNY.<br/><br/><b>^STOXX50E</b> is the EURO STOXX 50 index, dominated by France (36.4%) and Germany (35.2%) and providing a blue-chip representation of supersector leaders in the Eurozone.<br/><br/><b>^CASE30</b> is the stock market index for securities in Egypt.<br/><br/>",
+                   'The Stock Exchange of Hong Kong': f"According to wikipedia, the Stock Exchange of Hong Kong is a stock exchange based in Hong Kong.<br/><br/>It is the world's largest bourse (a stock market in a non-English-speaking country) in terms of market capitalization, surpassing Chicago-based CME.<br/><br/>As of the end of 2020, it has 2,538 listed companies with a combined market capitalization of HK$47 trillion.",
+                   'World\'s Billionaires': "<style> table, th, td {border: 1px solid black; border-collapse: collapse; padding: 2px;}</style><a href='https://www.forbes.com/real-time-billionaires/'>Many billionaires</a> are rich because of the stock markets.<br/><br/>2021-04-06:<br/><table><tr><th>#</th><th>Name</th><th>Stock</th></tr><tr><td>1</td><td>Jeff Bezos</td><td>AMZN</td></tr><tr><td>2</td><td>Elon Musk</td><td>TSLA</td></tr><tr><td>3</td><td>Bernard Arnault & family</td><td>MC.PA (France), LVMUY (USA)</td></tr><tr><td>4</td><td>Bill Gates</td><td>MSFT</td></tr><tr><td>5</td><td>Mark Zuckerberg</td><td>FB</td></tr><tr><td>6</td><td>Warren Buffett</td><td>BRK-B</td></tr><tr><td>7</td><td>Larry Ellison</td><td>ORCL</td></tr><tr><td>8</td><td>Larry Page</td><td>GOOGL</td></tr><tr><td>9</td><td>Sergey Brin</td><td>GOOGL</td></tr><tr><td>10</td><td>Amancio Ortega</td><td>ITX.MC (Spain), IDEXY (USA)</td></tr><tr><td>11</td><td>Francoise Bettencourt Meyers & family</td><td>OR.PA (France), LRLCY or LRLCF (USA)</td></tr></table><br/><br/>To be completed...",
                    'Futures': f"<b>NQ=F</b>: Nasdaq Futures<br/><br/><b>YM=F</b>: Dow Futures<br/><br/><b>ES=F</b>: S&P Futures<br/><br/><b>GC=F</b>: Gold Futures<br/><br/><b>CL=F</b>: Crude Oil Futures",
                    'DOW 30': f"Dow Jones Industrial Average 30 Components",
                    'NASDAQ 100': f"A stock market index made up of 103 equity securities issued by 100 of the largest non-financial companies listed on the Nasdaq stock market.\n\nThe complete index, NASDAQ Composite (COMP), has 2,667 securities as of February 2020.\n\nBecause the index is weighted by market capitalization, the index is rather top-heavy. In fact, the top 10 stocks in the Nasdaq Composite account for one-third of the index’s performance.",
@@ -721,7 +726,8 @@ class Ticker(object):
                               'CMX': 'COMEX (Commodity Exchange Inc., e.g., GC=F)',
                               'NYM': 'NYMEX (New York Mercantile Exchange, e.g., CL=F)',
                               'CBT': 'Chicago Board of Trade (e.g., YM=F)',
-                              'ZRH': 'Zurich/headquarters (e.g., ^STOXX50E)'}
+                              'ZRH': 'Zurich/headquarters (e.g., ^STOXX50E)',
+                              'MCE': 'Madrid Stock Exchange in Spain (e.g., ITX.MC)'}
         if exchange_info not in exchange_info_dict.keys():
             #print(f"exchange code [{exchange_info}] not defined")
             return f"{exchange_info} (??)"
@@ -1354,6 +1360,20 @@ class Ticker(object):
         return self.key_value('trailingEps')
 
     @property
+    def BVPS(self):
+        """
+        Book Value Per Share (e.g., https://www.gurufocus.com/term/pb/SPLK/PB-Ratio/Splunk)
+        """
+        return self.key_value('bookValue') # update every quarter, e.g., Splunk's book value per share for the quarter that ended in Jan. 2021 was $9.77.
+
+    @property
+    def PB_ratio(self):
+        """
+        Price-to-Book ratio (e.g., https://www.gurufocus.com/term/pb/SPLK/PB-Ratio/Splunk)
+        """
+        return self.key_value('priceToBook') # update every day real-time
+
+    @property
     def Eps_change_pct(self):
         if self.forwardEps is not None and self.trailingEps is not None:
             EPS_change_pct = 100*(self.forwardEps - self.trailingEps)/abs(self.trailingEps)
@@ -1377,24 +1397,11 @@ class Ticker(object):
         return trend_indicator().ADX(high_price = self.ticker_history['High'], low_price = self.ticker_history['Low'], close_price = self.ticker_history['Close'])
 
     @property
-    def curr_trend_reading(self):
-        adx, plus, minus, adx14, plus14, minus14, trend_reading = self.ADX
-        return trend_reading[-1]
+    def curr_trend(self):
+        adx, plus, minus, adx14, plus14, minus14, trend, trend_short = self.ADX
+        return trend[-1]
 
     @property
-    def curr_trend_slope(self):
-        from ..math_and_stats import Cubic_Spline_Approximation_Smoothing
-        adx, plus, minus, adx14, plus14, minus14, trend_reading = self.ADX
-        adx = adx[1:]
-        # spline smoothed
-        x = np.arange(len(adx))
-        adx_smooth = 0.90
-        adx_csaps, adx_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=adx, smooth=adx_smooth)
-        #
-        if adx_csaps[-1] > adx_csaps[-2]:
-            adx_slope = 'inc.' # increasing
-        elif adx_csaps[-1] == adx_csaps[-2]:
-            adx_slope = 'unc.' # unchanged
-        else:
-            adx_slope = 'dec.' # decreasing
-        return adx_slope
+    def curr_trend_short(self):
+        adx, plus, minus, adx14, plus14, minus14, trend, trend_short = self.ADX
+        return trend_short[-1]
