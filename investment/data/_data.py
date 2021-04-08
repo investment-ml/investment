@@ -416,7 +416,7 @@ def get_ticker_data_dict(ticker: str = None,
         if keep_up_to_date:
             if 'data_download_time' in curr_info_dict.keys():
                 curr_last_date = curr_info_dict['data_download_time']    
-                #if (datetime.now(tz=timezone.utc) - curr_last_date) <= timedelta(hours=3):
+                #if (datetime.now(tz=timezone.utc) - curr_last_date) <= timedelta(hours=1):
                 if (datetime.now(tz=timezone.utc).date() - curr_last_date.date()) == timedelta(days=0):
                     do_force_redownload = False
 
@@ -579,22 +579,23 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
         earnings_info = f"<br/><hr>Earnings info unavailable"
     else:
         earnings_info = f"\n\nEarnings info unavailable"
+        
     if this_ticker.trailingEps is not None:
         if use_html:
-            earnings_info = f"<br/><hr>Diluted Earnings per share (EPS) from the last four quarters: ${this_ticker.trailingEps:.2f}"
+            earnings_info = f"<br/><hr>Diluted Earnings per share (EPS) from the last four quarters: <b><span style=\"color:blue;\">${this_ticker.trailingEps:+.2f}</span></b>;"
         else:
-            earnings_info = f"\n\nDiluted Earnings per share (EPS) from the last four quarters: ${this_ticker.trailingEps:.2f}"
-        if this_ticker.forwardEps is not None:
-            if use_html:
-                earnings_info += f"<br/>EPS estimated for the next four quarters: ${this_ticker.forwardEps:.2f}." # , which is <b><span style=\"color:blue;\">{round(this_ticker.Eps_change_pct,2):+.2f}%</span></b>
-            else:
-                earnings_info += f"\nEPS estimated for the next four quarters: ${this_ticker.forwardEps:.2f}." # , which is {round(this_ticker.Eps_change_pct,2):+.2f}%
-        if this_ticker.Eps_growth_rate is not None:
-            if use_html:
-                earnings_info += f"<br/><br/>The 5-yr EPS growth rate is estimated to be <b><span style=\"color:blue;\">{this_ticker.Eps_growth_rate:+.2f}%</span></b> (compound rate per year)"
-            else:
-                earnings_info += f"\n\nThe 5-yr EPS growth rate is estimated to be {this_ticker.Eps_growth_rate:+.2f}% (compound rate per year)"
-    
+            earnings_info = f"\n\nDiluted Earnings per share (EPS) from the last four quarters: ${this_ticker.trailingEps:+.2f};"
+    if this_ticker.forwardEps is not None:
+        if use_html:
+            earnings_info += f"<br/>EPS estimated for the next four quarters: <b><span style=\"color:blue;\">${this_ticker.forwardEps:+.2f}</span></b>." # , which is <b><span style=\"color:blue;\">{round(this_ticker.Eps_change_pct,2):+.2f}%</span></b>
+        else:
+            earnings_info += f"\nEPS estimated for the next four quarters: ${this_ticker.forwardEps:+.2f}." # , which is {round(this_ticker.Eps_change_pct,2):+.2f}%
+    if this_ticker.Eps_growth_rate is not None:
+        if use_html:
+            earnings_info += f"<br/><br/>The 5-yr EPS growth rate is estimated to be <b><span style=\"color:blue;\">{this_ticker.Eps_growth_rate:+.2f}%</span></b> (compound rate per year)"
+        else:
+            earnings_info += f"\n\nThe 5-yr EPS growth rate is estimated to be {this_ticker.Eps_growth_rate:+.2f}% (compound rate per year)"
+
     # price target
     if use_html:
         price_target_info = f"<br/><hr>Price target info unavailable"

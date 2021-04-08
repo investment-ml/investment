@@ -178,8 +178,18 @@ class SnappingCursor(Cursor):
         self.name = name
         self.UI = UI
 
-    def onmove(self, event):
-        if event.inaxes:
+    def onmove(self, event, cascading_to_the_other_canvas: bool = True):
+
+        if cascading_to_the_other_canvas:
+            if self.name == 'ticker_canvas_cursor':
+                self.UI.control.index_canvas_cursor.onmove(event = event, cascading_to_the_other_canvas = False)
+
+            if self.name == 'index_canvas_cursor':
+                self.UI.control.ticker_canvas_cursor.onmove(event = event, cascading_to_the_other_canvas = False)
+
+        # inaxes: the Axes instance over which the mouse is, if any; else None
+        if (event.inaxes) or (not cascading_to_the_other_canvas):
+
             if type(event.xdata) == np.float64:
 
                 if self.use_x_index:
@@ -202,17 +212,51 @@ class SnappingCursor(Cursor):
                 else:
                     supporting_info = ""
 
+                unit = ''
+                if self.name == 'ticker_canvas_cursor':
+                    unit = '$'
+
                 if self.use_x_index:
-                    text_str = f"{pd.to_datetime(self.actual_x_data[index], utc=True).date()}, {event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}"
+                    text_str = f"{pd.to_datetime(self.actual_x_data[index], utc=True).date()}, {unit}{event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}"
                 else:
-                    text_str = f"{pd.to_datetime(event.xdata, utc=True).date()}, {event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}"
+                    text_str = f"{pd.to_datetime(event.xdata, utc=True).date()}, {unit}{event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}"
 
                 if self.name == 'ticker_canvas_cursor':
                     self.UI.ticker_canvas_coord_label.setText(text_str)
                 if self.name == 'index_canvas_cursor':
                     self.UI.index_canvas_coord_label.setText(text_str)
 
-            super().onmove(event)
+            self.super_onmove(event, cascading_to_the_other_canvas = cascading_to_the_other_canvas)
+
+    def super_onmove(self, event, cascading_to_the_other_canvas: bool = True):
+        """
+        modified from https://matplotlib.org/stable/_modules/matplotlib/widgets.html#Cursor.onmove
+        goal: to allow display of the cross hair even when cursor is not over an Axes instance
+        """
+        """Internal event handler to draw the cursor when the mouse moves."""
+        if self.ignore(event):
+            return
+        if not self.canvas.widgetlock.available(self):
+            return
+        if cascading_to_the_other_canvas:
+            if event.inaxes != self.ax:
+                self.linev.set_visible(False)
+                self.lineh.set_visible(False)
+
+                if self.needclear:
+                    self.canvas.draw()
+                    self.needclear = False
+                return
+        self.needclear = True
+        if not self.visible:
+            return
+        self.linev.set_xdata((event.xdata, event.xdata))
+
+        self.lineh.set_ydata((event.ydata, event.ydata))
+        self.linev.set_visible(self.visible and self.vertOn)
+        self.lineh.set_visible(self.visible and self.horizOn)
+
+        self._update()
 
 
 # reference: https://matplotlib.org/faq/usage_faq.html

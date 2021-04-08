@@ -49,7 +49,7 @@ tickers_problematic = ['ACEVW','ACKIW','ADERW','ADILW','ADNWW','ADOCR','ADOCW','
                        'VOSOW','ASLEW','ASAXW','ARVLW','ARTLW','AMHCW','VHAQ^','UKOMW','TZPSW','TWCTW','TLMDW','THWWW','THMAW','THCBW','THCAW','THBRW','TDACW','TBCPW','SYTAW','SWETW','BTRSW','BTAQW','BRPAW','BROGW','BRLIW','BRLIR','BREZW','BREZR','BNGOW','BLUWW','BLTSW',
                        'BIOTW','BHSEW','BFIIW','BEEMW','BCYPW','BCTXW','BCDAW','ANDAR','ANDAW','APOPW','APPHW','APXTW','ARBGW','ARKOW','AUUDW','AVCTW','BLNKW','BWACW','CAHCW','CAPAW','VMACW','VKTXW','VINCW','VIIAW','VIHAW','VIEWW','USWSW','TRITW','TMTSW','TMPMW','TMKRW',
                        'SVSVW','CHEKZ','CLRBZ','SHIPZ','DHCNL','SFB','PAVMZ','EVOJ','GIG','GECCL','GBLIL','MCADR','GRNVR','HYMCZ','APGB','XPDI','CVII','CCVI','CHAA','FOA','IACB','LGAC','MSAC','TSIB','CTOS','SCLE','SCOB','SLAC','TCAC','ABCL','AIN','RELV','OTTR','CHK',
-                       'AQB','ATMP','PYR','OTEL','WTS','NHLD','PICO']
+                       'AQB','ATMP','PYR','OTEL','WTS','NHLD','PICO','ECP']
 tradable_tickers = []
 
 ###########################################################################################
