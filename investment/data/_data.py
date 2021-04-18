@@ -54,6 +54,10 @@ class timedata(object):
                 self.timestamp = time_stamp
 
     @property
+    def yymmdd_str(self):
+        return f"{self.datetime.strftime('%y')}{self.datetime.strftime('%m')}{self.datetime.strftime('%d')}"
+
+    @property
     def Y_m_d_str(self):
         return self.datetime.strftime('%Y-%m-%d')
 
