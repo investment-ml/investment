@@ -59,7 +59,7 @@ class trend_indicator(object):
         n_periods = close_price.shape[0]
         if n_periods <= 1:
             #raise ValueError(f"n_periods cannot be <= 1")
-            return [None,], [None,], [None,], [None,], [None,], [None,], [None,]
+            return [None,], [None,], [None,], [None,], [None,], [None,], [None,], [None,]
         if (high_price.shape[0] != low_price.shape[0]) or (high_price.shape[0] != close_price.shape[0]) or (low_price.shape[0] != close_price.shape[0]):
             raise RuntimeError(f"The lengths of high_price [{high_price.shape[0]}], low_price [{low_price.shape[0]}], close_price [{close_price.shape[0]}] are different")
         higher_highs = list(np.diff(high_price))
@@ -95,53 +95,60 @@ class trend_indicator(object):
         plus_smoothed = moving_average(periods = ADX_smoothing_len).rma(data_series = plus)
         minus_smoothed = moving_average(periods = ADX_smoothing_len).rma(data_series = minus)
         # spline smoothed
-        x = np.arange(len(adx))
-        adx_smooth = 0.90
-        adx_csaps, adx_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=adx, smooth=adx_smooth)
-        #
-        trend = [None] * (n_periods-1)
-        trend_short = [None] * (n_periods-1)
-        for idx in range(len(adx)):
-            adx_slope = ''
-            adx_slope_short = ''
-            trend_strength = ''
-            trend_strength_short = ''
-            trend_direction = ''
-            trend_direction_short = ''
+        if len(adx) == 0:
+            trend = trend_short = []
+        elif len(adx) == 1:
+            trend = trend_short = [None,]
+        else:
+            x = np.arange(len(adx))
+            adx_smooth = 0.90
+            adx_csaps, adx_smooth = Cubic_Spline_Approximation_Smoothing(x=x, y=adx, smooth=adx_smooth)            
             #
-            if idx > 0:
-                if adx_csaps[idx] > adx_csaps[idx-1]:
-                    adx_slope = 'continued' # increasing
-                    adx_slope_short = 'c.'
-                elif adx_csaps[idx] == adx_csaps[idx-1]:
-                    adx_slope = 'unchanged' # unchanged
-                    adx_slope_short = 'u.'
+            trend = [None] * (n_periods-1)
+            trend_short = [None] * (n_periods-1)
+            for idx in range(len(adx)):
+                adx_slope = ''
+                adx_slope_short = ''
+                trend_strength = ''
+                trend_strength_short = ''
+                trend_direction = ''
+                trend_direction_short = ''
+                #
+                if idx > 0:
+                    if adx_csaps[idx] > adx_csaps[idx-1]:
+                        adx_slope = 'continued' # increasing
+                        adx_slope_short = 'c.'
+                    elif adx_csaps[idx] == adx_csaps[idx-1]:
+                        adx_slope = 'unchanged' # unchanged
+                        adx_slope_short = 'u.'
+                    else:
+                        adx_slope = 'faded' # decreasing
+                        adx_slope_short = 'f.'
+                #
+                if adx_csaps[idx] < 20:
+                    trend_strength = 'weak'
+                    trend_strength_short = 'w.'
+                elif 20 <= adx_csaps[idx] and adx_csaps[idx] <= 40:
+                    trend_strength = 'moderate'
+                    trend_strength_short = 'm.'
+                elif 40 < adx_csaps[idx]:
+                    trend_strength = 'strong'
+                    trend_strength_short = 's.'
+                #
+                if plus[idx] > minus[idx]:
+                    trend_direction = 'uptrend'
+                    trend_direction_short = 'up.'
+                elif plus[idx] < minus[idx]:
+                    trend_direction = 'downtrend'
+                    trend_direction_short = 'dn.'
                 else:
-                    adx_slope = 'faded' # decreasing
-                    adx_slope_short = 'f.'
+                    trend_direction = 'nd-trend'
+                    trend_direction_short = 'nt.'
+                trend[idx] = f"{adx_slope} {trend_strength} {trend_direction}"
+                trend_short[idx] = f"{adx_slope_short}{trend_strength_short}{trend_direction_short}"
             #
-            if adx_csaps[idx] < 20:
-                trend_strength = 'weak'
-                trend_strength_short = 'w.'
-            elif 20 <= adx_csaps[idx] and adx_csaps[idx] <= 40:
-                trend_strength = 'moderate'
-                trend_strength_short = 'm.'
-            elif 40 < adx_csaps[idx]:
-                trend_strength = 'strong'
-                trend_strength_short = 's.'
-            #
-            if plus[idx] > minus[idx]:
-                trend_direction = 'uptrend'
-                trend_direction_short = 'up.'
-            elif plus[idx] < minus[idx]:
-                trend_direction = 'downtrend'
-                trend_direction_short = 'dn.'
-            else:
-                trend_direction = 'nd-trend'
-                trend_direction_short = 'nt.'
-            trend[idx] = f"{adx_slope} {trend_strength} {trend_direction}"
-            trend_short[idx] = f"{adx_slope_short}{trend_strength_short}{trend_direction_short}"
-        #
+        #for debugging
+        #print(f"adx={adx}, plus={plus}, minus={minus}, adx_smoothed={adx_smoothed}, plus_smoothed={plus_smoothed}, minus_smoothed={minus_smoothed}, trend={trend}, trend_short={trend_short}")
         return [None] + list(adx), [None] + list(plus), [None] + list(minus), [None] + list(adx_smoothed), [None] + list(plus_smoothed), [None] + list(minus_smoothed), [None] + trend, [None] + trend_short
 
     """

@@ -417,7 +417,7 @@ def get_ticker_data_dict(ticker: str = None,
             if 'data_download_time' in curr_info_dict.keys():
                 curr_last_date = curr_info_dict['data_download_time']    
                 #if (datetime.now(tz=timezone.utc) - curr_last_date) <= timedelta(hours=1):
-                if (datetime.now(tz=timezone.utc).date() - curr_last_date.date()) == timedelta(days=0):
+                if (datetime.now(tz=timezone.utc).date() - curr_last_date.date()) <= timedelta(days=0): # T1 = curr_last_date, T2 = now; if T2 is ahead of T1
                     do_force_redownload = False
 
         if do_force_redownload:
@@ -437,10 +437,10 @@ def get_ticker_data_dict(ticker: str = None,
             new_last_date = datetime.strptime(new_last_date_str, "%Y-%m-%d").date()
 
             # making sure the new df always has a wider date coverage
-            if (curr_df.shape[0] - new_df.shape[0]) > 300:
+            if (curr_df.shape[0] - new_df.shape[0]) > 1000:
                 #raise ValueError(f"for ticker [{ticker}], the redownloaded df has fewer rows than the current one")
                 print(f"ticker: [{ticker}]")
-                print(f"*** The redownloaded df's rows [n={new_df.shape[0]}] are so much fewer (#<300) than that of the current one [n={curr_df.shape[0]}] --> the current one will be used instead")
+                print(f"*** The redownloaded df's rows [n={new_df.shape[0]}] are so much fewer (#<1000) than that of the current one [n={curr_df.shape[0]}] --> the current one will be used instead")
             elif (curr_first_date - new_first_date) < timedelta(days=0):
                 #raise ValueError(f"for ticker [{ticker}], the redownloaded df has a more recent start date: {new_first_date_str}, compared to the current one: {curr_first_date_str}")
                 print(f"ticker: [{ticker}]")
