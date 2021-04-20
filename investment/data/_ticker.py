@@ -560,14 +560,14 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Treasury Bonds Yield': f"<a href='https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield'>https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield</a><br/><br/>^IRX: 13 Week Treasury Bill<br/>^FVX: Treasury Yield 5 Years<br/>^TNX: Treasury Yield 10 Years<br/>^TYX: Treasury Yield 30 Years<br/><br/><b>A sell-off in the US Government Bond could be considered a good thing</b>: investors sold safe US bonds to buy something more risky; in contrast, when there is great fear in stock markets, investors flee towards the US Treasuries, the safest asset class. When bond yield becomes higher, it means buyers are now less interested in the current yield level, so that the sellers need to increase its yield (lowering bond price) to attract buyers.<br/><br/>In general, <a href='https://www.investopedia.com/ask/answers/042215/what-are-risks-associated-investing-treasury-bond.asp'>the risks of buying US Treasury bonds (T-bonds)</a>:<br/><br/>1. <b>Inflation risk</b>: if the inflation rate is greater (e.g., > 2%) than T-bonds yield, investors lose money in buying power.<br/>2. <b>Yield risk</b>: when bond yield increases, investors who sell T-bonds before maturity date lose money.<br/>3. <b>Opportunity risk</b>: the return on investment could be higher in somewhere else other than buying T-bonds.",
                    'OTC Market': f"Over-the-counter Market<br/><br/><a href='https://www.otcmarkets.com/research/stock-screener'>https://www.otcmarkets.com/research/stock-screener</a>",
                    'ARK Investments': "<a href='https://ark-funds.com/'>https://ark-funds.com/</a> and <a href='https://ark-invest.com/'>https://ark-invest.com/</a><br/><br/>see also: <a href='https://cathiesark.com/'>https://cathiesark.com/</a><br/><hr><b>ARK Actively Managed Innovation ETFs:</b><br/><br/>ARKK - ARK Innovation ETF (171% gain)<br/>ARKQ - Autonomous Technology & Robotics ETF (125% gain)<br/>ARKW - Next Generation Internet ETF (155% gain)<br/>ARKG - Genomic Revolution ETF (210% gain)<br/>ARKF - Fintech Innovation ETF (104% gain)<br/>ARKX - Space Exploration & Innovation ETF<br/><hr><b>ARK Indexed Innovation ETFs:</b><br/><br/>PRNT - The 3D Printing ETF (68% gain)<br/>IZRL - Israel Innovative Technology ETF (37% gain)",
-                   'ARK Innovation ETF': ARK_df_dict['ARKK'][['ticker','company','weight(%)']].reset_index(drop=True).to_html(index=True),
-                   'ARK Autonomous Tech. & Robotics ETF': ARK_df_dict['ARKQ'][['ticker','company','weight(%)']].reset_index(drop=True).to_html(index=True),
-                   'ARK Next Generation Internet ETF': ARK_df_dict['ARKW'][['ticker','company','weight(%)']].reset_index(drop=True).to_html(index=True),
-                   'ARK Genomic Revolution ETF': ARK_df_dict['ARKG'][['ticker','company','weight(%)']].reset_index(drop=True).to_html(index=True),
-                   'ARK Fintech Innovation ETF': ARK_df_dict['ARKF'][['ticker','company','weight(%)']].reset_index(drop=True).to_html(index=True),
-                   'ARK Space Exploration & Innovation ETF': ARK_df_dict['ARKX'][['ticker','company','weight(%)']].reset_index(drop=True).to_html(index=True),
-                   'ARK The 3D Printing ETF': ARK_df_dict['PRNT'][['ticker','company','weight(%)']].reset_index(drop=True).to_html(index=True),
-                   'ARK Israel Innovative Technology ETF': ARK_df_dict['IZRL'][['ticker','company','weight(%)']].reset_index(drop=True).to_html(index=True),
+                   'ARK Innovation ETF': f"Basket Holdings: <b>{len(ARK_df_dict['ARKK'].index)}</b><br/>" + ARK_df_dict['ARKK'][['ticker','company','shares','weight(%)']].reset_index(drop=True).to_html(index=True),
+                   'ARK Autonomous Tech. & Robotics ETF': f"Basket Holdings: <b>{len(ARK_df_dict['ARKQ'].index)}</b><br/>" + ARK_df_dict['ARKQ'][['ticker','company','shares','weight(%)']].reset_index(drop=True).to_html(index=True),
+                   'ARK Next Generation Internet ETF': f"Basket Holdings: <b>{len(ARK_df_dict['ARKW'].index)}</b><br/>" + ARK_df_dict['ARKW'][['ticker','company','shares','weight(%)']].reset_index(drop=True).to_html(index=True),
+                   'ARK Genomic Revolution ETF': f"Basket Holdings: <b>{len(ARK_df_dict['ARKG'].index)}</b><br/>" + ARK_df_dict['ARKG'][['ticker','company','shares','weight(%)']].reset_index(drop=True).to_html(index=True),
+                   'ARK Fintech Innovation ETF': f"Basket Holdings: <b>{len(ARK_df_dict['ARKF'].index)}</b><br/>" + ARK_df_dict['ARKF'][['ticker','company','shares','weight(%)']].reset_index(drop=True).to_html(index=True),
+                   'ARK Space Exploration & Innovation ETF': f"Basket Holdings: <b>{len(ARK_df_dict['ARKX'].index)}</b><br/>" + ARK_df_dict['ARKX'][['ticker','company','shares','weight(%)']].reset_index(drop=True).to_html(index=True),
+                   'ARK The 3D Printing ETF': f"Basket Holdings: <b>{len(ARK_df_dict['PRNT'].index)}</b><br/>" + ARK_df_dict['PRNT'][['ticker','company','shares','weight(%)']].reset_index(drop=True).to_html(index=True),
+                   'ARK Israel Innovative Technology ETF': f"Basket Holdings: <b>{len(ARK_df_dict['IZRL'].index)}</b><br/>" + ARK_df_dict['IZRL'][['ticker','company','shares','weight(%)']].reset_index(drop=True).to_html(index=True),
                    'Others': f"Others"}
 
 def ticker_preprocessing():
@@ -734,7 +734,7 @@ class Ticker(object):
                               'MCE': 'Madrid Stock Exchange in Spain (e.g., ITX.MC)'}
         if exchange_info not in exchange_info_dict.keys():
             #print(f"exchange code [{exchange_info}] not defined")
-            return f"{exchange_info} (??)"
+            return f"{exchange_info} (???)"
         else:
             return exchange_info_dict[exchange_info]
 
@@ -777,7 +777,10 @@ class Ticker(object):
         if (self.ticker in ticker_group_dict['ETF']) or (self.ticker in ticker_group_dict['ETF database']):
             return True
         else:
-            return False
+            if 'quoteType' in self.ticker_info.keys() and self.ticker_info['quoteType'] == 'ETF':
+                return True
+            else:
+                return False
         
     @property
     def in_dow30(self):
@@ -831,7 +834,7 @@ class Ticker(object):
     @property
     def symbol(self):
         if 'symbol' in self.ticker_info.keys():
-            return self.ticker_info['symbol']
+            return self.ticker_info['symbol'].upper()
         else:
             return None
 

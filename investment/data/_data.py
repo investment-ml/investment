@@ -542,6 +542,12 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
             stock_exchange_info += f"<br/><hr>Exchange: {this_ticker.non_nasdaq_exchange}<br/>- Name: [{this_ticker.non_nasdaq_security_name}]<br/>- ETF? [{this_ticker.non_nasdaq_etf}]"
         else:
             stock_exchange_info += f"\n\nExchange: {this_ticker.non_nasdaq_exchange}\n- Name: [{this_ticker.non_nasdaq_security_name}]\n- ETF? [{this_ticker.non_nasdaq_etf}]"
+    # ETF holdings
+    if this_ticker.is_etf:
+        if use_html:
+            stock_exchange_info += f"<br/>- Portfolio Composition: <a href='https://screener.fidelity.com/ftgw/etf/snapshot/portfolioComposition.jhtml?symbols={this_ticker.symbol}'><b>{this_ticker.symbol}</b></a>"
+        else:
+            stock_exchange_info += f"\n- Portfolio Composition: https://screener.fidelity.com/ftgw/etf/snapshot/portfolioComposition.jhtml?symbols={this_ticker.symbol}"
 
     # sector info
     if use_html:
@@ -580,20 +586,20 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
 
     # earnings
     if use_html:
-        earnings_info = f"<br/><hr>Earnings info unavailable"
+        earnings_info = f"<br/><hr><b><a href='https://eresearch.fidelity.com/eresearch/evaluate/fundamentals/keyStatistics.jhtml?stockspage=keyStatistics&symbols={this_ticker.symbol}'>Valuation and Growth statistics</a></b>"
     else:
-        earnings_info = f"\n\nEarnings info unavailable"
-        
+        earnings_info = f"\n\nValuation and Growth statistics: https://eresearch.fidelity.com/eresearch/evaluate/fundamentals/keyStatistics.jhtml?stockspage=keyStatistics&symbols={this_ticker.symbol}"
+    
     if this_ticker.trailingEps is not None:
         if use_html:
-            earnings_info = f"<br/><hr>Diluted Earnings per share (EPS) from the last four quarters: <b><span style=\"color:blue;\">${this_ticker.trailingEps:+.2f}</span></b>;"
+            earnings_info += f"<br/><br/>Diluted Earnings per share (EPS) from the last four quarters: <b><span style=\"color:blue;\">${this_ticker.trailingEps:+.2f}</span></b>;"
         else:
-            earnings_info = f"\n\nDiluted Earnings per share (EPS) from the last four quarters: ${this_ticker.trailingEps:+.2f};"
+            earnings_info += f"\n\nDiluted Earnings per share (EPS) from the last four quarters: ${this_ticker.trailingEps:+.2f};"
     if this_ticker.forwardEps is not None:
         if use_html:
-            earnings_info += f"<br/>EPS estimated for the next four quarters: <b><span style=\"color:blue;\">${this_ticker.forwardEps:+.2f}</span></b>." # , which is <b><span style=\"color:blue;\">{round(this_ticker.Eps_change_pct,2):+.2f}%</span></b>
+            earnings_info += f"<br/><br/>EPS estimated for the next four quarters: <b><span style=\"color:blue;\">${this_ticker.forwardEps:+.2f}</span></b>." # , which is <b><span style=\"color:blue;\">{round(this_ticker.Eps_change_pct,2):+.2f}%</span></b>
         else:
-            earnings_info += f"\nEPS estimated for the next four quarters: ${this_ticker.forwardEps:+.2f}." # , which is {round(this_ticker.Eps_change_pct,2):+.2f}%
+            earnings_info += f"\n\nEPS estimated for the next four quarters: ${this_ticker.forwardEps:+.2f}." # , which is {round(this_ticker.Eps_change_pct,2):+.2f}%
     if this_ticker.Eps_growth_rate is not None:
         if use_html:
             earnings_info += f"<br/><br/>The 5-yr EPS growth rate is estimated to be <b><span style=\"color:blue;\">{this_ticker.Eps_growth_rate:+.2f}%</span></b> (compound rate per year)"
@@ -605,6 +611,7 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
         price_target_info = f"<br/><hr>Price target info unavailable"
     else:
         price_target_info = f"\n\nPrice target info unavailable"
+
     if this_ticker.price_target is not None:
         up_side_pct = 100 * (this_ticker.price_target - this_ticker.last_close_price) / this_ticker.last_close_price
         if use_html:
@@ -615,14 +622,15 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
     # apples-to-apples comparison
     # e.g., https://www.investopedia.com/terms/p/price-earningsratio.asp#investor-expectations
     if use_html:
-        company_to_company_comparison_info = f"<br/><hr>Company-to-company comparison info unavailable"
+        company_to_company_comparison_info = f"<br/><hr><b><a href='https://eresearch.fidelity.com/eresearch/evaluate/analystsOpinionsReport.jhtml?symbols={this_ticker.symbol}'>Research Reports</a></b>"
     else:
-        company_to_company_comparison_info = f"\n\nCompany-to-company comparison info unavailable"
+        company_to_company_comparison_info = f"\n\nResearch Reports: https://eresearch.fidelity.com/eresearch/evaluate/analystsOpinionsReport.jhtml?symbols={this_ticker.symbol}"
+
     if this_ticker.trailingPE is not None:
         if use_html:
-            company_to_company_comparison_info = f"<br/><hr>For an apples-to-apples comparison, the ratio of current price to the earnings from the last four quarters (the trailing P/E, <b>the earnings multiple</b>): <b><span style=\"color:blue;\">{this_ticker.trailingPE:.2f}</span></b><br/><br/>A high P/E ratio could mean that an over-valued stock, or high expectation of growth rates in the future. Traditionally the P/E could be between 6 and 120, with a long-term mean of 15."
+            company_to_company_comparison_info += f"<br/><br/>For an apples-to-apples comparison, the ratio of current price to the earnings from the last four quarters (the trailing P/E, <b>the earnings multiple</b>): <b><span style=\"color:blue;\">{this_ticker.trailingPE:.2f}</span></b><br/><br/>A high P/E ratio could mean that an over-valued stock, or high expectation of growth rates in the future. Traditionally the P/E could be between 6 and 120, with a long-term mean of 15."
         else:
-            company_to_company_comparison_info = f"\n\nFor an apples-to-apples comparison, the ratio of current price to the earnings from the last four quarters (the trailing P/E, the earnings multiple): {this_ticker.trailingPE:.2f} A high P/E ratio could mean that an over-valued stock, or high expectation of growth rates in the future. Traditionally the P/E could be between 6 and 120, with a long-term mean of 15."
+            company_to_company_comparison_info += f"\n\nFor an apples-to-apples comparison, the ratio of current price to the earnings from the last four quarters (the trailing P/E, the earnings multiple): {this_ticker.trailingPE:.2f} A high P/E ratio could mean that an over-valued stock, or high expectation of growth rates in the future. Traditionally the P/E could be between 6 and 120, with a long-term mean of 15."
         if this_ticker.forwardPE is not None:
             if use_html:
                 company_to_company_comparison_info += f"<br/><br/>The ratio of current price to the earnings estimated for the next four quarters (the forward P/E, <b>the earnings multiple</b>): <b><span style=\"color:blue;\">{this_ticker.forwardPE:.2f}</span></b>. If the forward P/E ratio is lower (or higher) than the trailing P/E ratio, it means analysts are expecting earnings to increase (or decrease)."
