@@ -14,9 +14,13 @@ from datetime import datetime, timedelta, timezone
 from calendar import day_name
 
 import socket
+
 import ftplib
+
 import pathlib
+
 import shutil
+
 import requests
 
 # NASDAQ Composite Components:
@@ -156,36 +160,18 @@ def download_nasdaqtrader_data(data_root_dir: str = None):
             data_dir.mkdir(parents=True, exist_ok=True)
         except:
             raise IOError(f"cannot create data dir: {data_dir}")
-
-    print(f'\n\nAttempt to download data from ftp.nasdaqtrader.com ...', end='')
-
+    ftp_server = 'ftp.nasdaqtrader.com'
+    ftp_username = 'anonymous'
+    ftp_password = 'anonymous'
+    ftp = ftplib.FTP(ftp_server)
+    ftp.login(ftp_username, ftp_password)
     files = [('SymbolDirectory/nasdaqlisted.txt', data_dir / 'nasdaqlisted.txt'), 
              ('SymbolDirectory/otherlisted.txt',  data_dir / 'otherlisted.txt' ),
              ('SymbolDirectory/options.txt',      data_dir / 'options.txt'     )]
-    
     for file_ in files:
-        url = "ftp://anonymous:anonymous@ftp.nasdaqtrader.com/" + file_[0]
-        headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.192 Safari/537.36'} # https://stackoverflow.com/questions/57155387/workaround-for-blocked-get-requests-in-python
-        r = requests.get(url, headers=headers)
-        if r.status_code == 200:
-            with open(file_[1], 'wb') as outfile:
-                outfile.write(r.content)
-            print(f' Successful [status code: {r.status_code}]')
-        else:
-            print(f' Failed [status code: {r.status_code}]')
-
-    #ftp_server = 'ftp.nasdaqtrader.com'
-    #ftp_username = 'anonymous'
-    #ftp_password = 'anonymous'
-    #ftp = ftplib.FTP(ftp_server)
-    #ftp.login(ftp_username, ftp_password)
-    #files = [('SymbolDirectory/nasdaqlisted.txt', data_dir / 'nasdaqlisted.txt'), 
-    #         ('SymbolDirectory/otherlisted.txt',  data_dir / 'otherlisted.txt' ),
-    #         ('SymbolDirectory/options.txt',      data_dir / 'options.txt'     )]
-    #for file_ in files:
-    #    with open(file_[1], "wb") as f:
-    #        ftp.retrbinary("RETR " + file_[0], f.write)
-    #ftp.quit()
+        with open(file_[1], "wb") as f:
+            ftp.retrbinary("RETR " + file_[0], f.write)
+    ftp.quit()
 
 
 def load_nasdaqtrader_data(data_root_dir: str = None):
