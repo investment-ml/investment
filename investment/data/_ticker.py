@@ -170,10 +170,7 @@ def download_nasdaqtrader_data(data_root_dir: str = None):
              ('SymbolDirectory/options.txt',      data_dir / 'options.txt'     )]
     for file_ in files:
         with open(file_[1], "wb") as f:
-            try:
-                ftp.retrbinary("RETR " + file_[0], f.write)
-            except:
-                pass
+            ftp.retrbinary("RETR " + file_[0], f.write)
     ftp.quit()
 
 

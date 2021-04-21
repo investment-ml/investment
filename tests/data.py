@@ -4,6 +4,6 @@
 #
 #  License: LGPL-3.0
 
-from investment import data
+#from investment import data
 
-data.test()
+#data.test()

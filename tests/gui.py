@@ -4,6 +4,6 @@
 #
 #  License: LGPL-3.0
 
-from investment import gui
+#from investment import gui
 
-gui.test()
+#gui.test()
