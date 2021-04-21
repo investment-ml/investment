@@ -157,14 +157,14 @@ def download_nasdaqtrader_data(data_root_dir: str = None):
         except:
             raise IOError(f"cannot create data dir: {data_dir}")
 
-    print(f'Attempt to download data from ftp.nasdaqtrader.com ...', end='')
+    print(f'\n\nAttempt to download data from ftp.nasdaqtrader.com ...', end='')
 
     files = [('SymbolDirectory/nasdaqlisted.txt', data_dir / 'nasdaqlisted.txt'), 
              ('SymbolDirectory/otherlisted.txt',  data_dir / 'otherlisted.txt' ),
              ('SymbolDirectory/options.txt',      data_dir / 'options.txt'     )]
     
     for file_ in files:
-        url = "ftp://ftp.nasdaqtrader.com/" + file_[0]
+        url = "ftp://anonymous:anonymous@ftp.nasdaqtrader.com/" + file_[0]
         headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.192 Safari/537.36'} # https://stackoverflow.com/questions/57155387/workaround-for-blocked-get-requests-in-python
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
