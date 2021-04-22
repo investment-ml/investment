@@ -1530,6 +1530,7 @@ class UI_control(object):
             formatter = DateFormatter(dates)
             canvas.axes.xaxis.set_major_formatter(formatter)
             x = np.arange(len(dates))
+            canvas.axes.grid(True, color='silver', linewidth=0.5)
             #
             #index_plotline_PVI, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['PVI'], color='tab:green',    linewidth=1.0)
             #index_plotline_NVI, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['NVI'], color='tab:orange',   linewidth=1.0)
@@ -1712,6 +1713,7 @@ class UI_control(object):
             formatter = DateFormatter(dates)
             canvas.axes.xaxis.set_major_formatter(formatter)
             x = np.arange(len(dates))
+            canvas.axes.grid(True, color='silver', linewidth=0.5)
             #
             n_ticks = len(x)
             y70 = np.empty(n_ticks); y70.fill(70)
@@ -1745,6 +1747,7 @@ class UI_control(object):
             formatter = DateFormatter(dates)
             canvas.axes.xaxis.set_major_formatter(formatter)
             x = np.arange(len(dates))
+            canvas.axes.grid(True, color='silver', linewidth=0.5)
             #
             canvas.axes.set_ylabel('MACD', fontsize=10.0)
             MACD_macd = self.ticker_data_dict_in_effect['history']['MACD_macd']
@@ -1851,6 +1854,7 @@ class UI_control(object):
             formatter = DateFormatter(dates)
             canvas.axes.xaxis.set_major_formatter(formatter)
             x = np.arange(len(dates))
+            canvas.axes.grid(True, color='silver', linewidth=0.5)
             #
             canvas.axes.set_ylabel('Money Flow', fontsize=10.0)
             canvas.axes.set_ylim(0, 100)
