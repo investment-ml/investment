@@ -1198,11 +1198,11 @@ class UI(QWidget):
 
         self.ticker_selection = ticker_selection(parent=self)
         self.ticker_textinfo = textinfo(parent=self)
-        self.ticker_textinfo.setFixedHeight(self.app_window.height*0.55)
+        self.ticker_textinfo.setFixedHeight(self.app_window.height*0.57)
 
         self.index_selection = index_selection(parent=self)
         self.index_textinfo = textinfo(parent=self)
-        self.index_textinfo.setFixedHeight(self.app_window.height*0.55)
+        self.index_textinfo.setFixedHeight(self.app_window.height*0.57)
 
         self.ticker_timeframe_selection = ticker_timeframe_selection(parent=self)
         self.ticker_lastdate_pushbutton = ticker_lastdate_pushbutton(parent=self)
