@@ -35,6 +35,7 @@ import copy
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator, LogLocator
 
 from datetime import date, datetime, timedelta, timezone
 
@@ -217,9 +218,9 @@ class SnappingCursor(Cursor):
                     unit = '$'
 
                 if self.use_x_index:
-                    text_str = f"{pd.to_datetime(self.actual_x_data[index], utc=True).date()}, {unit}{event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}"
+                    text_str = f"[{pd.to_datetime(self.actual_x_data[index], utc=True).date()}, {unit}{event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}]"
                 else:
-                    text_str = f"{pd.to_datetime(event.xdata, utc=True).date()}, {unit}{event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}"
+                    text_str = f"[{pd.to_datetime(event.xdata, utc=True).date()}, {unit}{event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}]"
 
                 if self.name == 'ticker_canvas_cursor':
                     self.UI.ticker_canvas_coord_label.setText(text_str)
@@ -239,6 +240,7 @@ class SnappingCursor(Cursor):
         if not self.canvas.widgetlock.available(self):
             return
         if cascading_to_the_other_canvas:
+            #print(f"1.{event.inaxes}; 2.{self.ax}")
             if event.inaxes != self.ax:
                 self.linev.set_visible(False)
                 self.lineh.set_visible(False)
@@ -1207,6 +1209,8 @@ class UI(QWidget):
         self.ticker_timeframe_selection = ticker_timeframe_selection(parent=self)
         self.ticker_lastdate_pushbutton = ticker_lastdate_pushbutton(parent=self)
         self.ticker_download_latest_data_from_yfinance_pushbutton = ticker_download_latest_data_from_yfinance_pushbutton(parent=self)
+        self.ticker_yscale_log_checkbox = QCheckBox('yscale: log', parent=self)
+        self.ticker_yscale_log_checkbox.setChecked(True)
         self.ticker_canvas_coord_label = QLabel(text='', parent=self)
         self.ticker_lastdate_calendar_dialog = ticker_lastdate_calendar_dialog(parent=self)
         self.ticker_canvas = canvas(parent=self, dpi=dpi, UI=self)
@@ -1227,11 +1231,12 @@ class UI(QWidget):
         self.layout.addWidget(self.ticker_timeframe_selection, 0, 3)
         self.layout.addWidget(self.ticker_lastdate_pushbutton, 0, 4)
         self.layout.addWidget(self.ticker_download_latest_data_from_yfinance_pushbutton, 0, 5)
-        self.layout.addWidget(self.ticker_canvas_coord_label, 0, 6, 1, 2)
-        self.layout.addWidget(self.ticker_canvas, 1, 3, 2, 5)
+        self.layout.addWidget(self.ticker_yscale_log_checkbox, 0, 6)
+        self.layout.addWidget(self.ticker_canvas_coord_label, 0, 7, 1, 1)
+        self.layout.addWidget(self.ticker_canvas, 1, 3, 2, 6)
         self.layout.addWidget(self.index_canvas_options,     3, 3)
         self.layout.addWidget(self.index_canvas_coord_label, 3, 4)
-        self.layout.addWidget(self.index_canvas,  4, 3, 2, 5)
+        self.layout.addWidget(self.index_canvas,  4, 3, 2, 6)
         self.setLayout(self.layout)
 
         # control
@@ -1249,6 +1254,7 @@ class UI_control(object):
         self._UI.ticker_selection.currentIndexChanged.connect(self._ticker_selection_change)
         self._UI.ticker_timeframe_selection.currentIndexChanged.connect(self._ticker_timeframe_selection_change)
         self._UI.ticker_lastdate_pushbutton.clicked.connect(self._ticker_lastdate_pushbutton_clicked)
+        self._UI.ticker_yscale_log_checkbox.stateChanged.connect(self._ticker_yscale_log_checkbox_stateChanged)
         self._UI.ticker_lastdate_calendar_dialog.ticker_lastdate_calendar_use_last_available_date_button.clicked.connect(self._ticker_lastdate_dialog_use_last_available_date_button_clicked)
         self._UI.ticker_lastdate_calendar_dialog.ticker_lastdate_calendar_dialog_ok_button.clicked.connect(self._ticker_lastdate_dialog_ok_button_clicked)
         self._UI.ticker_download_latest_data_from_yfinance_pushbutton.clicked.connect(self._ticker_download_latest_data_from_yfinance)
@@ -1461,26 +1467,48 @@ class UI_control(object):
 
             self._ticker_selected = True
 
+    def _ticker_yscale_log_checkbox_stateChanged(self):
+        if self.selected_ticker_index is not None and self.selected_ticker_index > 0:
+            self._draw_ticker_canvas()
+
     def _draw_ticker_canvas(self):
         canvas = self._UI.ticker_canvas
-        canvas.axes.clear()
+        for this_axis in canvas.figure.axes:
+            this_axis.clear()
         # to skip non-existent dates on the plot
         # x = self.ticker_data_dict_in_effect['history']['Date']
         dates = self.ticker_data_dict_in_effect['history']['Date'].values
         formatter = DateFormatter(dates)
         canvas.axes.xaxis.set_major_formatter(formatter)
         x = np.arange(len(dates))
-        canvas.axes.grid(True, color='silver', linewidth=0.5)
+        canvas.axes.grid(True, which='major', color='silver', linewidth=0.5)
+        #canvas.axes.grid(True, which='minor', color='silver', linewidth=0.5, linestyle='dashed')
         # volume bar
         volumes = self.ticker_data_dict_in_effect['history']['Volume'].values
         if volumes[0] is not None:
-            close = self.ticker_data_dict_in_effect['history']['Close']
-            scale_factor = (max(close.values) * 0.40) / max(volumes)
-            volumes = volumes * scale_factor
-            close_prev = self.ticker_data_dict_in_effect['history']['Close'].shift(1)
-            close_increase = (close >= close_prev).values
-            volume_color = ['#86cbc5' if chg else '#f69f9d' for chg in close_increase]
-            canvas.axes.bar(x, volumes, color=volume_color)
+            if not self._UI.ticker_yscale_log_checkbox.isChecked():
+                close = self.ticker_data_dict_in_effect['history']['Close']
+                scale_factor = (max(close.values) * 0.4) / max(volumes)
+                volumes = volumes * scale_factor
+                close_prev = self.ticker_data_dict_in_effect['history']['Close'].shift(1)
+                close_increase = (close >= close_prev).values
+                volume_color = ['#86cbc5' if chg else '#f69f9d' for chg in close_increase]
+                canvas.axes.bar(x, volumes, color=volume_color)
+            else:
+                axis1 = canvas.axes.twinx()
+                axis1.set_yscale('linear')
+                axis1.set_ylim(bottom=0, top=1)
+                axis1.yaxis.set_ticks([])
+                axis1.yaxis.set_ticklabels([])
+                axis1.yaxis.set_visible(False)
+                close = self.ticker_data_dict_in_effect['history']['Close']
+                canvas.axes.set_ylim(bottom=close.min() * 0.85, top = close.max() * 1.15)
+                scale_factor = 0.4 / max(volumes)
+                volumes = volumes * scale_factor
+                close_prev = self.ticker_data_dict_in_effect['history']['Close'].shift(1)
+                close_increase = (close >= close_prev).values
+                volume_color = ['#86cbc5' if chg else '#f69f9d' for chg in close_increase]
+                axis1.bar(x, volumes, color=volume_color)              
         #
         #ticker_plotline, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close'], color='tab:blue',                    linewidth=1)
         canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA255'],             color='#9ed5f7', linestyle="dashed", linewidth=1)
@@ -1488,6 +1516,28 @@ class UI_control(object):
         canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close'],                    color='tab:blue',                    linewidth=1)
         canvas.axes.set_xlabel('Date', fontsize=10.0)
         canvas.axes.set_ylabel('Close Price (EMA9, 255)', fontsize=10.0)
+        x_range = max(x) - min(x)
+        canvas.axes.set_xlim(left=min(x)-(x_range / 50), right=max(x)+(x_range / 50), auto=True)
+        #
+        if self._UI.ticker_yscale_log_checkbox.isChecked():
+            canvas.axes.set_yscale('log', base=10)
+            y_min = self.ticker_data_dict_in_effect['history']['Close'].min()
+            y_max = self.ticker_data_dict_in_effect['history']['Close'].max()
+            if y_max <= 3:
+                y_major = MultipleLocator(0.5)
+            elif 3 < y_max and y_max <= 10:
+                y_major = MultipleLocator(1)
+            elif 10 < y_max and y_max <= 300:
+                y_major = MultipleLocator(10)
+            elif 300 < y_max:
+                y_major = MultipleLocator(100)
+            y_major = MultipleLocator(round((y_max - y_min) / 8, 1))
+            #y_major = LogLocator(base=2, numticks=10)
+            canvas.axes.yaxis.set_major_locator(y_major) # https://stackoverflow.com/questions/49436895/arguments-for-loglocator-in-matplotlib
+            #canvas.axes.yaxis.set_minor_locator(None)
+            canvas.axes.yaxis.set_major_formatter(plt.FuncFormatter('{:.1f}'.format)) # ScalarFormatter()) #plt.FuncFormatter('{:.0f}'.format))
+            canvas.axes.minorticks_off()
+            #canvas.axes.yaxis.set_minor_formatter(plt.FuncFormatter('{:.1f}'.format)) #
         #
         canvas.figure.autofmt_xdate()
         ticker_plotline = None
@@ -1504,7 +1554,14 @@ class UI_control(object):
         canvas.mpl_connect('button_release_event', canvas.button_released)
         canvas.mpl_connect('motion_notify_event',  canvas.onmove)
         #################################################
+        # to allow snapping cursor, so axis1 is now under, rather than on top of the original axis
+        if self._UI.ticker_yscale_log_checkbox.isChecked():
+            axis1.set_zorder(0)
+        canvas.axes.set_zorder(1)  # default zorder is 0 for ax1 and ax2 # https://stackoverflow.com/questions/30505616/how-to-arrange-plots-of-secondary-axis-to-be-below-plots-of-primary-axis-in-matp
+        canvas.axes.set_frame_on(False)
+        #################################################
         canvas.draw()
+
 
     def _draw_index_canvas(self):
         actual_x_data = None
@@ -1512,7 +1569,8 @@ class UI_control(object):
         y_data = None
 
         canvas = self._UI.index_canvas
-        canvas.axes.clear()
+        for this_axis in canvas.figure.axes:
+            this_axis.clear()
         canvas.axes.set_xlabel('Date', fontsize=10.0)
         #################################################
         if self._index_selected is None:
@@ -1919,6 +1977,9 @@ class UI_control(object):
         #################################################
         self.index_canvas_cursor = SnappingCursor(plotline=index_plotline, actual_x_data=actual_x_data, x_index=x_index, y_data=y_data, ax=canvas.axes, useblit=True, color='black', linestyle='dashed', linewidth=1, name='index_canvas_cursor', UI=self._UI)
         canvas.mpl_connect('motion_notify_event', self.index_canvas_cursor.onmove)
+        #################################################
+        x_range = max(x) - min(x)
+        canvas.axes.set_xlim(left=min(x)-(x_range / 50), right=max(x)+(x_range / 50), auto=True)
         #################################################
         canvas.draw()
 

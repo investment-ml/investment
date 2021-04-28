@@ -419,7 +419,8 @@ def get_ticker_data_dict(ticker: str = None,
 
         if keep_up_to_date:
             if 'data_download_time' in curr_info_dict.keys():
-                curr_last_date = curr_info_dict['data_download_time']    
+                curr_last_date = curr_info_dict['data_download_time']
+                #if (datetime.now(tz=timezone.utc) - curr_last_date) <= timedelta(minutes=30):
                 #if (datetime.now(tz=timezone.utc) - curr_last_date) <= timedelta(hours=1):
                 if (datetime.now(tz=timezone.utc).date() - curr_last_date.date()) <= timedelta(days=0): # T1 = curr_last_date, T2 = now; if T2 is ahead of T1
                     do_force_redownload = False
@@ -602,7 +603,8 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
             earnings_info += f"\n\nEPS estimated for the next four quarters: ${this_ticker.forwardEps:+.2f}." # , which is {round(this_ticker.Eps_change_pct,2):+.2f}%
     if this_ticker.Eps_growth_rate is not None:
         if use_html:
-            earnings_info += f"<br/><br/>The 5-yr EPS growth rate is estimated to be <b><span style=\"color:blue;\">{this_ticker.Eps_growth_rate:+.2f}%</span></b> (compound rate per year)"
+            Eps_growth_rate_color = 'green' if this_ticker.Eps_growth_rate >= 0 else 'red'
+            earnings_info += f"<br/><br/><a href='https://eresearch.fidelity.com/eresearch/evaluate/fundamentals/keyStatistics.jhtml?stockspage=keyStatistics&symbols={this_ticker.symbol}'>The 5-yr EPS growth rate</a> is estimated to be <b><span style=\"color:{Eps_growth_rate_color};\">{this_ticker.Eps_growth_rate:+.2f}%</span></b> (compound rate per year)"
         else:
             earnings_info += f"\n\nThe 5-yr EPS growth rate is estimated to be {this_ticker.Eps_growth_rate:+.2f}% (compound rate per year)"
 
