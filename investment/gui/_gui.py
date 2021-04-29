@@ -218,9 +218,11 @@ class SnappingCursor(Cursor):
                     unit = '$'
 
                 if self.use_x_index:
-                    text_str = f"[{pd.to_datetime(self.actual_x_data[index], utc=True).date()}, {unit}{event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}]"
+                    #text_str = f"[{pd.to_datetime(self.actual_x_data[index], utc=True).date()}, {unit}{event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}]"
+                    text_str = f"[{pd.to_datetime(self.actual_x_data[index], utc=True).date()}, {unit}{event.ydata:.2f}{supporting_info}]"
                 else:
-                    text_str = f"[{pd.to_datetime(event.xdata, utc=True).date()}, {unit}{event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}]"
+                    #text_str = f"[{pd.to_datetime(event.xdata, utc=True).date()}, {unit}{event.ydata:.2f}, slope={event.ydata_grad:.2f}{supporting_info}]"
+                    text_str = f"[{pd.to_datetime(event.xdata, utc=True).date()}, {unit}{event.ydata:.2f}{supporting_info}]"
 
                 if self.name == 'ticker_canvas_cursor':
                     self.UI.ticker_canvas_coord_label.setText(text_str)
@@ -1232,7 +1234,7 @@ class UI(QWidget):
         self.layout.addWidget(self.ticker_lastdate_pushbutton, 0, 4)
         self.layout.addWidget(self.ticker_download_latest_data_from_yfinance_pushbutton, 0, 5)
         self.layout.addWidget(self.ticker_yscale_log_checkbox, 0, 6)
-        self.layout.addWidget(self.ticker_canvas_coord_label, 0, 7, 1, 1)
+        self.layout.addWidget(self.ticker_canvas_coord_label, 0, 7, 1, 2)
         self.layout.addWidget(self.ticker_canvas, 1, 3, 2, 6)
         self.layout.addWidget(self.index_canvas_options,     3, 3)
         self.layout.addWidget(self.index_canvas_coord_label, 3, 4)
@@ -1384,11 +1386,13 @@ class UI_control(object):
         # ticker frame selection
         self._UI.ticker_timeframe_selection.reset()
         # ticker canvas
-        self._UI.ticker_canvas.axes.clear()
+        for this_axis in self._UI.ticker_canvas.figure.axes:
+            this_axis.clear()
         self._UI.ticker_canvas.draw()
         self._UI.ticker_canvas_coord_label.clear()
         # index canvas
-        self._UI.index_canvas.axes.clear()
+        for this_axis in self._UI.index_canvas.figure.axes:
+            this_axis.clear()
         self._UI.index_canvas.draw()
         self._UI.index_canvas_coord_label.clear()
         # index selection
@@ -1485,30 +1489,33 @@ class UI_control(object):
         #canvas.axes.grid(True, which='minor', color='silver', linewidth=0.5, linestyle='dashed')
         # volume bar
         volumes = self.ticker_data_dict_in_effect['history']['Volume'].values
+        if self._UI.ticker_yscale_log_checkbox.isChecked():
+            axis1 = canvas.axes.twinx()
+            axis1.set_yscale('linear')
+            axis1.set_ylim(bottom=0, top=1)
+            axis1.yaxis.set_ticks([])
+            axis1.yaxis.set_ticklabels([])
+            axis1.yaxis.set_visible(False)
+            close = self.ticker_data_dict_in_effect['history']['Close']
+            canvas.axes.set_ylim(bottom=close.min() * 0.95, top = close.max() * 1.05)
+        #
         if volumes[0] is not None:
-            if not self._UI.ticker_yscale_log_checkbox.isChecked():
+            if self._UI.ticker_yscale_log_checkbox.isChecked():
+                canvas.axes.set_ylim(bottom=close.min() * 0.80, top = close.max() * 1.10)
+                scale_factor = 0.4 / max(volumes)
+                volumes = volumes * scale_factor
+                close_prev = self.ticker_data_dict_in_effect['history']['Close'].shift(1)
+                close_increase = (close >= close_prev).values
+                volume_color = ['#86cbc5' if chg else '#f69f9d' for chg in close_increase]
+                axis1.bar(x, volumes, color=volume_color)
+            else:
                 close = self.ticker_data_dict_in_effect['history']['Close']
                 scale_factor = (max(close.values) * 0.4) / max(volumes)
                 volumes = volumes * scale_factor
                 close_prev = self.ticker_data_dict_in_effect['history']['Close'].shift(1)
                 close_increase = (close >= close_prev).values
                 volume_color = ['#86cbc5' if chg else '#f69f9d' for chg in close_increase]
-                canvas.axes.bar(x, volumes, color=volume_color)
-            else:
-                axis1 = canvas.axes.twinx()
-                axis1.set_yscale('linear')
-                axis1.set_ylim(bottom=0, top=1)
-                axis1.yaxis.set_ticks([])
-                axis1.yaxis.set_ticklabels([])
-                axis1.yaxis.set_visible(False)
-                close = self.ticker_data_dict_in_effect['history']['Close']
-                canvas.axes.set_ylim(bottom=close.min() * 0.85, top = close.max() * 1.15)
-                scale_factor = 0.4 / max(volumes)
-                volumes = volumes * scale_factor
-                close_prev = self.ticker_data_dict_in_effect['history']['Close'].shift(1)
-                close_increase = (close >= close_prev).values
-                volume_color = ['#86cbc5' if chg else '#f69f9d' for chg in close_increase]
-                axis1.bar(x, volumes, color=volume_color)              
+                canvas.axes.bar(x, volumes, color=volume_color)          
         #
         #ticker_plotline, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close'], color='tab:blue',                    linewidth=1)
         canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA255'],             color='#9ed5f7', linestyle="dashed", linewidth=1)
@@ -1980,6 +1987,9 @@ class UI_control(object):
         #################################################
         x_range = max(x) - min(x)
         canvas.axes.set_xlim(left=min(x)-(x_range / 50), right=max(x)+(x_range / 50), auto=True)
+        #################################################
+        canvas.axes.set_zorder(1)
+        #canvas.axes.set_frame_on(False)
         #################################################
         canvas.draw()
 

@@ -21,6 +21,10 @@ import time
 
 from functools import total_ordering
 
+import numpy as np
+
+risk_free_interest_rate = yf.Ticker('^TNX').history(period='1d').iloc[0]['Close'] # e.g., 1.64
+
 @total_ordering
 class timedata(object):
     def __init__(self, time_stamp: float=None, date_time=None, Y_m_d_str: str = None, Y_m_d={}, days_from_now=0, use_y_m_d_precision=False):
@@ -420,7 +424,7 @@ def get_ticker_data_dict(ticker: str = None,
         if keep_up_to_date:
             if 'data_download_time' in curr_info_dict.keys():
                 curr_last_date = curr_info_dict['data_download_time']
-                #if (datetime.now(tz=timezone.utc) - curr_last_date) <= timedelta(minutes=30):
+                #if (datetime.now(tz=timezone.utc) - curr_last_date) <= timedelta(minutes=10):
                 #if (datetime.now(tz=timezone.utc) - curr_last_date) <= timedelta(hours=1):
                 if (datetime.now(tz=timezone.utc).date() - curr_last_date.date()) <= timedelta(days=0): # T1 = curr_last_date, T2 = now; if T2 is ahead of T1
                     do_force_redownload = False
@@ -587,9 +591,9 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
 
     # earnings
     if use_html:
-        earnings_info = f"<br/><hr><b><a href='https://eresearch.fidelity.com/eresearch/evaluate/fundamentals/keyStatistics.jhtml?stockspage=keyStatistics&symbols={this_ticker.symbol}'>Valuation and Growth statistics</a></b>"
+        earnings_info = f"<br/><hr><b><a href='https://eresearch.fidelity.com/eresearch/evaluate/fundamentals/keyStatistics.jhtml?stockspage=keyStatistics&symbols={this_ticker.symbol}'>Valuation and Growth statistics</a></b><br/>"
     else:
-        earnings_info = f"\n\nValuation and Growth statistics: https://eresearch.fidelity.com/eresearch/evaluate/fundamentals/keyStatistics.jhtml?stockspage=keyStatistics&symbols={this_ticker.symbol}"
+        earnings_info = f"\n\nValuation and Growth statistics: https://eresearch.fidelity.com/eresearch/evaluate/fundamentals/keyStatistics.jhtml?stockspage=keyStatistics&symbols={this_ticker.symbol}\n"
     
     if this_ticker.trailingEps is not None:
         if use_html:
@@ -598,15 +602,20 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
             earnings_info += f"\n\nDiluted Earnings per share (EPS) from the last four quarters: ${this_ticker.trailingEps:+.2f};"
     if this_ticker.forwardEps is not None:
         if use_html:
-            earnings_info += f"<br/><br/>EPS estimated for the next four quarters: <b><span style=\"color:blue;\">${this_ticker.forwardEps:+.2f}</span></b>." # , which is <b><span style=\"color:blue;\">{round(this_ticker.Eps_change_pct,2):+.2f}%</span></b>
+            earnings_info += f"<br/><br/>EPS estimated for the next four quarters: <b><span style=\"color:blue;\">${this_ticker.forwardEps:+.2f}</span></b>.<br/>" # , which is <b><span style=\"color:blue;\">{round(this_ticker.Eps_change_pct,2):+.2f}%</span></b>
         else:
-            earnings_info += f"\n\nEPS estimated for the next four quarters: ${this_ticker.forwardEps:+.2f}." # , which is {round(this_ticker.Eps_change_pct,2):+.2f}%
+            earnings_info += f"\n\nEPS estimated for the next four quarters: ${this_ticker.forwardEps:+.2f}.\n" # , which is {round(this_ticker.Eps_change_pct,2):+.2f}%
     if this_ticker.Eps_growth_rate is not None:
         if use_html:
-            Eps_growth_rate_color = 'green' if this_ticker.Eps_growth_rate >= 0 else 'red'
-            earnings_info += f"<br/><br/><a href='https://eresearch.fidelity.com/eresearch/evaluate/fundamentals/keyStatistics.jhtml?stockspage=keyStatistics&symbols={this_ticker.symbol}'>The 5-yr EPS growth rate</a> is estimated to be <b><span style=\"color:{Eps_growth_rate_color};\">{this_ticker.Eps_growth_rate:+.2f}%</span></b> (compound rate per year)"
+            Eps_growth_rate_color = 'green' if this_ticker.Eps_growth_rate >= risk_free_interest_rate else 'red'
+            earnings_info += f"<br/><a href='https://eresearch.fidelity.com/eresearch/evaluate/fundamentals/keyStatistics.jhtml?stockspage=keyStatistics&symbols={this_ticker.symbol}'>The 5-yr EPS growth rate</a> is estimated to be <b><span style=\"color:{Eps_growth_rate_color};\">{this_ticker.Eps_growth_rate:+.2f}%</span></b> (compound rate per year)<br/>"
         else:
-            earnings_info += f"\n\nThe 5-yr EPS growth rate is estimated to be {this_ticker.Eps_growth_rate:+.2f}% (compound rate per year)"
+            earnings_info += f"\nThe 5-yr EPS growth rate is estimated to be {this_ticker.Eps_growth_rate:+.2f}% (compound rate per year)\n"
+
+    if use_html:
+        earnings_info += f"<br/>Compared to risk-free interest rate: <b>{risk_free_interest_rate:+.2f}%</b>"
+    else:
+        earnings_info += f"\nCompared to risk-free interest rate: {risk_free_interest_rate:+.2f}%"
 
     # price target
     if use_html:
@@ -616,10 +625,12 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
 
     if this_ticker.price_target is not None:
         up_side_pct = 100 * (this_ticker.price_target - this_ticker.last_close_price) / this_ticker.last_close_price
+        PT_implied_continuous_compound_interest = 100 * np.log(this_ticker.price_target / this_ticker.last_close_price)
+        PT_based_on_risk_free_rate = this_ticker.last_close_price * np.exp(risk_free_interest_rate/100)
         if use_html:
-            price_target_info = f"<br/><hr>1-yr price target: ${this_ticker.price_target} (<b><span style=\"color:blue;\">{up_side_pct:+.2f}%</span></b> upside)"
+            price_target_info = f"<br/><hr>Price target:<br/><br/>- 1-yr price target: ${this_ticker.price_target:.1f} (compound interest: {PT_implied_continuous_compound_interest:.2f}%, <b><span style=\"color:blue;\">{up_side_pct:+.2f}%</span></b> upside)<br/>- 1-yr price target: ${PT_based_on_risk_free_rate:.1f} (based on risk-free interest rate: {risk_free_interest_rate:.2f}%)"
         else:
-            price_target_info = f"\n\n1-yr price target: ${this_ticker.price_target} ({up_side_pct:+.2f}% upside)"
+            price_target_info = f"\n\nPrice target:\n\n1-yr price target: ${this_ticker.price_target:.1f} (compound interest: {PT_implied_continuous_compound_interest:.2f}%, {up_side_pct:+.2f}% upside)\n- 1-yr price target: ${PT_based_on_risk_free_rate:.1f} (based on risk-free interest rate: {risk_free_interest_rate:.2f}%)"
 
     # apples-to-apples comparison
     # e.g., https://www.investopedia.com/terms/p/price-earningsratio.asp#investor-expectations

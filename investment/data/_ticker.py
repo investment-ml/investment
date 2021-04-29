@@ -299,7 +299,7 @@ ticker_group_dict = {'All': [],
                      'Major Market Indexes': ['^DJI','^NDX','^GSPC','^IXIC','^RUT','^VIX','DIA','SPLG','IVV','VOO','SPY','QQQ','ONEQ','IWM','VTWO','VXX'],
                      'Non-US World Market Indexes': ['^FTSE','^HSI','^N225','^GDAXI','^FCHI','^TWII','^TWDOWD','000001.SS','399001.SZ','^STOXX50E','^CASE30'],
                      'The Stock Exchange of Hong Kong': ['9633.HK','0700.HK','9888.HK','9988.HK'],
-                     'Taiwan Stock Exchange': ['2330.TW','2303.TW','2317.TW'],
+                     'Taiwan Stock Exchange': ['2330.TW','2303.TW','2317.TW','2454.TW'],
                      'Tokyo Stock Exchange': ['8604.T',],
                      'World\'s Billionaires': ['AMZN','TSLA','LVMUY','MSFT','FB','BRK-B','ORCL','GOOGL','IDEXY','ITX.MC','LRLCF','LRLCY','OR.PA','MC.PA'],
                      'Futures': ['NQ=F','YM=F','ES=F','GC=F','CL=F'],
@@ -1422,3 +1422,32 @@ class Ticker(object):
     def curr_trend_short(self):
         adx, plus, minus, adx14, plus14, minus14, trend, trend_short = self.ADX
         return trend_short[-1]
+
+    @property
+    def daily_log_returns_df(self):
+        """
+        https://www.quora.com/How-is-the-volatility-calculated-at-the-Black-Scholes-formula
+        https://www.quora.com/What-are-daily-log-returns-of-an-equity
+        """
+        close = self.ticker_history['Close']
+        return pd.DataFrame({'Date': self.ticker_history['Date'][1:], 'log_returns': np.log( close / close.shift(1) )[1:]})
+
+    @property
+    def annualized_historical_volatility_based_on_daily_log_returns(self):
+        interday_returns_df = self.daily_log_returns_df
+        if interday_returns_df.shape[0] >= 11:
+            return np.std(interday_returns_df['log_returns'][-10:]) * (252**0.5)
+        else:
+            return None
+
+    @property
+    def annualized_historical_volatility(self):
+        """
+        https://www.investopedia.com/ask/answers/021015/how-can-you-calculate-volatility-excel.asp
+        """
+        close = self.ticker_history['Close']
+        interday_returns = (close / close.shift(1)) - 1
+        if len(close) >= 11:
+            return np.std(interday_returns[-10:]) * (252**0.5)
+        else:
+            return None
