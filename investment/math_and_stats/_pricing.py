@@ -13,35 +13,37 @@ class pricing_demo:
     def option(self):
         
         # Option
-        strike_price = 310
-        time_to_maturity = 14 / 365.25 # this must be accurate to the millisecond, including the expiration time is at 11:59am on the expiration date, as the B-S formula assumes continuous compound interest
+        strike_price = 180
+        time_to_maturity = 2 / 365.25 # this must be accurate to the millisecond, including the expiration time is at 11:59am on the expiration date, as the B-S formula assumes continuous compound interest
         # https://www.investopedia.com/terms/e/expiration-time.asp
         # https://www.nasdaq.com/glossary/e/expiration-time
         # "The time of day by which all exercise notices must be received on the expiration date. 
         # Technically, the expiration time is currently 11:59 a.m. [Eastern Time] on the expiration date, but public holders of option contracts must indicate their desire to exercise no later than 5:30 p.m. [Eastern Time] on the business day preceding the expiration date."
         
         # Stock
-        curr_stock_price = 301.13 # spot price
-        expected_volatility_pct = 40.95 # (%)
+        curr_stock_price = 178.58 # spot price
+        expected_volatility_pct = 121.01 # (%)
         expected_dividend_pct = 0
         
         # Market
-        expected_risk_free_interest_rate = 1.5595 # (%), United States 10-Year Bond Yield
+        expected_risk_free_interest_rate = 1.63 # (%), United States 10-Year Bond Yield # https://www.treasury.gov/resource-center/data-chart-center/interest-rates/pages/textview.aspx?data=yield
         
         # Calculation
         this_bs = Black_Scholes(strike_price = strike_price, time_to_maturity = time_to_maturity,
                                 curr_stock_price = curr_stock_price, expected_volatility_pct = expected_volatility_pct, expected_dividend_pct = expected_dividend_pct,
                                 expected_risk_free_interest_rate = expected_risk_free_interest_rate)
-        print(f"While the current price of $XYZ in the marketplace is ${curr_stock_price:.2f} on 2021-04-23, regarding 1 call contract $XYZ 2021-05-07 strike ${strike_price:.2f}.")
+        print(f"While the current price of $XYZ in the marketplace is ${curr_stock_price:.2f} on 2021-04-23, regarding 1 call contract $XYZ 2021-04-30 strike ${strike_price:.2f}.")
         print(f"According to the Black-Scholes model, the present premium is [${this_bs.present_value_of_call_option_price:.2f}/share], and the ask (or bid) price should be higher (or lower) than that.")
+        print(f"Delta: [{this_bs.delta_for_call:.4f}]; Gamma: [{this_bs.gamma_for_call:.4f}]; Theta: [{this_bs.theta_for_call:.4f}]; Vega: [{this_bs.vega_for_call:.4f}]; Rho: [{this_bs.rho_for_call:.4f}].\n")
         #
-        strike_price = 292.5
-        expected_volatility_pct = 42.04 # (%)
+        strike_price = 172.5
+        expected_volatility_pct = 113.34 # (%)
         this_bs = Black_Scholes(strike_price = strike_price, time_to_maturity = time_to_maturity,
                                 curr_stock_price = curr_stock_price, expected_volatility_pct = expected_volatility_pct, expected_dividend_pct = expected_dividend_pct,
                                 expected_risk_free_interest_rate = expected_risk_free_interest_rate)
-        print(f"While the current price of $XYZ in the marketplace is ${curr_stock_price:.2f} on 2021-04-23, regarding 1 put contract $XYZ 2021-05-07 strike ${strike_price:.2f}.")
+        print(f"While the current price of $XYZ in the marketplace is ${curr_stock_price:.2f} on 2021-04-23, regarding 1 put contract $XYZ 2021-04-30 strike ${strike_price:.2f}.")
         print(f"According to the Black-Scholes model, the present premium is [${this_bs.present_value_of_put_option_price:.2f}/share], and the ask (or bid) price should be higher (or lower) than that.")
+        print(f"Delta: [{this_bs.delta_for_put:.4f}]; Gamma: [{this_bs.gamma_for_put:.4f}]; Theta: [{this_bs.theta_for_put:.4f}]; Vega: [{this_bs.vega_for_put:.4f}]; Rho: [{this_bs.rho_for_put:.4f}].\n")
 
 
 class Black_Scholes:
@@ -52,6 +54,7 @@ class Black_Scholes:
     3. http://socr.ucla.edu/htmls/HTML5/econ_apps/BlackScholesPlot/BlackScholesPlot.html (graphics)
     4. https://brilliant.org/wiki/black-scholes-merton/ (some explanation)
     5. https://www.investopedia.com/terms/b/blackscholes.asp
+    6. https://www.quora.com/How-is-the-volatility-calculated-at-the-Black-Scholes-formula (most comprehensive)
     """
 
     ############################################
@@ -123,11 +126,13 @@ class Black_Scholes:
     ############################################
 
     @property
-    def normalizing_factor(self):
+    def standard_deviation_of_the_norm_distribution(self):
         """
         https://papers.ssrn.com/sol3/Delivery.cfm/SSRN_ID1682261_code140767.pdf?abstractid=1682261&mirid=1
 
         this is the SD of the normal distribution.
+
+        This one is at the core of the B-S model and primarily determines the premium when strike price = spot price.
         """
         return self.sigma * (self.t**0.5)
 
@@ -146,7 +151,7 @@ class Black_Scholes:
 
         The Black-Scholes model posits that stock shares will have a lognormal distribution of prices, following a random walk with constant drift and volatility.
         """
-        return np.log(self.present_value_of_stock_price / self.present_value_of_strike_price) / self.normalizing_factor
+        return np.log(self.present_value_of_stock_price / self.present_value_of_strike_price) / self.standard_deviation_of_the_norm_distribution
 
     # note that (+d1) - (+d2) = 1 SD
 
@@ -160,7 +165,7 @@ class Black_Scholes:
         why 0.5 SD? This is to ensure that the current intrinsic value of the call option won't be negative.
         """
         #return (np.log(self.S/self.K) + (self.r - self.q + ((self.sigma**2)/2)) * self.t) / (self.sigma * (self.t**0.5))
-        return self.d_center_for_call + (0.5*self.normalizing_factor)
+        return self.d_center_for_call + (0.5*self.standard_deviation_of_the_norm_distribution)
 
     @property
     def positive_d2_for_call(self):
@@ -170,10 +175,12 @@ class Black_Scholes:
         +d2: the asymmetry in option payoff that favors the call seller (lower intrinsic value);
 
         why 0.5 SD? This is to ensure that the current intrinsic value of the call option won't be negative.
+
+        Note: (positive_d1_for_call - positive_d2_for_call) = 1 self.normalizing_factor
         """
         # return self.d1 - (self.sigma * (self.t**0.5))
         #return (np.log(self.S/self.K) + (self.r - self.q - ((self.sigma**2)/2)) * self.t) / (self.sigma * (self.t**0.5))
-        return self.d_center_for_call - (0.5*self.normalizing_factor)
+        return self.d_center_for_call - (0.5*self.standard_deviation_of_the_norm_distribution)
 
     @property
     def N_positive_d1_for_call(self):
@@ -190,6 +197,9 @@ class Black_Scholes:
         https://quant.stackexchange.com/questions/46856/where-can-i-find-a-clear-explanation-brief-derivation-of-nd1-and-nd2
         # after favoring the call seller, the risk-adjusted probability of the call option finishing ITM and being exercised at maturity (the stock price > the strike price); range = 0 ~ 1; prob > 0.5 means more likely ITM; prob ≤ 0.5 means more likely OTM;
         # the risks here include (a) the risk-free interest, (b) the dividend, (c) the volatility, (d) the time to maturity.
+
+        When d_center_for_call = 0 (self.present_value_of_stock_price / self.present_value_of_strike_price = 1),
+        (N_positive_d1_for_call - N_positive_d2_for_call) is the largest, reflecting the max. time value = 1 SD.
         """
         return self.rv.cdf(self.positive_d2_for_call)
 
@@ -210,6 +220,43 @@ class Black_Scholes:
         the_expected_cash_cost_as_buying_at_maturity = self.present_value_of_strike_price * probability_of_ITM_favoring_call_seller # the payment (cost basis) that will likely be made to call away the stock from the seller when the call option is exercised at expiration
         return the_expected_asset_value_as_selling_at_maturity - the_expected_cash_cost_as_buying_at_maturity
 
+    @property
+    def delta_for_call(self):
+        """
+        slide#20 in https://web.ma.utexas.edu/users/mcudina/m339w-slides-option-greeks.pdf
+        https://www.macroption.com/black-scholes-formula/
+        """
+        return np.exp(-self.q*self.t) * self.N_positive_d1_for_call
+
+    @property
+    def gamma_for_call(self):
+        """
+        slide#23 in https://web.ma.utexas.edu/users/mcudina/m339w-slides-option-greeks.pdf
+        https://www.macroption.com/black-scholes-formula/
+        """
+        return self.rv.pdf(self.positive_d1_for_call) * np.exp(-self.q*self.t) / (self.S_at_maturity * self.sigma * ((self.t)**0.5))
+
+    @property
+    def theta_for_call(self):
+        """
+        https://www.macroption.com/black-scholes-formula/
+        """
+        return (- (( self.S_at_maturity * self.sigma * np.exp(-self.q*self.t)/(2*(self.t**0.5)) ) * self.rv.pdf(self.positive_d1_for_call)) - (self.r * self.K_at_maturity * np.exp(-self.r*self.t) * self.N_positive_d2_for_call) + (self.q*self.S_at_maturity*np.exp(-self.q*self.t)*self.N_positive_d1_for_call) ) / 365.25
+
+    @property
+    def vega_for_call(self):
+        """
+        https://www.macroption.com/black-scholes-formula/
+        """
+        return self.S_at_maturity * np.exp(-self.q*self.t) * (self.t**0.5) * self.rv.pdf(self.positive_d1_for_call) / 100
+
+    @property
+    def rho_for_call(self):
+        """
+        https://www.macroption.com/black-scholes-formula/
+        """
+        return self.K_at_maturity * self.t * np.exp(-self.r*self.t) * self.N_positive_d2_for_call / 100        
+
     ################# for put #################
 
     @property
@@ -225,7 +272,7 @@ class Black_Scholes:
 
         The Black-Scholes model posits that stock shares will have a lognormal distribution of prices, following a random walk with constant drift and volatility.
         """
-        return np.log(self.present_value_of_strike_price / self.present_value_of_stock_price) / self.normalizing_factor
+        return np.log(self.present_value_of_strike_price / self.present_value_of_stock_price) / self.standard_deviation_of_the_norm_distribution
 
     # note that (-d2) - (-d1) = 1 SD
 
@@ -236,7 +283,7 @@ class Black_Scholes:
         -d2: 0.5 SD [above, thus favoring the put buyer] the d_center_for_put in a normal distribution of d_center_for_put;
         -d2: the asymmetry in option payoff that favors the put buyer (higher intrinsic value);
         """
-        return self.d_center_for_put + (0.5*self.normalizing_factor)
+        return self.d_center_for_put + (0.5*self.standard_deviation_of_the_norm_distribution)
 
     @property
     def negative_d1_for_put(self):
@@ -244,8 +291,10 @@ class Black_Scholes:
         https://papers.ssrn.com/sol3/Delivery.cfm/SSRN_ID1682261_code140767.pdf?abstractid=1682261&mirid=1
         -d1: 0.5 SD [below, thus favoring the put seller] the d_center_for_put in a normal distribution of d_center_for_put;
         -d1: the asymmetry in option payoff that favors the put seller (lower intrinsic value);
+
+        Note: (negative_d2_for_put - negative_d1_for_put) = 1 self.normalizing_factor
         """
-        return self.d_center_for_put - (0.5*self.normalizing_factor)
+        return self.d_center_for_put - (0.5*self.standard_deviation_of_the_norm_distribution)
 
     @property
     def N_negative_d2_for_put(self):
@@ -260,6 +309,9 @@ class Black_Scholes:
         """
         # after favoring the put seller, the risk-adjusted probability of the put option finishing ITM and being exercised at maturity (the strike price > the stock price); range = 0 ~ 1; prob > 0.5 means more likely ITM; prob ≤ 0.5 means more likely OTM;
         # the risks here include (a) the risk-free interest, (b) the dividend, (c) the volatility, (d) the time to maturity.
+
+        When d_center_for_put = 0 (self.present_value_of_strike_price / self.present_value_of_stock_price = 1),
+        (N_negative_d2_for_put - N_negative_d1_for_put) is the largest, reflecting the max. time value = 1 SD.
         """
         return self.rv.cdf(self.negative_d1_for_put)
 
@@ -280,6 +332,40 @@ class Black_Scholes:
         the_expected_asset_cost_as_buying_cover_at_maturity = self.present_value_of_stock_price * probability_of_ITM_favoring_put_seller
         return the_expected_cash_value_as_short_selling_at_maturity - the_expected_asset_cost_as_buying_cover_at_maturity
 
+    @property
+    def delta_for_put(self):
+        """
+        https://www.macroption.com/black-scholes-formula/
+        """
+        return np.exp(-self.q*self.t) * (self.N_positive_d1_for_call - 1)
+
+    @property
+    def gamma_for_put(self):
+        """
+        https://www.macroption.com/black-scholes-formula/
+        """
+        return self.gamma_for_call
+
+    @property
+    def theta_for_put(self):
+        """
+        https://www.macroption.com/black-scholes-formula/
+        """
+        return (- (( self.S_at_maturity * self.sigma * np.exp(-self.q*self.t)/(2*(self.t**0.5)) ) * self.rv.pdf(self.positive_d1_for_call)) + (self.r * self.K_at_maturity * np.exp(-self.r*self.t) * self.N_negative_d2_for_put) - (self.q*self.S_at_maturity*np.exp(-self.q*self.t)*self.N_negative_d1_for_put) ) / 365.25 
+
+    @property
+    def vega_for_put(self):
+        """
+        https://www.macroption.com/black-scholes-formula/
+        """
+        return self.vega_for_call
+
+    @property
+    def rho_for_put(self):
+        """
+        https://www.macroption.com/black-scholes-formula/
+        """
+        return self.K_at_maturity * self.t * np.exp(-self.r*self.t) * self.N_negative_d2_for_put / -100      
 
 class Bjerksund_Stensland:
     """

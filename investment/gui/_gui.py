@@ -1487,35 +1487,25 @@ class UI_control(object):
         x = np.arange(len(dates))
         canvas.axes.grid(True, which='major', color='silver', linewidth=0.5)
         #canvas.axes.grid(True, which='minor', color='silver', linewidth=0.5, linestyle='dashed')
-        # volume bar
+        close = self.ticker_data_dict_in_effect['history']['Close']
+        close_range = close.max() - close.min()
+        canvas.axes.set_ylim(bottom=close.min() - close_range * 0.15, top = close.max() + close_range * 0.15)
+        # for plotting volume bar
         volumes = self.ticker_data_dict_in_effect['history']['Volume'].values
-        if self._UI.ticker_yscale_log_checkbox.isChecked():
+        if volumes[0] is not None:
+            canvas.axes.set_ylim(bottom=close.min() - close_range * 0.25, top = close.max() + close_range * 0.15) # to allow room for the volume bars
             axis1 = canvas.axes.twinx()
             axis1.set_yscale('linear')
             axis1.set_ylim(bottom=0, top=1)
             axis1.yaxis.set_ticks([])
             axis1.yaxis.set_ticklabels([])
             axis1.yaxis.set_visible(False)
-            close = self.ticker_data_dict_in_effect['history']['Close']
-            canvas.axes.set_ylim(bottom=close.min() * 0.95, top = close.max() * 1.05)
-        #
-        if volumes[0] is not None:
-            if self._UI.ticker_yscale_log_checkbox.isChecked():
-                canvas.axes.set_ylim(bottom=close.min() * 0.80, top = close.max() * 1.10)
-                scale_factor = 0.4 / max(volumes)
-                volumes = volumes * scale_factor
-                close_prev = self.ticker_data_dict_in_effect['history']['Close'].shift(1)
-                close_increase = (close >= close_prev).values
-                volume_color = ['#86cbc5' if chg else '#f69f9d' for chg in close_increase]
-                axis1.bar(x, volumes, color=volume_color)
-            else:
-                close = self.ticker_data_dict_in_effect['history']['Close']
-                scale_factor = (max(close.values) * 0.4) / max(volumes)
-                volumes = volumes * scale_factor
-                close_prev = self.ticker_data_dict_in_effect['history']['Close'].shift(1)
-                close_increase = (close >= close_prev).values
-                volume_color = ['#86cbc5' if chg else '#f69f9d' for chg in close_increase]
-                canvas.axes.bar(x, volumes, color=volume_color)          
+            scale_factor = 0.4 / max(volumes)
+            volumes = volumes * scale_factor
+            close_prev = self.ticker_data_dict_in_effect['history']['Close'].shift(1)
+            close_increase = (close >= close_prev).values
+            volume_color = ['#86cbc5' if chg else '#f69f9d' for chg in close_increase]
+            axis1.bar(x, volumes, color=volume_color)        
         #
         #ticker_plotline, = canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close'], color='tab:blue',                    linewidth=1)
         canvas.axes.plot(x, self.ticker_data_dict_in_effect['history']['Close_EMA255'],             color='#9ed5f7', linestyle="dashed", linewidth=1)
@@ -1525,26 +1515,31 @@ class UI_control(object):
         canvas.axes.set_ylabel('Close Price (EMA9, 255)', fontsize=10.0)
         x_range = max(x) - min(x)
         canvas.axes.set_xlim(left=min(x)-(x_range / 50), right=max(x)+(x_range / 50), auto=True)
-        #
+        # yscale
         if self._UI.ticker_yscale_log_checkbox.isChecked():
+            # yscale: log
             canvas.axes.set_yscale('log', base=10)
             y_min = self.ticker_data_dict_in_effect['history']['Close'].min()
             y_max = self.ticker_data_dict_in_effect['history']['Close'].max()
-            if y_max <= 3:
-                y_major = MultipleLocator(0.5)
-            elif 3 < y_max and y_max <= 10:
-                y_major = MultipleLocator(1)
-            elif 10 < y_max and y_max <= 300:
-                y_major = MultipleLocator(10)
-            elif 300 < y_max:
-                y_major = MultipleLocator(100)
+            #if y_max <= 3:
+            #    y_major = MultipleLocator(0.5)
+            #elif 3 < y_max and y_max <= 10:
+            #    y_major = MultipleLocator(1)
+            #elif 10 < y_max and y_max <= 300:
+            #    y_major = MultipleLocator(10)
+            #elif 300 < y_max:
+            #    y_major = MultipleLocator(100)
             y_major = MultipleLocator(round((y_max - y_min) / 8, 1))
             #y_major = LogLocator(base=2, numticks=10)
             canvas.axes.yaxis.set_major_locator(y_major) # https://stackoverflow.com/questions/49436895/arguments-for-loglocator-in-matplotlib
             #canvas.axes.yaxis.set_minor_locator(None)
-            canvas.axes.yaxis.set_major_formatter(plt.FuncFormatter('{:.1f}'.format)) # ScalarFormatter()) #plt.FuncFormatter('{:.0f}'.format))
-            canvas.axes.minorticks_off()
             #canvas.axes.yaxis.set_minor_formatter(plt.FuncFormatter('{:.1f}'.format)) #
+        else:
+            # yscale: linear
+            canvas.axes.set_yscale('linear')
+        #
+        canvas.axes.yaxis.set_major_formatter(plt.FuncFormatter('{:.1f}'.format))
+        canvas.axes.minorticks_off()
         #
         canvas.figure.autofmt_xdate()
         ticker_plotline = None
@@ -1562,7 +1557,7 @@ class UI_control(object):
         canvas.mpl_connect('motion_notify_event',  canvas.onmove)
         #################################################
         # to allow snapping cursor, so axis1 is now under, rather than on top of the original axis
-        if self._UI.ticker_yscale_log_checkbox.isChecked():
+        if volumes[0] is not None:
             axis1.set_zorder(0)
         canvas.axes.set_zorder(1)  # default zorder is 0 for ax1 and ax2 # https://stackoverflow.com/questions/30505616/how-to-arrange-plots-of-secondary-axis-to-be-below-plots-of-primary-axis-in-matp
         canvas.axes.set_frame_on(False)

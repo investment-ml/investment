@@ -36,8 +36,8 @@ import requests
 
 ###########################################################################################
 
-tickers_with_no_volume = ['^W5000','^VVIX','^VIX','^TNX','^TYX','^FVX','^IRX','^VXN','EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','HKD=X','DX-Y.NYB','^TWII','^TWDOWD','^HSI','^N225','^GDAXI','^FCHI','000001.SS','399001.SZ','^STOXX50E','^CASE30']
-tickers_with_no_PT = ['^NDX','^GSPC','000001.SS','399001.SZ','NQ=F','YM=F','GC=F','ES=F','CL=F','DS-PB','^CASE30','ARKK','ARKQ','ARKW','ARKF','ARKG','ARKX']
+tickers_with_no_volume = ['^W5000','^VVIX','^VIX','^TNX','^TYX','^FVX','^IRX','^VXN','EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','HKD=X','DX-Y.NYB','^TWII','^TWDOWD','^HSI','^N225','^GDAXI','^FCHI','000001.SS','399001.SZ','^STOXX50E','^CASE30','^NSEI']
+tickers_with_no_PT = ['^NDX','^GSPC','000001.SS','399001.SZ','NQ=F','YM=F','GC=F','ES=F','CL=F','DS-PB','^CASE30','ARKK','ARKQ','ARKW','ARKF','ARKG','ARKX','^NSEI','0050.TW']
 tickers_likely_delisted = ['AAC+','AAC=','AAQC=','ACIC+','ACII=','ALMDG','AKE','ADYEN','ACND+','ACND=','ACR-C','ADEX+','ADEX=','ADF=','ADRA=','AMTD','BEZQ','BATM','SERV','TCO','WPX','PLSN','PE','OERL','BIMCM','BSEN','CTL','NBL','MYL','EIDX','PIH','PRCP','DRAD','CXO',
                            'MLTM','EMCO','DNKN','LVGO','LOGM','FTAL','ETFC','GLIBA','HAML','LM','KSPI','HEXAB','HDS','IMMU','WMGI','VSLR','WRTC','SBBX','TERP','TRWH','RUBI','RTRX','RST','RESI','PUB','PTLA','PRSC','PRNB','RTIX','POL','PFNX','PDLI','AMAG','AKCA','AIMT',
                            'ADSW','ADRO','CETV','CATS','BSTC','BREW','BMCH','BFYT','BBX','CVTI','DBCP','EE','ERI','EROS','FIT','NGHC','AMRH','AAXN','ACAM','TZAC','TOTA','SMMC','SAMA','ARA','CFBI','PRVL','PTAC','PTI','PECK','PEIX','NVUS','OPES','FBM','FRAN','NOVS','MYOK',
@@ -297,9 +297,9 @@ ticker_group_dict = {'All': [],
                      'ETF database': [],
                      'Buffett Indicator': ['^W5000',],
                      'Major Market Indexes': ['^DJI','^NDX','^GSPC','^IXIC','^RUT','^VIX','DIA','SPLG','IVV','VOO','SPY','QQQ','ONEQ','IWM','VTWO','VXX'],
-                     'Non-US World Market Indexes': ['^FTSE','^HSI','^N225','^GDAXI','^FCHI','^TWII','^TWDOWD','000001.SS','399001.SZ','^STOXX50E','^CASE30'],
+                     'Non-US World Market Indexes': ['^FTSE','^HSI','^N225','^GDAXI','^FCHI','^TWII','^TWDOWD','000001.SS','399001.SZ','^STOXX50E','^CASE30','^NSEI'],
                      'The Stock Exchange of Hong Kong': ['9633.HK','0700.HK','9888.HK','9988.HK'],
-                     'Taiwan Stock Exchange': ['2330.TW','2303.TW','2317.TW','2454.TW'],
+                     'Taiwan Stock Exchange': ['2330.TW','2303.TW','2317.TW','2454.TW','0050.TW'],
                      'Tokyo Stock Exchange': ['8604.T',],
                      'World\'s Billionaires': ['AMZN','TSLA','LVMUY','MSFT','FB','BRK-B','ORCL','GOOGL','IDEXY','ITX.MC','LRLCF','LRLCY','OR.PA','MC.PA'],
                      'Futures': ['NQ=F','YM=F','ES=F','GC=F','CL=F'],
@@ -315,7 +315,7 @@ ticker_group_dict = {'All': [],
                      'Russell 3000': [],
                      'Equity database': [],
                      'Volatility': ['^VVIX','^VIX','VIXY','VXX','^VXN',],
-                     'Treasury Bonds Yield': ['^TNX','^TYX','^FVX','^IRX','SHV','TIP','FLOT','VUT','BND','TMV','TLT','EDV','ZROZ','TBT'],
+                     'Treasury Bonds Yield': ['^TNX','^TYX','^FVX','^IRX','SHV','TIP', 'STIP', 'FLOT','VUT','BND','TMV','TLT','EDV','ZROZ','TBT'],
                      'OTC Market': ['JCPNQ','TGLO','HTZGQ','TCTZF','LVMUY','IDEXY','LRLCF','LRLCY'],
                      'ARK Investments': ['ARKK','ARKQ','ARKW','ARKG','ARKF','ARKX','IZRL','PRNT'],
                      'ARK Innovation ETF': [x for x in ARK_df_dict['ARKK']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
@@ -542,9 +542,9 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'ETF database': f"https://nasdaqtrader.com/",
                    'Buffett Indicator': f"Divide the Wilshire 5000 Index (viewed as the total stock market) by the annual U.S. GDP (e.g., <a href='https://www.investing.com/economic-calendar/gdp-375'>https://www.investing.com/economic-calendar/gdp-375</a>). Before dot-com bubble burst, it was 159.2%.<br/><br/><a href='https://www.gurufocus.com/stock-market-valuations.php'>https://www.gurufocus.com/stock-market-valuations.php</a><br/><br/><a href='https://www.bea.gov/data/gdp/gross-domestic-product'>GDP</a>",
                    'Major Market Indexes': f"https://www.investing.com/indices/major-indices",
-                   'Non-US World Market Indexes': f"<b>FTSE</b> (Financial Times Stock Exchange) 100 Index is a share index of the 100 companies listed on the <b>London Stock Exchange</b> with the highest market capitalisation.<br/><br/><b>HSI</b> is Hang Seng Index.<br/><br/><b>N225</b> is the Nikkei 225, the Nikkei Stock Average, is a stock market index for the Tokyo Stock Exchange.<br/><br/><b>GDAXI</b> is the DAX Performance Index, a blue chip stock market index consisting of the 30 major <b>German</b> companies trading on the Frankfurt Stock Exchange.<br/><br/><b>FCHI</b> is CAC 40, a benchmark <b>French stock market index</b>, representing a capitalization-weighted measure of the 40 most significant stocks among the 100 largest market caps on the Euronext Paris.<br/><br/><b>TWII</b> is the TSEC (Taiwan Stock Exchange Corporation) weighted index.<br/><br/><b>000001.SS</b> is the SSE (Shanghai Stock Exchange) Composite Index, currency in CNY.<br/><br/><b>399001.SZ</b> is the Shenzhen Component, currency in CNY.<br/><br/><b>^STOXX50E</b> is the EURO STOXX 50 index, dominated by France (36.4%) and Germany (35.2%) and providing a blue-chip representation of supersector leaders in the Eurozone.<br/><br/><b>^CASE30</b> is the stock market index for securities in Egypt.<br/><br/>",
+                   'Non-US World Market Indexes': f"<b>FTSE</b> (Financial Times Stock Exchange) 100 Index is a share index of the 100 companies listed on the <b>London Stock Exchange</b> with the highest market capitalisation.<br/><br/><b>HSI</b> is Hang Seng Index.<br/><br/><b>N225</b> is the Nikkei 225, the Nikkei Stock Average, is a stock market index for the Tokyo Stock Exchange.<br/><br/><b>GDAXI</b> is the DAX Performance Index, a blue chip stock market index consisting of the 30 major <b>German</b> companies trading on the Frankfurt Stock Exchange.<br/><br/><b>FCHI</b> is CAC 40, a benchmark <b>French stock market index</b>, representing a capitalization-weighted measure of the 40 most significant stocks among the 100 largest market caps on the Euronext Paris.<br/><br/><b>TWII</b> is the TSEC (Taiwan Stock Exchange Corporation) weighted index.<br/><br/><b>000001.SS</b> is the SSE (Shanghai Stock Exchange) Composite Index, currency in CNY.<br/><br/><b>399001.SZ</b> is the Shenzhen Component, currency in CNY.<br/><br/><b>^STOXX50E</b> is the EURO STOXX 50 index, dominated by France (36.4%) and Germany (35.2%) and providing a blue-chip representation of supersector leaders in the Eurozone.<br/><br/><b>^CASE30</b> is the stock market index for securities in Egypt.<br/><br/><b>^NSEI</b> (the NIFTY 50) is a benchmark Indian stock market index that represents the weighted average of 50 of the largest Indian companies listed on the National Stock Exchange (NSE). It is one of the two main stock indices used in India, the other being the BSE SENSEX.<br/><br/>",
                    'The Stock Exchange of Hong Kong': f"According to wikipedia, the Stock Exchange of Hong Kong is a stock exchange based in Hong Kong.<br/><br/>It is the world's largest bourse (a stock market in a non-English-speaking country) in terms of market capitalization, surpassing Chicago-based CME.<br/><br/>As of the end of 2020, it has 2,538 listed companies with a combined market capitalization of HK$47 trillion.",
-                   'Taiwan Stock Exchange': f"<a href='https://www.twse.com.tw/en/'>Taiwan Stock Exchange Corporation</a>",
+                   'Taiwan Stock Exchange': f"<a href='https://www.twse.com.tw/en/'>Taiwan Stock Exchange Corporation</a><br/><br/>2330.TW: Taiwan Semiconductor Manufacturing Company Limited.<br/><br/>2303.TW: United Microelectronics Corporation.<br/><br/>2317.TW: Hon Hai Precision Industry Co., Ltd.<br/><br/>2454.TW: MediaTek Inc.<br/><br/>0050.TW: Yuanta/P-shares Taiwan Top 50 ETF.<br/><br/>",
                    'Tokyo Stock Exchange': f"<a href='https://en.wikipedia.org/wiki/Tokyo_Stock_Exchange'>Tokyo Stock Exchange</a>",
                    'World\'s Billionaires': "<style> table, th, td {border: 1px solid black; border-collapse: collapse; padding: 2px;}</style><a href='https://www.forbes.com/real-time-billionaires/'>Many billionaires</a> are rich because of the stock markets.<br/><br/>2021-04-06:<br/><table><tr><th>#</th><th>Name</th><th>Stock</th></tr><tr><td>1</td><td>Jeff Bezos</td><td>AMZN</td></tr><tr><td>2</td><td>Elon Musk</td><td>TSLA</td></tr><tr><td>3</td><td>Bernard Arnault & family</td><td>MC.PA (France), LVMUY (USA)</td></tr><tr><td>4</td><td>Bill Gates</td><td>MSFT</td></tr><tr><td>5</td><td>Mark Zuckerberg</td><td>FB</td></tr><tr><td>6</td><td>Warren Buffett</td><td>BRK-B</td></tr><tr><td>7</td><td>Larry Ellison</td><td>ORCL</td></tr><tr><td>8</td><td>Larry Page</td><td>GOOGL</td></tr><tr><td>9</td><td>Sergey Brin</td><td>GOOGL</td></tr><tr><td>10</td><td>Amancio Ortega</td><td>ITX.MC (Spain), IDEXY (USA)</td></tr><tr><td>11</td><td>Francoise Bettencourt Meyers & family</td><td>OR.PA (France), LRLCY or LRLCF (USA)</td></tr></table><br/><br/>To be completed...",
                    'Futures': f"<b>NQ=F</b>: Nasdaq Futures<br/><br/><b>YM=F</b>: Dow Futures<br/><br/><b>ES=F</b>: S&P Futures<br/><br/><b>GC=F</b>: Gold Futures<br/><br/><b>CL=F</b>: Crude Oil Futures",
@@ -731,7 +731,8 @@ class Ticker(object):
                               'NYM': 'NYMEX (New York Mercantile Exchange, e.g., CL=F)',
                               'CBT': 'Chicago Board of Trade (e.g., YM=F)',
                               'ZRH': 'Zurich/headquarters (e.g., ^STOXX50E)',
-                              'MCE': 'Madrid Stock Exchange in Spain (e.g., ITX.MC)'}
+                              'MCE': 'Madrid Stock Exchange in Spain (e.g., ITX.MC)',
+                              'NSI': 'National Stock Exchange in India (e.g., ^NSEI)'}
         if exchange_info not in exchange_info_dict.keys():
             #print(f"exchange code [{exchange_info}] not defined")
             return f"{exchange_info} (???)"
@@ -1432,22 +1433,35 @@ class Ticker(object):
         close = self.ticker_history['Close']
         return pd.DataFrame({'Date': self.ticker_history['Date'][1:], 'log_returns': np.log( close / close.shift(1) )[1:]})
 
-    @property
-    def annualized_historical_volatility_based_on_daily_log_returns(self):
-        interday_returns_df = self.daily_log_returns_df
-        if interday_returns_df.shape[0] >= 11:
-            return np.std(interday_returns_df['log_returns'][-10:]) * (252**0.5)
-        else:
-            return None
-
-    @property
-    def annualized_historical_volatility(self):
+    def historical_volatility(self, periods = 10):
         """
         https://www.investopedia.com/ask/answers/021015/how-can-you-calculate-volatility-excel.asp
+        https://www.macroption.com/historical-volatility-excel/
         """
-        close = self.ticker_history['Close']
-        interday_returns = (close / close.shift(1)) - 1
-        if len(close) >= 11:
-            return np.std(interday_returns[-10:]) * (252**0.5)
+        #close = self.ticker_history['Close']
+        #interday_returns = (close / close.shift(1)) - 1
+        #if len(close) >= (periods+1):
+        #    return np.std(interday_returns[-periods:]) * (252**0.5)
+        #else:
+        #    return None
+        interday_returns_df = self.daily_log_returns_df
+        if interday_returns_df.shape[0] >= (periods+1):
+            return np.std(interday_returns_df['log_returns'][-periods:]) * (252**0.5)
         else:
             return None
+    
+    @property
+    def HV10(self):
+        return self.historical_volatility(periods = 10)
+
+    @property
+    def HV20(self):
+        return self.historical_volatility(periods = 20)
+
+    @property
+    def HV30(self):
+        return self.historical_volatility(periods = 30)
+
+    @property
+    def HV60(self):
+        return self.historical_volatility(periods = 60)
