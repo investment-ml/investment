@@ -44,6 +44,7 @@ class pricing_demo:
         print(f"While the current price of $XYZ in the marketplace is ${curr_stock_price:.2f} on 2021-04-23, regarding 1 put contract $XYZ 2021-04-30 strike ${strike_price:.2f}.")
         print(f"According to the Black-Scholes model, the present premium is [${this_bs.present_value_of_put_option_price:.2f}/share], and the ask (or bid) price should be higher (or lower) than that.")
         print(f"Delta: [{this_bs.delta_for_put:.4f}]; Gamma: [{this_bs.gamma_for_put:.4f}]; Theta: [{this_bs.theta_for_put:.4f}]; Vega: [{this_bs.vega_for_put:.4f}]; Rho: [{this_bs.rho_for_put:.4f}].\n")
+        ################################################################################################################
         #
         strike_price = 100
         time_to_maturity = 1
@@ -61,6 +62,25 @@ class pricing_demo:
         print(f"Delta: [{this_bs.delta_for_call:.4f}]; Gamma: [{this_bs.gamma_for_call:.4f}]; Theta: [{this_bs.theta_for_call:.4f}]; Vega: [{this_bs.vega_for_call:.4f}]; Rho: [{this_bs.rho_for_call:.4f}].\n")
         print(f"While the current price of $XYZ in the marketplace is ${curr_stock_price:.2f} on 2021-04-23, regarding 1 put contract $XYZ 2021-04-30 strike ${strike_price:.2f}.")
         print(f"According to the Black-Scholes model, the present premium is [${this_bs.present_value_of_put_option_price:.2f}/share], and the ask (or bid) price should be higher (or lower) than that.")
+        print(f"Delta: [{this_bs.delta_for_put:.4f}]; Gamma: [{this_bs.gamma_for_put:.4f}]; Theta: [{this_bs.theta_for_put:.4f}]; Vega: [{this_bs.vega_for_put:.4f}]; Rho: [{this_bs.rho_for_put:.4f}].\n")
+        ################################################################################################################
+        #
+        strike_price = 12.5
+        time_to_maturity = 19/365.25
+        #
+        curr_stock_price = 14.71
+        expected_volatility_pct = 81.96 # (%)
+        expected_dividend_pct = 0
+        #
+        expected_risk_free_interest_rate_pct = 1.65
+        this_bs = Black_Scholes_model(strike_price = strike_price, time_to_maturity = time_to_maturity,
+                                      curr_stock_price = curr_stock_price, expected_volatility_pct = expected_volatility_pct, expected_dividend_pct = expected_dividend_pct,
+                                      expected_risk_free_interest_rate_pct = expected_risk_free_interest_rate_pct)
+        print(f"While the current price of $XYZ in the marketplace is ${curr_stock_price:.2f} on 2021-04-23, regarding 1 call contract $XYZ 2021-05-21 strike ${strike_price:.2f}.")
+        print(f"According to the B-S model, the present premium is [${this_bs.present_value_of_call_option_price:.2f}/share] (APY = {100*this_bs.present_APY_of_call_option_price:.2f}%); the ask (or bid) should be higher (or lower) than this.")
+        print(f"Delta: [{this_bs.delta_for_call:.4f}]; Gamma: [{this_bs.gamma_for_call:.4f}]; Theta: [{this_bs.theta_for_call:.4f}]; Vega: [{this_bs.vega_for_call:.4f}]; Rho: [{this_bs.rho_for_call:.4f}].\n")
+        print(f"While the current price of $XYZ in the marketplace is ${curr_stock_price:.2f} on 2021-04-23, regarding 1 put contract $XYZ 2021-05-21 strike ${strike_price:.2f}.")
+        print(f"According to the B-S model, the present premium is [${this_bs.present_value_of_put_option_price:.2f}/share] (APY = {100*this_bs.present_APY_of_put_option_price:.2f}%); the ask (or bid) should be higher (or lower) than this.")
         print(f"Delta: [{this_bs.delta_for_put:.4f}]; Gamma: [{this_bs.gamma_for_put:.4f}]; Theta: [{this_bs.theta_for_put:.4f}]; Vega: [{this_bs.vega_for_put:.4f}]; Rho: [{this_bs.rho_for_put:.4f}].\n")
 
 
@@ -241,6 +261,14 @@ class Black_Scholes_model:
         return the_expected_asset_value_as_selling_at_maturity - the_expected_cash_cost_as_buying_at_maturity
 
     @property
+    def present_APY_of_call_option_price(self):
+        if self.K_at_maturity < self.S_at_maturity: # ITM
+            intrinsic_value_at_maturity = self.S_at_maturity - self.K_at_maturity
+        else:
+            intrinsic_value_at_maturity = 0
+        return np.log( (self.present_value_of_call_option_price - intrinsic_value_at_maturity) / self.K_at_maturity + 1 ) / self.t
+
+    @property
     def delta_for_call(self):
         """
         slide#20 in https://web.ma.utexas.edu/users/mcudina/m339w-slides-option-greeks.pdf
@@ -351,6 +379,14 @@ class Black_Scholes_model:
         the_expected_cash_value_as_short_selling_at_maturity = self.present_value_of_strike_price * probability_of_ITM_favoring_put_buyer
         the_expected_asset_cost_as_buying_cover_at_maturity = self.present_value_of_stock_price * probability_of_ITM_favoring_put_seller
         return the_expected_cash_value_as_short_selling_at_maturity - the_expected_asset_cost_as_buying_cover_at_maturity
+
+    @property
+    def present_APY_of_put_option_price(self):
+        if self.S_at_maturity < self.K_at_maturity: # ITM
+            intrinsic_value_at_maturity = self.K_at_maturity - self.S_at_maturity
+        else:
+            intrinsic_value_at_maturity = 0
+        return np.log( (self.present_value_of_put_option_price - intrinsic_value_at_maturity) / self.K_at_maturity + 1 ) / self.t
 
     @property
     def delta_for_put(self):

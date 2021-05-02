@@ -25,7 +25,10 @@ import numpy as np
 
 # Treasury (U.S. Government Bills, Notes, Bonds, and TIPS) Yield 10 Years
 # Treasury Yield is the return on investment, expressed as a percentage, on the U.S. government's debt obligations.
-risk_free_interest_rate = yf.Ticker('^TNX').history(period='1d').iloc[0]['Close'] # e.g., 1.64
+try:
+    risk_free_interest_rate = yf.Ticker('^TNX').history(period='1d').iloc[0]['Close'] # e.g., 1.64
+except:
+    risk_free_interest_rate = 1.64
 
 # Tresury Yield is different from the Federal funds rate
 # The Federal funds rate is the interest rate at which depository institutions lend reserve balances to other depository institutions overnight.

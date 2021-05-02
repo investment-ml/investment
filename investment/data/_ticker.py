@@ -1437,6 +1437,8 @@ class Ticker(object):
         """
         https://www.investopedia.com/ask/answers/021015/how-can-you-calculate-volatility-excel.asp
         https://www.macroption.com/historical-volatility-excel/
+        We assume that prices make the so called random walk, mathematically Wiener Process, but popularly better known as Brownian Motion (from physics).
+        Each particular increment of this random walk has variance that is proportional to the time over which the price was moving. For example, if a particular randomly walking stock has variance equal to 1 in 1 day, it has variance equal to 2 in 2 days etc.
         """
         #close = self.ticker_history['Close']
         #interday_returns = (close / close.shift(1)) - 1
@@ -1457,6 +1459,10 @@ class Ticker(object):
     @property
     def HV20(self):
         return self.historical_volatility(periods = 20)
+
+    @property
+    def HV21(self):
+        return self.historical_volatility(periods = 21)
 
     @property
     def HV30(self):
