@@ -35,7 +35,7 @@ import copy
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator, LogLocator
+from matplotlib.ticker import MultipleLocator, LogLocator, MaxNLocator
 
 from datetime import date, datetime, timedelta, timezone
 
@@ -1489,11 +1489,11 @@ class UI_control(object):
         #canvas.axes.grid(True, which='minor', color='silver', linewidth=0.5, linestyle='dashed')
         close = self.ticker_data_dict_in_effect['history']['Close']
         close_range = close.max() - close.min()
-        canvas.axes.set_ylim(bottom=close.min() - close_range * 0.15, top = close.max() + close_range * 0.15)
+        canvas.axes.set_ylim(bottom=max(close.min() * 0.85, close.min() - close_range * 0.15), top = min(close.max() * 1.15, close.max() + close_range * 0.15))
         # for plotting volume bar
         volumes = self.ticker_data_dict_in_effect['history']['Volume'].values
         if volumes[0] is not None:
-            canvas.axes.set_ylim(bottom=close.min() - close_range * 0.25, top = close.max() + close_range * 0.15) # to allow room for the volume bars
+            canvas.axes.set_ylim(bottom=max(close.min() * 0.75, close.min() - close_range * 0.25), top = min(close.max() * 1.15, close.max() + close_range * 0.15)) # to allow room for the volume bars
             axis1 = canvas.axes.twinx()
             axis1.set_yscale('linear')
             axis1.set_ylim(bottom=0, top=1)
@@ -1519,19 +1519,11 @@ class UI_control(object):
         if self._UI.ticker_yscale_log_checkbox.isChecked():
             # yscale: log
             canvas.axes.set_yscale('log', base=10)
-            y_min = self.ticker_data_dict_in_effect['history']['Close'].min()
-            y_max = self.ticker_data_dict_in_effect['history']['Close'].max()
-            #if y_max <= 3:
-            #    y_major = MultipleLocator(0.5)
-            #elif 3 < y_max and y_max <= 10:
-            #    y_major = MultipleLocator(1)
-            #elif 10 < y_max and y_max <= 300:
-            #    y_major = MultipleLocator(10)
-            #elif 300 < y_max:
-            #    y_major = MultipleLocator(100)
-            y_major = MultipleLocator(round((y_max - y_min) / 8, 1))
-            #y_major = LogLocator(base=2, numticks=10)
-            canvas.axes.yaxis.set_major_locator(y_major) # https://stackoverflow.com/questions/49436895/arguments-for-loglocator-in-matplotlib
+            #y_max = self.ticker_data_dict_in_effect['history']['Close'].max()
+            #y_min = self.ticker_data_dict_in_effect['history']['Close'].min()
+            #y_major = MultipleLocator(round((y_max - y_min) / 8, 1))
+            #canvas.axes.yaxis.set_major_locator(y_major) # https://stackoverflow.com/questions/49436895/arguments-for-loglocator-in-matplotlib
+            canvas.axes.yaxis.set_major_locator(MaxNLocator(nbins=8))
             #canvas.axes.yaxis.set_minor_locator(None)
             #canvas.axes.yaxis.set_minor_formatter(plt.FuncFormatter('{:.1f}'.format)) #
         else:

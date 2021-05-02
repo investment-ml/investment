@@ -13,40 +13,59 @@ class pricing_demo:
     def option(self):
         
         # Option
-        strike_price = 180
-        time_to_maturity = 2 / 365.25 # this must be accurate to the millisecond, including the expiration time is at 11:59am on the expiration date, as the B-S formula assumes continuous compound interest
+        strike_price = 80
+        time_to_maturity = 1 / 365.25 # this must be accurate to the millisecond, including the expiration time is at 11:59am on the expiration date, as the B-S formula assumes continuous compound interest
         # https://www.investopedia.com/terms/e/expiration-time.asp
         # https://www.nasdaq.com/glossary/e/expiration-time
         # "The time of day by which all exercise notices must be received on the expiration date. 
         # Technically, the expiration time is currently 11:59 a.m. [Eastern Time] on the expiration date, but public holders of option contracts must indicate their desire to exercise no later than 5:30 p.m. [Eastern Time] on the business day preceding the expiration date."
         
         # Stock
-        curr_stock_price = 178.58 # spot price
-        expected_volatility_pct = 121.01 # (%)
+        curr_stock_price = 83.11 # spot price
+        expected_volatility_pct = 54.1 # (%)
         expected_dividend_pct = 0
         
         # Market
-        expected_risk_free_interest_rate = 1.63 # (%), United States 10-Year Bond Yield # https://www.treasury.gov/resource-center/data-chart-center/interest-rates/pages/textview.aspx?data=yield
+        expected_risk_free_interest_rate_pct = 0.25 # (%), United States 10-Year Bond Yield # https://www.treasury.gov/resource-center/data-chart-center/interest-rates/pages/textview.aspx?data=yield
         
         # Calculation
-        this_bs = Black_Scholes(strike_price = strike_price, time_to_maturity = time_to_maturity,
-                                curr_stock_price = curr_stock_price, expected_volatility_pct = expected_volatility_pct, expected_dividend_pct = expected_dividend_pct,
-                                expected_risk_free_interest_rate = expected_risk_free_interest_rate)
+        this_bs = Black_Scholes_model(strike_price = strike_price, time_to_maturity = time_to_maturity,
+                                      curr_stock_price = curr_stock_price, expected_volatility_pct = expected_volatility_pct, expected_dividend_pct = expected_dividend_pct,
+                                      expected_risk_free_interest_rate_pct = expected_risk_free_interest_rate_pct)
         print(f"While the current price of $XYZ in the marketplace is ${curr_stock_price:.2f} on 2021-04-23, regarding 1 call contract $XYZ 2021-04-30 strike ${strike_price:.2f}.")
         print(f"According to the Black-Scholes model, the present premium is [${this_bs.present_value_of_call_option_price:.2f}/share], and the ask (or bid) price should be higher (or lower) than that.")
         print(f"Delta: [{this_bs.delta_for_call:.4f}]; Gamma: [{this_bs.gamma_for_call:.4f}]; Theta: [{this_bs.theta_for_call:.4f}]; Vega: [{this_bs.vega_for_call:.4f}]; Rho: [{this_bs.rho_for_call:.4f}].\n")
         #
         strike_price = 172.5
         expected_volatility_pct = 113.34 # (%)
-        this_bs = Black_Scholes(strike_price = strike_price, time_to_maturity = time_to_maturity,
-                                curr_stock_price = curr_stock_price, expected_volatility_pct = expected_volatility_pct, expected_dividend_pct = expected_dividend_pct,
-                                expected_risk_free_interest_rate = expected_risk_free_interest_rate)
+        this_bs = Black_Scholes_model(strike_price = strike_price, time_to_maturity = time_to_maturity,
+                                      curr_stock_price = curr_stock_price, expected_volatility_pct = expected_volatility_pct, expected_dividend_pct = expected_dividend_pct,
+                                      expected_risk_free_interest_rate_pct = expected_risk_free_interest_rate_pct)
+        print(f"While the current price of $XYZ in the marketplace is ${curr_stock_price:.2f} on 2021-04-23, regarding 1 put contract $XYZ 2021-04-30 strike ${strike_price:.2f}.")
+        print(f"According to the Black-Scholes model, the present premium is [${this_bs.present_value_of_put_option_price:.2f}/share], and the ask (or bid) price should be higher (or lower) than that.")
+        print(f"Delta: [{this_bs.delta_for_put:.4f}]; Gamma: [{this_bs.gamma_for_put:.4f}]; Theta: [{this_bs.theta_for_put:.4f}]; Vega: [{this_bs.vega_for_put:.4f}]; Rho: [{this_bs.rho_for_put:.4f}].\n")
+        #
+        strike_price = 100
+        time_to_maturity = 1
+        #
+        curr_stock_price = 100
+        expected_volatility_pct = 20 # (%)
+        expected_dividend_pct = 0
+        #
+        expected_risk_free_interest_rate_pct = 5
+        this_bs = Black_Scholes_model(strike_price = strike_price, time_to_maturity = time_to_maturity,
+                                      curr_stock_price = curr_stock_price, expected_volatility_pct = expected_volatility_pct, expected_dividend_pct = expected_dividend_pct,
+                                      expected_risk_free_interest_rate_pct = expected_risk_free_interest_rate_pct)
+        print(f"While the current price of $XYZ in the marketplace is ${curr_stock_price:.2f} on 2021-04-23, regarding 1 call contract $XYZ 2021-04-30 strike ${strike_price:.2f}.")
+        print(f"According to the Black-Scholes model, the present premium is [${this_bs.present_value_of_call_option_price:.2f}/share], and the ask (or bid) price should be higher (or lower) than that.")
+        print(f"Delta: [{this_bs.delta_for_call:.4f}]; Gamma: [{this_bs.gamma_for_call:.4f}]; Theta: [{this_bs.theta_for_call:.4f}]; Vega: [{this_bs.vega_for_call:.4f}]; Rho: [{this_bs.rho_for_call:.4f}].\n")
         print(f"While the current price of $XYZ in the marketplace is ${curr_stock_price:.2f} on 2021-04-23, regarding 1 put contract $XYZ 2021-04-30 strike ${strike_price:.2f}.")
         print(f"According to the Black-Scholes model, the present premium is [${this_bs.present_value_of_put_option_price:.2f}/share], and the ask (or bid) price should be higher (or lower) than that.")
         print(f"Delta: [{this_bs.delta_for_put:.4f}]; Gamma: [{this_bs.gamma_for_put:.4f}]; Theta: [{this_bs.theta_for_put:.4f}]; Vega: [{this_bs.vega_for_put:.4f}]; Rho: [{this_bs.rho_for_put:.4f}].\n")
 
 
-class Black_Scholes:
+
+class Black_Scholes_model:
     """
     references: 
     1. https://www.math.drexel.edu/~pg/fin/VanillaCalculator.html
@@ -55,13 +74,14 @@ class Black_Scholes:
     4. https://brilliant.org/wiki/black-scholes-merton/ (some explanation)
     5. https://www.investopedia.com/terms/b/blackscholes.asp
     6. https://www.quora.com/How-is-the-volatility-calculated-at-the-Black-Scholes-formula (most comprehensive)
+    7. https://www.investopedia.com/trading/getting-to-know-the-greeks
     """
 
     ############################################
     
     def __init__(self, strike_price: float = None, time_to_maturity: float = None, # Option
                        curr_stock_price: float = None, expected_volatility_pct: float = None, expected_dividend_pct: float = 0, # Stock
-                       expected_risk_free_interest_rate: float = None): # Market
+                       expected_risk_free_interest_rate_pct: float = None): # Market
         """
         Option, Stock, Market
         """
@@ -73,7 +93,7 @@ class Black_Scholes:
         self.sigma = expected_volatility_pct / 100
         self.q = expected_dividend_pct / 100 # e.g., $XOM dividend yield is 6.29%, then self.q = 0.0629
         # Market
-        self.r = expected_risk_free_interest_rate / 100 # APY, e.g., U.S. 10-Year Bond Yield = 1.5595%, then self.r = 0.015595
+        self.r = expected_risk_free_interest_rate_pct / 100 # APY, e.g., U.S. 10-Year Bond Yield = 1.5595%, then self.r = 0.015595
         #
         self.rv = norm()
 
