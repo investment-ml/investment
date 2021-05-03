@@ -100,8 +100,8 @@ class Black_Scholes_model:
     ############################################
     
     def __init__(self, strike_price: float = None, time_to_maturity: float = None, # Option
-                       curr_stock_price: float = None, expected_volatility_pct: float = None, expected_dividend_pct: float = 0, # Stock
-                       expected_risk_free_interest_rate_pct: float = None): # Market
+                       curr_stock_price: float = None, expected_volatility_pct: float = 0, expected_dividend_pct: float = 0, # Stock
+                       expected_risk_free_interest_rate_pct: float = 0): # Market
         """
         Option, Stock, Market
         """
@@ -191,7 +191,15 @@ class Black_Scholes_model:
 
         The Black-Scholes model posits that stock shares will have a lognormal distribution of prices, following a random walk with constant drift and volatility.
         """
-        return np.log(self.present_value_of_stock_price / self.present_value_of_strike_price) / self.standard_deviation_of_the_norm_distribution
+        if self.present_value_of_stock_price <= 0:
+            raise ValueError(f"present value of stock price [{self.present_value_of_stock_price}] cannot be less than or equal to 0.")
+        if self.present_value_of_strike_price <= 0:
+            raise ValueError(f"present value of strike price [{self.present_value_of_strike_price}] cannot be less than or equal to 0.")
+        try:
+            result = np.log(self.present_value_of_stock_price / self.present_value_of_strike_price) / self.standard_deviation_of_the_norm_distribution
+        except:
+            raise RuntimeError(f"Error - d_center_for_call: present value of stock price: {self.present_value_of_stock_price}, present value of strike price: {self.present_value_of_strike_price}, SD: {self.standard_deviation_of_the_norm_distribution}")
+        return result
 
     # note that (+d1) - (+d2) = 1 SD
 
@@ -320,7 +328,15 @@ class Black_Scholes_model:
 
         The Black-Scholes model posits that stock shares will have a lognormal distribution of prices, following a random walk with constant drift and volatility.
         """
-        return np.log(self.present_value_of_strike_price / self.present_value_of_stock_price) / self.standard_deviation_of_the_norm_distribution
+        if self.present_value_of_stock_price <= 0:
+            raise ValueError(f"present value of stock price [{self.present_value_of_stock_price}] cannot be less than or equal to 0.")
+        if self.present_value_of_strike_price <= 0:
+            raise ValueError(f"present value of strike price [{self.present_value_of_strike_price}] cannot be less than or equal to 0.")
+        try:
+            result = np.log(self.present_value_of_strike_price / self.present_value_of_stock_price) / self.standard_deviation_of_the_norm_distribution
+        except:
+            raise RuntimeError(f"Error - d_center_for_put: present value of strike price: {self.present_value_of_strike_price}, present value of stock price: {self.present_value_of_stock_price}, SD: {self.standard_deviation_of_the_norm_distribution}")
+        return result
 
     # note that (-d2) - (-d1) = 1 SD
 
@@ -422,6 +438,53 @@ class Black_Scholes_model:
         https://www.macroption.com/black-scholes-formula/
         """
         return self.K_at_maturity * self.t * np.exp(-self.r*self.t) * self.N_negative_d2_for_put / -100      
+
+    ###########################################
+
+    def Greeks(self, option_type: str = None, Greek_letter: str = None):
+        if option_type.lower() in ['c','calls','call']:
+            if Greek_letter in ['Delta','delta','Δ','δ']:
+                return self.delta_for_call
+            elif Greek_letter in ['Gamma','gamma','Γ','δ']:
+                return self.gamma_for_call
+            elif Greek_letter in ['Theta','theta','Θ','θ']:
+                return self.theta_for_call
+            elif Greek_letter in ['Vega','vega','ν']:
+                return self.vega_for_call
+            elif Greek_letter in ['Rho','rho','ρ']:
+                return self.rho_for_call
+            else:
+                raise ValueError(f'unexpected Greek_letter for call: {Greek_letter}')
+        elif option_type.lower() in ['p','puts','put']:
+            if Greek_letter in ['Delta','delta','Δ','δ']:
+                return self.delta_for_put
+            elif Greek_letter in ['Gamma','gamma','Γ','δ']:
+                return self.gamma_for_put
+            elif Greek_letter in ['Theta','theta','Θ','θ']:
+                return self.theta_for_put
+            elif Greek_letter in ['Vega','vega','ν']:
+                return self.vega_for_put
+            elif Greek_letter in ['Rho','rho','ρ']:
+                return self.rho_for_put
+            else:
+                raise ValueError(f'unexpected Greek_letter for put: {Greek_letter}')
+        else:
+            raise ValueError(f'unexpected option_type: {option_type}')
+
+    def Greeks_interpretation(self, Greek_letter: str = None):
+        if Greek_letter in ['Delta','delta','Δ','δ']:
+            return 'The impact of stock price increase (+1 dollar) on premium'
+        elif Greek_letter in ['Gamma','gamma','Γ','δ']:
+            return 'The instability of the impact of stock price increase (+1 dollar) on premium'
+        elif Greek_letter in ['Theta','theta','Θ','θ']:
+            return 'The impact of time passing (+1 day) on premium'
+        elif Greek_letter in ['Vega','vega','ν']:
+            return 'The impact of implied volatility increase (+1 percent) on premium'
+        elif Greek_letter in ['Rho','rho','ρ']:
+            return 'The impact of risk-free interest rate increase (+1 percent) on premium'
+        else:
+            raise ValueError(f'unexpected Greek_letter for put: {Greek_letter}')
+        
 
 class Bjerksund_Stensland:
     """

@@ -301,7 +301,7 @@ ticker_group_dict = {'All': [],
                      'The Stock Exchange of Hong Kong': ['9633.HK','0700.HK','9888.HK','9988.HK'],
                      'Taiwan Stock Exchange': ['2330.TW','2303.TW','2317.TW','2454.TW','0050.TW'],
                      'Tokyo Stock Exchange': ['8604.T',],
-                     'World\'s Billionaires': ['AMZN','TSLA','LVMUY','MSFT','FB','BRK-B','ORCL','GOOGL','IDEXY','ITX.MC','LRLCF','LRLCY','OR.PA','MC.PA'],
+                     'World\'s Billionaires': ['AMZN','TSLA','LVMUY','MSFT','FB','BRK-B','ORCL','GOOGL','IDEXY','ITX.MC','LRLCF','LRLCY','OR.PA','MC.PA','TITAN.NS'],
                      'Futures': ['NQ=F','YM=F','ES=F','GC=F','CL=F'],
                      'DOW 30': ['^DJI', 'GS','WMT','MCD','CRM','DIS','NKE','CAT','TRV','VZ','JPM','IBM','HD','INTC','AAPL','MMM','MSFT','JNJ','CSCO','V','DOW','MRK','PG','AXP','KO','AMGN','HON','UNH','WBA','CVX','BA'],
                      'NASDAQ 100': ['^NDX', 'AAPL', 'ADBE', 'ADI', 'ADP', 'ADSK', 'ALGN', 'ALXN', 'AMAT', 'AMD', 'AMGN', 'AMZN', 'ANSS', 'ASML', 'ATVI', 'AVGO', 'BIDU', 'BIIB', 'BKNG', 'BMRN', 'CDNS', 'CDW', 'CERN', 'CHKP', 'CHTR', 'CMCSA', 'COST', 'CPRT', 'CSCO', 'CSX', 'CTAS', 'CTSH', 'CTXS', 'DLTR', 'DOCU', 'DXCM', 'EA', 'EBAY', 'EXC', 'EXPE', 'FAST', 'FB', 'FISV', 'FOX', 'FOXA', 'GILD', 'GOOG', 'GOOGL', 'IDXX', 'ILMN', 'INCY', 'INTC', 'INTU', 'ISRG', 'JD', 'KDP', 'KHC', 'KLAC', 'LBTYA', 'LBTYK', 'LRCX', 'LULU', 'MAR', 'MCHP', 'MDLZ', 'MELI', 'MNST', 'MRNA', 'MSFT', 'MU', 'MXIM', 'NFLX', 'NTES', 'NVDA', 'NXPI', 'ORLY', 'PAYX', 'PCAR', 'PDD', 'PEP', 'PYPL', 'QCOM', 'REGN', 'ROST', 'SBUX', 'SGEN', 'SIRI', 'SNPS', 'SPLK', 'SWKS', 'TCOM', 'TMUS', 'TSLA', 'TTWO', 'TXN', 'ULTA', 'VRSK', 'VRSN', 'VRTX', 'WBA', 'WDAY', 'XEL', 'XLNX', 'ZM'],
@@ -546,7 +546,13 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'The Stock Exchange of Hong Kong': f"According to wikipedia, the Stock Exchange of Hong Kong is a stock exchange based in Hong Kong.<br/><br/>It is the world's largest bourse (a stock market in a non-English-speaking country) in terms of market capitalization, surpassing Chicago-based CME.<br/><br/>As of the end of 2020, it has 2,538 listed companies with a combined market capitalization of HK$47 trillion.",
                    'Taiwan Stock Exchange': f"<a href='https://www.twse.com.tw/en/'>Taiwan Stock Exchange Corporation</a><br/><br/>2330.TW: Taiwan Semiconductor Manufacturing Company Limited.<br/><br/>2303.TW: United Microelectronics Corporation.<br/><br/>2317.TW: Hon Hai Precision Industry Co., Ltd.<br/><br/>2454.TW: MediaTek Inc.<br/><br/>0050.TW: Yuanta/P-shares Taiwan Top 50 ETF.<br/><br/>",
                    'Tokyo Stock Exchange': f"<a href='https://en.wikipedia.org/wiki/Tokyo_Stock_Exchange'>Tokyo Stock Exchange</a>",
-                   'World\'s Billionaires': "<style> table, th, td {border: 1px solid black; border-collapse: collapse; padding: 2px;}</style><a href='https://www.forbes.com/real-time-billionaires/'>Many billionaires</a> are rich because of the stock markets.<br/><br/>2021-04-06:<br/><table><tr><th>#</th><th>Name</th><th>Stock</th></tr><tr><td>1</td><td>Jeff Bezos</td><td>AMZN</td></tr><tr><td>2</td><td>Elon Musk</td><td>TSLA</td></tr><tr><td>3</td><td>Bernard Arnault & family</td><td>MC.PA (France), LVMUY (USA)</td></tr><tr><td>4</td><td>Bill Gates</td><td>MSFT</td></tr><tr><td>5</td><td>Mark Zuckerberg</td><td>FB</td></tr><tr><td>6</td><td>Warren Buffett</td><td>BRK-B</td></tr><tr><td>7</td><td>Larry Ellison</td><td>ORCL</td></tr><tr><td>8</td><td>Larry Page</td><td>GOOGL</td></tr><tr><td>9</td><td>Sergey Brin</td><td>GOOGL</td></tr><tr><td>10</td><td>Amancio Ortega</td><td>ITX.MC (Spain), IDEXY (USA)</td></tr><tr><td>11</td><td>Francoise Bettencourt Meyers & family</td><td>OR.PA (France), LRLCY or LRLCF (USA)</td></tr></table><br/><br/>To be completed...",
+                   'World\'s Billionaires': "<style> table, th, td {border: 1px solid black; border-collapse: collapse; padding: 2px;}</style><a href='https://www.forbes.com/real-time-billionaires/'>Many billionaires</a> are rich because of the stock markets.<br/><br/>2021-04-06:<br/><table>" +
+                                            "<tr><th>#</th><th>Name</th><th>Stock</th></tr>" +
+                                            "<tr><td>1</td><td>Jeff Bezos</td><td>AMZN</td></tr>" +
+                                            "<tr><td>2</td><td>Elon Musk</td><td>TSLA</td></tr><tr><td>3</td><td>Bernard Arnault & family</td><td>MC.PA (France), LVMUY (USA)</td></tr><tr><td>4</td><td>Bill Gates</td><td>MSFT</td></tr><tr><td>5</td><td>Mark Zuckerberg</td><td>FB</td></tr><tr><td>6</td><td>Warren Buffett</td><td>BRK-B</td></tr><tr><td>7</td><td>Larry Ellison</td><td>ORCL</td></tr><tr><td>8</td><td>Larry Page</td><td>GOOGL</td></tr><tr><td>9</td><td>Sergey Brin</td><td>GOOGL</td></tr><tr><td>10</td><td>Amancio Ortega</td><td>ITX.MC (Spain), IDEXY (USA)</td></tr>" +
+                                            "<tr><td>11</td><td>Francoise Bettencourt Meyers & family</td><td>OR.PA (France), LRLCY or LRLCF (USA)</td></tr>" +
+                                            "<tr><td>723</td><td>Rakesh Jhunjhunwala (India's Warren Buffett)</td><td>TITAN.NS (India)</td></tr>" + 
+                                            "</table><br/><br/>To be completed...",
                    'Futures': f"<b>NQ=F</b>: Nasdaq Futures<br/><br/><b>YM=F</b>: Dow Futures<br/><br/><b>ES=F</b>: S&P Futures<br/><br/><b>GC=F</b>: Gold Futures<br/><br/><b>CL=F</b>: Crude Oil Futures",
                    'DOW 30': f"Dow Jones Industrial Average 30 Components",
                    'NASDAQ 100': f"A stock market index made up of 103 equity securities issued by 100 of the largest non-financial companies listed on the Nasdaq stock market.\n\nThe complete index, NASDAQ Composite (COMP), has 2,667 securities as of February 2020.\n\nBecause the index is weighted by market capitalization, the index is rather top-heavy. In fact, the top 10 stocks in the Nasdaq Composite account for one-third of the index’s performance.",
@@ -1423,6 +1429,10 @@ class Ticker(object):
     def curr_trend_short(self):
         adx, plus, minus, adx14, plus14, minus14, trend, trend_short = self.ADX
         return trend_short[-1]
+
+    def standard_deviation_of_price(self, periods = 252, price_name = 'Close'):
+        prices = self.ticker_history[price_name][-periods:]
+        return np.std(prices)
 
     @property
     def daily_log_returns_df(self):
