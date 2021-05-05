@@ -1278,6 +1278,8 @@ class UI_control(object):
         if self.default_indicator is not None:
             if self.default_indicator == 'ADX':
                 self.index_selection_index = 8 # ADX
+            elif self.default_indicator == 'A/D':
+                self.index_selection_index = 6 # A/D
             else:
                 raise RuntimeError(f'Undefined: [{self.default_indicator}]')
         else:
@@ -1301,11 +1303,11 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("NVI")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'RSI':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>RSI</b> (Relative Strength Index) is a leading <b>momentum</b> indicator reflecting a possible oversold (RSI &lt; 30) or overbought (RSI &gt; 70) trend.<br/><br/>RSI = 50 means no trend; thus, long periods of RSI &gt; 50 (or &lt; 50) suggests continuous uptrend (or downtrend).<br/><br/><a href='https://www.investopedia.com/terms/r/rsi.asp'>https://www.investopedia.com/terms/r/rsi.asp</a></body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>RSI</b> (Relative Strength Index) is a <u>leading</u> <b>momentum</b> indicator reflecting a possible oversold (RSI &lt; 30) or overbought (RSI &gt; 70) trend.<br/><br/>RSI = 50 means no trend; thus, long periods of RSI &gt; 50 (or &lt; 50) suggests continuous uptrend (or downtrend).<br/><br/><a href='https://www.investopedia.com/terms/r/rsi.asp'>https://www.investopedia.com/terms/r/rsi.asp</a></body>")
                 self._UI.index_canvas_options.addItem("RSI14")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'MACD':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>MACD</b> (Moving Average Convergence Divergence) is a lagging (trend-following) momentum indicator. When <b><span style='color:blue'>MACD</span></b>(EMA12 minus EMA26) crosses <b>above</b> (or below) its own 9-day EMA <b><span style='color:orange'>signal</span></b> line, it's a <b>buy</b> (or sell).<br/><br/>Common interpretations: crossovers, divergences, and rapid rises/falls.<br/><br/><a href='https://www.investopedia.com/terms/m/macd.asp'>https://www.investopedia.com/terms/m/macd.asp</a></body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>MACD</b> (Moving Average Convergence Divergence) is a <u>lagging</u> (trend-following) momentum indicator. When <b><span style='color:blue'>MACD</span></b>(EMA12 minus EMA26) crosses <b>above</b> (or below) its own 9-day EMA <b><span style='color:orange'>signal</span></b> line, it's a <b>buy</b> (or sell).<br/><br/>Common interpretations: crossovers, divergences, and rapid rises/falls.<br/><br/><a href='https://www.investopedia.com/terms/m/macd.asp'>https://www.investopedia.com/terms/m/macd.asp</a></body>")
                 self._UI.index_canvas_options.addItem("MACD: EMA12 vs. EMA26")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'OBV':
@@ -1886,7 +1888,7 @@ class UI_control(object):
             x = np.arange(len(dates))
             canvas.axes.grid(True, color='silver', linewidth=0.5)
             #
-            canvas.axes.set_ylabel('Accumulation/Distribution', fontsize=10.0)
+            canvas.axes.set_ylabel('Accumulation / Distribution', fontsize=10.0)
             if self.index_options_selection_index == 1:
                 ad = self.ticker_data_dict_in_effect['history']['Accumulation_Distribution']
             elif self.index_options_selection_index == 2:
