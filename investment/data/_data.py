@@ -829,10 +829,14 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
     # all-time high's and all-time low's
     all_time_highs_df = this_ticker.all_time_highs_df(n=10)
     all_time_lows_df = this_ticker.all_time_lows_df(n=10)
+    fifty_two_weeks_high = this_ticker.fifty_two_weeks_high
+    fifty_two_weeks_low = this_ticker.fifty_two_weeks_low
     if use_html:
+        risk_info += f"<br/>52-wk high: ${fifty_two_weeks_high:.2f}<br/>52-wk low: ${fifty_two_weeks_low:.2f}<br/>"
         risk_info += f"<br/>All time highs: {all_time_highs_df.to_html(index=False, formatters={'High':'${:,.2f}'.format,'Date': lambda x: '{:%Y-%m-%d}'.format(pd.to_datetime(x, unit='D'))})}<br/>"
         risk_info += f"<br/>All time lows: {all_time_lows_df.to_html(index=False, formatters={'Low':'${:,.2f}'.format,'Date': lambda x: '{:%Y-%m-%d}'.format(pd.to_datetime(x, unit='D'))})}<br/>"
     else:
+        risk_info += f"\n52-wk high: ${fifty_two_weeks_high:.2f}\n52-wk low: ${fifty_two_weeks_low:.2f}\n"
         risk_info += f"\nAll time highs: {all_time_highs_df.to_string(index=False, formatters={'High':'${:,.2f}'.format,'Date': lambda x: '{:%Y-%m-%d}'.format(pd.to_datetime(x, unit='D'))})}\n"
         risk_info += f"\nAll time lows: {all_time_lows_df.to_string(index=False, formatters={'Low':'${:,.2f}'.format,'Date': lambda x: '{:%Y-%m-%d}'.format(pd.to_datetime(x, unit='D'))})}\n"        
 
