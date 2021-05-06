@@ -183,10 +183,12 @@ class SnappingCursor(Cursor):
 
         if cascading_to_the_other_canvas:
             if self.name == 'ticker_canvas_cursor':
-                self.UI.control.index_canvas_cursor.onmove(event = event, cascading_to_the_other_canvas = False)
+                if self.UI.control.index_canvas_cursor is not None:
+                    self.UI.control.index_canvas_cursor.onmove(event = event, cascading_to_the_other_canvas = False)
 
             if self.name == 'index_canvas_cursor':
-                self.UI.control.ticker_canvas_cursor.onmove(event = event, cascading_to_the_other_canvas = False)
+                if self.UI.control.ticker_canvas_cursor is not None:
+                    self.UI.control.ticker_canvas_cursor.onmove(event = event, cascading_to_the_other_canvas = False)
 
         # inaxes: the Axes instance over which the mouse is, if any; else None
         if (event.inaxes) or (not cascading_to_the_other_canvas):
@@ -1451,8 +1453,10 @@ class UI_control(object):
                 if self.default_indicator is not None:
                     if self.default_indicator == 'ADX':
                         self.index_selection_index = 2 # ADX
+                    elif self.default_indicator == 'A/D': # this requires volume data
+                        self.index_selection_index = 3 # RSI 
                     else:
-                        RuntimeError(f'Undefined: [{self.default_indicator}]')
+                        raise RuntimeError(f'Undefined: [{self.default_indicator}]')
                 else:
                     self.index_selection_index = 3 # RSI
                 self._UI.index_selection.setCurrentIndex(self.index_selection_index)
@@ -1491,10 +1495,11 @@ class UI_control(object):
         #canvas.axes.grid(True, which='minor', color='silver', linewidth=0.5, linestyle='dashed')
         close = self.ticker_data_dict_in_effect['history']['Close']
         close_range = close.max() - close.min()
-        canvas.axes.set_ylim(bottom=max(close.min() * 0.85, close.min() - close_range * 0.15), top = min(close.max() * 1.15, close.max() + close_range * 0.15))
         # for plotting volume bar
         volumes = self.ticker_data_dict_in_effect['history']['Volume'].values
-        if volumes[0] is not None:
+        if volumes[0] is None:
+            canvas.axes.set_ylim(bottom=max(close.min() * 0.85, close.min() - close_range * 0.15), top = min(close.max() * 1.15, close.max() + close_range * 0.15))
+        else:
             canvas.axes.set_ylim(bottom=max(close.min() * 0.75, close.min() - close_range * 0.25), top = min(close.max() * 1.15, close.max() + close_range * 0.15)) # to allow room for the volume bars
             axis1 = canvas.axes.twinx()
             axis1.set_yscale('linear')
@@ -1553,8 +1558,11 @@ class UI_control(object):
         # to allow snapping cursor, so axis1 is now under, rather than on top of the original axis
         if volumes[0] is not None:
             axis1.set_zorder(0)
-        canvas.axes.set_zorder(1)  # default zorder is 0 for ax1 and ax2 # https://stackoverflow.com/questions/30505616/how-to-arrange-plots-of-secondary-axis-to-be-below-plots-of-primary-axis-in-matp
-        canvas.axes.set_frame_on(False)
+            canvas.axes.set_zorder(1)  # default zorder is 0 for ax1 and ax2 # https://stackoverflow.com/questions/30505616/how-to-arrange-plots-of-secondary-axis-to-be-below-plots-of-primary-axis-in-matp
+            canvas.axes.set_frame_on(False)
+        else:
+            canvas.axes.set_zorder(1)
+            canvas.axes.set_frame_on(True)
         #################################################
         canvas.draw()
 
