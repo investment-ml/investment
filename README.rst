@@ -25,7 +25,7 @@ A Python App for Investment
 Features
 -------------------
 - 9000+ tickers as included in major indexes and exchanges (DOW 30, NASDAQ 100, S&P 500, Russell 2000, ARK investment, etc.)
-- Breakdown by 11 sectors and 145 industries; key info for each ticker; Common indicators: ADX, RSI, Money Flow, OBV, A/D, MACD, PVI/NVI, Bollinger Bands
+- Breakdown by 11 sectors and 145 industries; key info for each ticker; Common indicators: ADX, RSI, Money Flow, OBV, A/D, MACD, PPO, PVI/NVI, Bollinger Bands
 - An ETF database of 2000+ tickers, and an equity database of 7000+ tickers
 
 

@@ -605,9 +605,9 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
     
     if this_ticker.trailingEps is not None:
         if use_html:
-            earnings_info += f"<br/><br/>Diluted Earnings per share (EPS) from the last four quarters: <b><span style=\"color:blue;\">${this_ticker.trailingEps:+.2f}</span></b>;"
+            earnings_info += f"<br/>Diluted Earnings per share (EPS) from the last four quarters: <b><span style=\"color:blue;\">${this_ticker.trailingEps:+.2f}</span></b>;"
         else:
-            earnings_info += f"\n\nDiluted Earnings per share (EPS) from the last four quarters: ${this_ticker.trailingEps:+.2f};"
+            earnings_info += f"\nDiluted Earnings per share (EPS) from the last four quarters: ${this_ticker.trailingEps:+.2f};"
     if this_ticker.forwardEps is not None:
         if use_html:
             earnings_info += f"<br/><br/>EPS estimated for the next four quarters: <b><span style=\"color:blue;\">${this_ticker.forwardEps:+.2f}</span></b>.<br/>" # , which is <b><span style=\"color:blue;\">{round(this_ticker.Eps_change_pct,2):+.2f}%</span></b>

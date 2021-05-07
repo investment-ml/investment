@@ -39,7 +39,7 @@ from matplotlib.ticker import MultipleLocator, LogLocator, MaxNLocator
 
 from datetime import date, datetime, timedelta, timezone
 
-from ..data import Ticker, get_ticker_data_dict, get_formatted_ticker_data, volatility_indicator, momentum_indicator, trend_indicator, volume_indicator, moving_average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict, global_data_root_dir, nasdaqlisted_df, otherlisted_df, tickers_with_no_volume
+from ..data import Ticker, get_ticker_data_dict, get_formatted_ticker_data, volatility_indicator, momentum_indicator, trend_indicator, volume_indicator, moving_average, ticker_group_dict, subgroup_group_dict, ticker_subgroup_dict, group_desc_dict, global_data_root_dir, nasdaqlisted_df, otherlisted_df, tickers_with_no_volume, ARK_df_dict
 from ..math_and_stats import Locally_Weighted_Scatterplot_Smoothing, Cubic_Spline_Approximation_Smoothing
 
 import numpy as np
@@ -50,6 +50,7 @@ from matplotlib.widgets import Cursor
 import time
 
 import random
+
 
 StyleSheet = '''
 #ProgressBar {
@@ -1188,8 +1189,32 @@ class app_window(QMainWindow):
             self.app_menu = app_menu(app_window=self)
         else:
             self.app_menu = appmenu(app_window=self)
+            self._init_data_processing()
         
         self.web_scraper = web_scraper
+
+    def _init_data_processing(self):
+        ARK_pairs_dict = {'ARKK': 'ARK Innovation ETF',
+                          'ARKQ': 'ARK Autonomous Tech. & Robotics ETF',
+                          'ARKW': 'ARK Next Generation Internet ETF',
+                          'ARKG': 'ARK Genomic Revolution ETF',
+                          'ARKF': 'ARK Fintech Innovation ETF',
+                          'ARKX': 'ARK Space Exploration & Innovation ETF',
+                          'PRNT': 'ARK The 3D Printing ETF',
+                          'IZRL': 'ARK Israel Innovative Technology ETF'}
+        for this_key in ARK_pairs_dict.keys():
+            this_value = ARK_pairs_dict[this_key]
+            df = ARK_df_dict[this_key]
+            for idx, row in df.iterrows():
+                this_ticker_name = str(row['ticker']).strip()
+                if (' ' not in this_ticker_name) and (not this_ticker_name.isdigit()) and (this_ticker_name not in ['STMN','AM3D','ALMDG','HEXAB','MOG/A','OERL','AKE','HEN3','MLTM','EMCO','PLSN','BATM','BEZQ','FTAL','DANE','BSEN','INCR','BIMCM']):
+                    ttm = Ticker(this_ticker_name).trailingEps
+                    fw = Ticker(this_ticker_name).forwardEps
+                    if ttm is not None:
+                        df.loc[idx, 'Eps.ttm'] = f"{ttm:.2f}"
+                    if fw is not None:
+                        df.loc[idx, 'Eps.fw'] = f"{fw:.2f}" 
+            group_desc_dict[this_value] = f"Basket Holdings: <b>{len(df.index)}</b><br/>" + df[['ticker','company','shares','weight(%)','Eps.ttm','Eps.fw']].reset_index(drop=True).to_html(index=True,formatters={'__index__': lambda x: '{:,.0f}'.format(x+1),'shares':'{:,.0f}'.format})
 
 
 class UI(QWidget):
@@ -1309,8 +1334,12 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("RSI14")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'MACD':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>MACD</b> (Moving Average Convergence Divergence) is a <u>lagging</u> (trend-following) momentum indicator. When <b><span style='color:blue'>MACD</span></b>(EMA12 minus EMA26) crosses <b>above</b> (or below) its own 9-day EMA <b><span style='color:orange'>signal</span></b> line, it's a <b>buy</b> (or sell).<br/><br/>Common interpretations: crossovers, divergences, and rapid rises/falls.<br/><br/><a href='https://www.investopedia.com/terms/m/macd.asp'>https://www.investopedia.com/terms/m/macd.asp</a></body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>MACD</b> (Moving Average Convergence Divergence) is a <u>lagging</u> (trend-following) momentum indicator.<br/><br/>MACD = 100 * (EMA12 - EMA26)<br/><br/>When <b><span style='color:blue'>MACD</span></b>(EMA12 minus EMA26) crosses <b>above</b> (or below) its own 9-day EMA <b><span style='color:orange'>signal</span></b> line, it's a <b>buy</b> (or sell).<br/><br/>Common interpretations: crossovers, divergences, and rapid rises/falls.<br/><br/><a href='https://www.investopedia.com/terms/m/macd.asp'>https://www.investopedia.com/terms/m/macd.asp</a></body>")
                 self._UI.index_canvas_options.addItem("MACD: EMA12 vs. EMA26")
+                self.index_options_selection_index = 1
+            elif self._index_selected == 'PPO':
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>PPO</b> (Percentage Price Oscillator) is a <u>lagging</u> (trend-following) momentum indicator.<br/><br/>PPO = 100 * (EMA12 - EMA26) / EMA26<br/><br/>The main difference between PPO and MACD is that the MACD reports the absolute difference between the EMAs, whereas the PPO measures percentage difference between two EMA, thus allowing a trader to use the PPO to compare assets with different prices more easily.<br/><br/>When <b><span style='color:blue'>PPO</span></b> crosses <b>above</b> (or below) its own 9-day EMA <b><span style='color:orange'>signal</span></b> line, it's a <b>buy</b> (or sell).<br/><br/>When the PPO is above zero, it confirms an uptrend.<br/><br/>When the PPO is below zero, it confirms a downtrend.<br/><br/>As a rule of thumb, only <b><u>consider buying</u></b> (along with many other factors) when <b><span style='color:blue;'>PPO</span></b> begins to cross above its 9-day EMA <b><span style='color:orange;'>signal</span></b> line; when it starts to come down and touches the signal line (that is, when the <b><span style='color:green;'>green</span></b> histogram is about to turn <b><span style='color:red;'>red</span></b>, running out of momentum), max. profit and <b><u>sell immediately</u></b>.<br/><br/>Example: <a href='https://seekingalpha.com/article/4419642-think-alteryx-is-cheap-think-again'>Alteryx</a></body>")
+                self._UI.index_canvas_options.addItem("Percentage Price Oscillator")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'OBV':
                 self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>OBV</b> (On-Balance Volume) is a leading (as opposed to lagging) momentum indicator to predict changes in stock price.<br/><br/><b>The moving-average <u>slope</u> of the OBV line carries all of the weight of analysis.</b><br/><br/>It appears that as institutions begin to buy into an issue that retail investors are still selling, volume increases as the price is still slightly falling or leveling out.<br/><br/>The author viewed OBV as \"a spring being wound tightly.\" and believed that when OBV uptrends without a significant change in the stock's price, <b><span style='color:green;'>probably institutions are buying</span></b> and the price will eventually jump upward.<br/><br/>Similarly, if OBV downtrends sharply but the price stays flat, it is likely that <b><span style='color:red;'>the institutions are selling</span></b> and the price will eventually drop.<br/><br/>- 1. If OBV is rising and the price isn't, it's likely that the price will follow the OBV in the future and start rising.<br/>- 2. If the price is rising and OBV is flat-lining or falling, the price may be near a top.<br/>- 3. the price is falling and OBV is flat-lining or rising, the price could be nearing a bottom.<br/><br/><a href='https://www.investopedia.com/terms/o/onbalancevolume.asp'>https://www.investopedia.com/terms/o/onbalancevolume.asp</a><br/><br/><a href='https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp'>https://www.investopedia.com/articles/active-trading/021115/uncover-market-sentiment-onbalance-volume-obv.asp</a></body>")
@@ -1321,7 +1350,7 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("Heat")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'A/D':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Accumulation/Distribution indicator.<br/><br/>Accumulation = Buy at a bargain/discount; Distribution = Sell at a profit.<br/><br/>It is a <a href='https://en.wikipedia.org/wiki/Accumulation/distribution_index'>leading</a> indicator of price movements, which gauges supply and demand.<br/><br/><a href='https://www.investopedia.com/terms/a/accumulationdistribution.asp'>https://www.investopedia.com/terms/a/accumulationdistribution.asp</a>; <a href='https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/accumulation-distribution'>https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/accumulation-distribution</a><br/><br/>Rising (or falling) A/D means high (or low) underlying <b>demand</b> (strength), while the price level is the <b>supply</b>.<br/><br/>Thus, if rising price but falling A/D, it signals a potential decline is upcoming. Conversely, if falling price but rising A/D, it signals a reversal is upcoming.<br/><br/>If the movement of price and A/D are in the same direction, further uptrend or downtrend is likely.</body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Accumulation/Distribution indicator.<br/><br/>Accumulation = Positive Slope = Buying (at a bargain/discount);<br/>Distribution = Negative Slope = Selling (at a profit).<br/><br/>It is a <a href='https://en.wikipedia.org/wiki/Accumulation/distribution_index'>leading</a> indicator of price movements, which gauges supply and demand.<br/><br/><a href='https://www.investopedia.com/terms/a/accumulationdistribution.asp'>https://www.investopedia.com/terms/a/accumulationdistribution.asp</a>; <a href='https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/accumulation-distribution'>https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/accumulation-distribution</a><br/><br/>Rising (or falling) A/D means high (or low) underlying <b>demand</b> (strength), while the price level is the <b>supply</b>.<br/><br/>Thus, if rising price but falling A/D, it signals a potential decline is upcoming. Conversely, if falling price but rising A/D, it signals a reversal is upcoming.<br/><br/>If the movement of price and A/D are in the same direction, further uptrend or downtrend is likely.</body>")
                 self._UI.index_canvas_options.addItem("A/D (raw-score)")
                 self._UI.index_canvas_options.addItem("A/D (Z-score)")
                 self.index_options_selection_index = 2
@@ -1347,7 +1376,7 @@ class UI_control(object):
                 if self.default_indicator is None:
                     self.index_options_selection_index = 4
                 else:
-                    self.index_options_selection_index = 5                
+                    self.index_options_selection_index = 5            
 
             self._UI.index_canvas_options.setCurrentIndex(self.index_options_selection_index) 
             self._calc_index()
@@ -1450,6 +1479,7 @@ class UI_control(object):
                 self._UI.index_selection.addItem("ADX")
                 self._UI.index_selection.addItem("RSI")
                 self._UI.index_selection.addItem("MACD")
+                self._UI.index_selection.addItem("PPO")
                 if self.default_indicator is not None:
                     if self.default_indicator == 'ADX':
                         self.index_selection_index = 2 # ADX
@@ -1469,6 +1499,7 @@ class UI_control(object):
                 self._UI.index_selection.addItem("A/D")
                 self._UI.index_selection.addItem("Bollinger Band")
                 self._UI.index_selection.addItem("ADX")
+                self._UI.index_selection.addItem("PPO")
                 self._UI.index_selection.addItem("Heat")
                 self._UI.index_selection.setCurrentIndex(self.index_selection_index)
 
@@ -1530,7 +1561,7 @@ class UI_control(object):
             #y_min = self.ticker_data_dict_in_effect['history']['Close'].min()
             #y_major = MultipleLocator(round((y_max - y_min) / 8, 1))
             #canvas.axes.yaxis.set_major_locator(y_major) # https://stackoverflow.com/questions/49436895/arguments-for-loglocator-in-matplotlib
-            canvas.axes.yaxis.set_major_locator(MaxNLocator(nbins=8))
+            canvas.axes.yaxis.set_major_locator(MaxNLocator(nbins=10))
             #canvas.axes.yaxis.set_minor_locator(None)
             #canvas.axes.yaxis.set_minor_formatter(plt.FuncFormatter('{:.1f}'.format)) #
         else:
@@ -1811,7 +1842,7 @@ class UI_control(object):
             x = np.arange(len(dates))
             canvas.axes.grid(True, color='silver', linewidth=0.5)
             #
-            canvas.axes.set_ylabel('MACD', fontsize=10.0)
+            canvas.axes.set_ylabel('MACD ($ difference between EMAs)', fontsize=10.0)
             MACD_macd = self.ticker_data_dict_in_effect['history']['MACD_macd']
             MACD_signal = self.ticker_data_dict_in_effect['history']['MACD_signal']
             MACD_histogram = self.ticker_data_dict_in_effect['history']['MACD_histogram']
@@ -1837,6 +1868,40 @@ class UI_control(object):
             actual_x_data = dates
             x_index = x
             y_data = MACD_macd.values
+
+        elif self._index_selected == 'PPO':
+            dates = self.ticker_data_dict_in_effect['history']['Date'].values
+            formatter = DateFormatter(dates)
+            canvas.axes.xaxis.set_major_formatter(formatter)
+            x = np.arange(len(dates))
+            canvas.axes.grid(True, color='silver', linewidth=0.5)
+            #
+            canvas.axes.set_ylabel('PPO (% difference between EMAs)', fontsize=10.0)
+            PPO_ppo = self.ticker_data_dict_in_effect['history']['PPO_ppo']
+            PPO_signal = self.ticker_data_dict_in_effect['history']['PPO_signal']
+            PPO_histogram = self.ticker_data_dict_in_effect['history']['PPO_histogram']
+            # The ternary operator has the same syntax:
+            # [(token if emoticon_re.search(token) else token.lower()) for token in tokens]
+            color_cross_above_and_increase = '#26A69A'
+            color_cross_above_and_decrease = '#B2DFDB'
+            color_cross_below_and_increase = '#FFCDD2'
+            color_cross_below_and_decrease = '#EF5350'
+            PPO_increase = (PPO_histogram > PPO_histogram.shift(1)).values
+            PPO_hist_color = [((color_cross_above_and_increase if PPO_increase[idx] else color_cross_above_and_decrease) if cross>=0 else (color_cross_below_and_increase if PPO_increase[idx] else color_cross_below_and_decrease)) for idx, cross in enumerate(PPO_histogram)]
+            # 
+            n_ticks = len(x)
+            y0 = np.empty(n_ticks); y0.fill(0)
+            canvas.axes.plot(x, y0, '--', color='black', linewidth=0.5)
+            #
+            canvas.axes.bar(x, PPO_histogram, color=PPO_hist_color)
+            canvas.axes.plot(x, PPO_ppo, color='tab:blue', linewidth=1)
+            canvas.axes.plot(x, PPO_signal, color='tab:orange', linewidth=1)
+            #
+            canvas.figure.autofmt_xdate()
+            index_plotline = None
+            actual_x_data = dates
+            x_index = x
+            y_data = PPO_ppo.values
 
         elif self._index_selected == 'OBV':
             # to skip non-existent dates on the plot
@@ -2045,6 +2110,9 @@ class UI_control(object):
         ######################
         history_all_df['MACD_macd'], history_all_df['MACD_signal'], history_all_df['MACD_histogram'] = momentum_indicator().MACD(close_price=history_all_df['Close'], fast_period=12, slow_period=26, signal_period=9)
         history_df[['MACD_macd','MACD_signal','MACD_histogram']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['MACD_macd','MACD_signal','MACD_histogram']]
+        ######################
+        history_all_df['PPO_ppo'], history_all_df['PPO_signal'], history_all_df['PPO_histogram'] = momentum_indicator().PPO(close_price=history_all_df['Close'], fast_period=12, slow_period=26, signal_period=9)
+        history_df[['PPO_ppo','PPO_signal','PPO_histogram']] = history_all_df[history_all_df['Date'].isin(history_df['Date'])][['PPO_ppo','PPO_signal','PPO_histogram']]
         ######################
         history_all_df['OBV'] = momentum_indicator().OBV(close_price=history_all_df['Close'], volume=history_all_df['Volume'])
         history_all_df['OBV_EMA9'] = moving_average(periods=9).exponential(history_all_df['OBV'])

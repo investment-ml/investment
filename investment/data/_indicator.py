@@ -248,6 +248,19 @@ class momentum_indicator(object):
                 MFI[today_idx] = None
         return MFI
         
+    def PPO(self, close_price: np.ndarray, fast_period: int = 12, slow_period: int = 26, signal_period: int = 9):
+        """
+        https://www.investopedia.com/terms/p/ppo.asp
+        """
+        if type(close_price) == pd.Series:
+            close_price = close_price.to_numpy()
+        fast_EMA = moving_average(periods=fast_period).exponential(close_price)
+        slow_EMA = moving_average(periods=slow_period).exponential(close_price)
+        ppo = 100 * (fast_EMA - slow_EMA) / slow_EMA # the only thing that differs vs. MACD
+        signal = moving_average(periods=signal_period).exponential(ppo)
+        histogram = ppo - signal
+        return ppo, signal, histogram            
+
     def MACD(self, close_price: np.ndarray, fast_period: int = 12, slow_period: int = 26, signal_period: int = 9):
         """
         https://www.investopedia.com/terms/m/macd.asp

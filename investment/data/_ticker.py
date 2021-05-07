@@ -141,7 +141,12 @@ def download_and_load_ARK_data(data_root_dir: str = None):
                 footer_n = len(data) - idx
                 break
         
-        ARK_df_dict[ETF_name] = pd.read_csv(filename, skipfooter=footer_n, engine='python').replace({'ticker': {'TREE UW':'TREE','ARCT UQ':'ARCT','TCS LI': None, 'MDT UN': 'MDT', 'XRX UN': 'XRX'}})
+        df = pd.read_csv(filename, skipfooter=footer_n, engine='python').replace({'ticker': {'TREE UW':'TREE','ARCT UQ':'ARCT','TCS LI': None, 'MDT UN': 'MDT', 'XRX UN': 'XRX'}})
+
+        df['Eps.ttm'] = None # trailing twelve months
+        df['Eps.fw'] = None
+
+        ARK_df_dict[ETF_name] = df.copy()
 
 download_and_load_ARK_data(data_root_dir=global_data_root_dir)
 
@@ -291,8 +296,8 @@ ticker_group_dict = {'All': [],
                      'Commodities': ['GC=F','CL=F'],
                      'Boom': ['ROKU','AMD','SHOP','NIO','MRNA','NVDA','QS','TKAT','UPST','MOON','HOFV','EYES'],
                      'Space': ['SPCE','SRAC','MAXR','LMT','BA','NOC','UFO','HOL','SRAC','VGAC','NPA','MAXR'],
-                     'Gene therapy': ['ABEO', 'CAPR', 'AVRO', 'EDIT', 'QURE', 'BLUE', 'PBE', 'GNOM'],
-                     'Data Science and A.I.': ['THNQ','JSMD','IVES','QTUM','AYX','PLTR','UPST'],
+                     'Gene therapy': ['ABEO', 'CAPR', 'AVRO', 'EDIT', 'QURE', 'BLUE', 'PBE', 'GNOM', 'CSLLY'],
+                     'Data Science and A.I.': ['THNQ','JSMD','IVES','QTUM','AYX','PLTR','UPST','IGV','VGT','XLK'],
                      'ETF': ['JETS', 'ONEQ', 'IEMG', 'VTHR', 'IWB', 'IWM', 'IWV', 'IWF', 'VTV', 'SCHD', 'USMV', 'VEA', 'VWO', 'AGG', 'LQD', 'GLD', 'VTI', 'DIA', 'OILU', 'OILD', 'TQQQ', 'SQQQ', 'UDOW', 'SDOW', 'UVXY', 'SVXY', 'KORU', 'YANG', 'YINN', 'QQQ', 'VOO','SPY','IVV','TMF','TMV','TBF','TLT','ESPO','GDX','XLC','XLI','XLF','XLE','XLV','XLB','XLK','XLU','XLP','XLY','XLRE'],
                      'ETF database': [],
                      'Buffett Indicator': ['^W5000',],
@@ -301,7 +306,10 @@ ticker_group_dict = {'All': [],
                      'The Stock Exchange of Hong Kong': ['9633.HK','0700.HK','9888.HK','9988.HK'],
                      'Taiwan Stock Exchange': ['2330.TW','2303.TW','2317.TW','2454.TW','0050.TW'],
                      'Tokyo Stock Exchange': ['8604.T',],
-                     'Frankfurt Stock Exchange': ['3AI.F',],
+                     'Frankfurt Stock Exchange': ['3AI.F','IQ8.F'],
+                     'Dusseldorf Stock Exchange': ['IQ8.DU',],
+                     'Tel Aviv Stock Exchange': ['NVMI.TA',],
+                     'Australian Securities Exchange': ['CSL.AX',],
                      'World\'s Billionaires': ['AMZN','TSLA','LVMUY','MSFT','FB','BRK-B','ORCL','GOOGL','IDEXY','ITX.MC','LRLCF','LRLCY','OR.PA','MC.PA','TITAN.NS'],
                      'Futures': ['NQ=F','YM=F','ES=F','GC=F','CL=F','LBS=F'],
                      'DOW 30': ['^DJI', 'GS','WMT','MCD','CRM','DIS','NKE','CAT','TRV','VZ','JPM','IBM','HD','INTC','AAPL','MMM','MSFT','JNJ','CSCO','V','DOW','MRK','PG','AXP','KO','AMGN','HON','UNH','WBA','CVX','BA'],
@@ -317,7 +325,7 @@ ticker_group_dict = {'All': [],
                      'Equity database': [],
                      'Volatility': ['^VVIX','^VIX','VIXY','VXX','^VXN',],
                      'Treasury Bonds Yield': ['^TNX','^TYX','^FVX','^IRX','SHV','TIP', 'STIP', 'FLOT','VUT','BND','TMV','TLT','EDV','ZROZ','TBT'],
-                     'OTC Market': ['JCPNQ','TGLO','HTZGQ','TCTZF','LVMUY','IDEXY','LRLCF','LRLCY'],
+                     'OTC Market': ['JCPNQ','TGLO','HTZGQ','TCTZF','LVMUY','IDEXY','LRLCF','LRLCY','CSLLY'],
                      'ARK Investments': ['ARKK','ARKQ','ARKW','ARKG','ARKF','ARKX','IZRL','PRNT'],
                      'ARK Innovation ETF': [x for x in ARK_df_dict['ARKK']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK Autonomous Tech. & Robotics ETF': [x for x in ARK_df_dict['ARKQ']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
@@ -538,7 +546,7 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Boom': f"Stocks that have a history of skyrocketing",
                    'Space': f"<a href='https://www.barrons.com/articles/ark-invest-is-planning-a-space-etf-here-are-5-stocks-that-could-benefit-51610641331'>5 Stocks That Could Benefit From ARK’s Planned Space ETF</a>",
                    'Gene therapy': "Gene therapy",
-                   'Data Science and A.I.': "Data science, machine learning, and artifical intelligence",
+                   'Data Science and A.I.': "Data science, machine learning, and artifical intelligence.<br/><br/>Baselines:<br/>- IGV: Software ETF<br/>- VGT: IT ETF<br/>- XLK: Technology ETF",
                    'ETF': f"Exchange-traded fund (ETF) is a basket of securities that trade on an exchange. Unlike mutual funds (which only trade once a day after the market closes), ETF is just like a stock and share prices fluctuate all day as the ETF is bought and sold.\n\nExchange-traded note (ETN) is a basket of unsecured debt securities that track an underlying index of securities and trade on a major exchange like a stock.\n\nDifference: Investing ETF is investing in a fund that holds the asset it tracks. That asset may be stocks, bonds, gold or other commodities, or futures contracts. In contrast, ETN is more like a bond. It's an unsecured debt note issued by an institution. If the underwriter (usually a bank) were to go bankrupt, the investor would risk a total default.",
                    'ETF database': f"https://nasdaqtrader.com/",
                    'Buffett Indicator': f"Divide the Wilshire 5000 Index (viewed as the total stock market) by the annual U.S. GDP (e.g., <a href='https://www.investing.com/economic-calendar/gdp-375'>https://www.investing.com/economic-calendar/gdp-375</a>). Before dot-com bubble burst, it was 159.2%.<br/><br/><a href='https://www.gurufocus.com/stock-market-valuations.php'>https://www.gurufocus.com/stock-market-valuations.php</a><br/><br/><a href='https://www.bea.gov/data/gdp/gross-domestic-product'>GDP</a>",
@@ -548,6 +556,9 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Taiwan Stock Exchange': f"<a href='https://www.twse.com.tw/en/'>Taiwan Stock Exchange Corporation</a><br/><br/>2330.TW: Taiwan Semiconductor Manufacturing Company Limited.<br/><br/>2303.TW: United Microelectronics Corporation.<br/><br/>2317.TW: Hon Hai Precision Industry Co., Ltd.<br/><br/>2454.TW: MediaTek Inc.<br/><br/>0050.TW: Yuanta/P-shares Taiwan Top 50 ETF.<br/><br/>",
                    'Tokyo Stock Exchange': f"<a href='https://en.wikipedia.org/wiki/Tokyo_Stock_Exchange'>Tokyo Stock Exchange</a>",
                    'Frankfurt Stock Exchange': f"<a href='https://en.wikipedia.org/wiki/Frankfurt_Stock_Exchange'>Frankfurt Stock Exchange</a>",
+                   'Dusseldorf Stock Exchange': f"<a href='https://www.investopedia.com/terms/d/dusseldorf-stock-exchange-dus-.d.asp'>Dusseldorf Stock Exchange</a>",
+                   'Tel Aviv Stock Exchange': f"<a href='https://en.wikipedia.org/wiki/Tel_Aviv_Stock_Exchange'>Tel Aviv Stock Exchange</a>",
+                   'Australian Securities Exchange': f"<a href='https://en.wikipedia.org/wiki/Australian_Securities_Exchange'>Australian Securities Exchange</a>",
                    'World\'s Billionaires': "<style> table, th, td {border: 1px solid black; border-collapse: collapse; padding: 2px;}</style><a href='https://www.forbes.com/real-time-billionaires/'>Many billionaires</a> are rich because of the stock markets.<br/><br/>2021-04-06:<br/><table>" +
                                             "<tr><th>#</th><th>Name</th><th>Stock</th></tr>" +
                                             "<tr><td>1</td><td>Jeff Bezos</td><td>AMZN</td></tr>" +
@@ -598,7 +609,7 @@ def ticker_preprocessing():
         ticker_group_dict[group] = [ticker for ticker in ticker_group_dict[group] if (('+' not in ticker) and ('^' not in ticker[-1]))] # clean up tickers
 
     ticker_group_dict['ETF database'] = [ticker for ticker in ticker_group_dict['ETF database'] if (('-' not in ticker) and ((ticker + 'ABCDE')[4] != 'W'))]
-    ticker_group_dict['Equity database'] = [ticker for ticker in ticker_group_dict['Equity database'] if (('-' not in ticker) and ((ticker + 'ABCDE')[4] != 'W'))]
+    ticker_group_dict['Equity database'] = [ticker for ticker in ticker_group_dict['Equity database'] if ((ticker + 'ABCDE')[4] != 'W')] # allow BRK-B
 
     ticker_group_dict['All'] = sorted(list(set([item for sublist in ticker_group_dict.values() for item in sublist])))
 
@@ -742,7 +753,10 @@ class Ticker(object):
                               'ZRH': 'Zurich/headquarters (e.g., ^STOXX50E)',
                               'MCE': 'Madrid Stock Exchange in Spain (e.g., ITX.MC)',
                               'NSI': 'National Stock Exchange in India (e.g., ^NSEI)',
-                              'FRA': 'Frankfurt Stock Exchange (e.g., 3AI.F)'}
+                              'FRA': 'Frankfurt Stock Exchange (e.g., 3AI.F)',
+                              'DUS': 'Dusseldorf Stock Exchange (e.g., IQ8.DU)',
+                              'TLV': 'Tel Aviv Stock Exchange (e.g., NVMI.TA)',
+                              'ASX': 'Australian Securities Exchange (e.g., CSL.AX)'}
         if exchange_info not in exchange_info_dict.keys():
             #print(f"exchange code [{exchange_info}] not defined")
             return f"{exchange_info} (???)"
@@ -1215,7 +1229,12 @@ class Ticker(object):
             if self.ticker_info is not None:
                 if this_key in self.ticker_info.keys():
                     if self.ticker_info[this_key] is not None:
-                        return round(self.ticker_info[this_key],7)
+                        this_value = self.ticker_info[this_key]
+                        if type(this_value) == str:
+                            return None
+                            #return round(float(this_value),7)
+                        else:    
+                            return round(this_value,7)
         return None
 
     @property
