@@ -36,7 +36,7 @@ import requests
 
 ###########################################################################################
 
-tickers_with_no_volume = ['^W5000','^VVIX','^VIX','^TNX','^TYX','^FVX','^IRX','^VXN','EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','HKD=X','DX-Y.NYB','^TWII','^TWDOWD','^HSI','^N225','^GDAXI','^FCHI','000001.SS','399001.SZ','^STOXX50E','^CASE30','^NSEI']
+tickers_with_no_volume = ['^W5000','^VVIX','^VIX','^TNX','^TYX','^FVX','^IRX','^VXN','CNYUSD=X','TWDUSD=X','EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','HKD=X','DX-Y.NYB','^TWII','^TWDOWD','^HSI','^N225','^GDAXI','^FCHI','000001.SS','399001.SZ','^STOXX50E','^CASE30','^NSEI']
 tickers_with_no_PT = ['^NDX','^GSPC','000001.SS','399001.SZ','NQ=F','YM=F','GC=F','ES=F','CL=F','LBS=F','DS-PB','^CASE30','ARKK','ARKQ','ARKW','ARKF','ARKG','ARKX','^NSEI','0050.TW']
 tickers_likely_delisted = ['AAC+','AAC=','AAQC=','ACIC+','ACII=','ALMDG','AKE','ADYEN','ACND+','ACND=','ACR-C','ADEX+','ADEX=','ADF=','ADRA=','AMTD','BEZQ','BATM','SERV','TCO','WPX','PLSN','PE','OERL','BIMCM','BSEN','CTL','NBL','MYL','EIDX','PIH','PRCP','DRAD','CXO',
                            'MLTM','EMCO','DNKN','LVGO','LOGM','FTAL','ETFC','GLIBA','HAML','LM','KSPI','HEXAB','HDS','IMMU','WMGI','VSLR','WRTC','SBBX','TERP','TRWH','RUBI','RTRX','RST','RESI','PUB','PTLA','PRSC','PRNB','RTIX','POL','PFNX','PDLI','AMAG','AKCA','AIMT',
@@ -60,6 +60,7 @@ options_df = pd.DataFrame()
 global_data_root_dir = pathlib.Path.home() / ".investment"
 
 ARK_df_dict = {}
+IOO_df = {}
 
 ###########################################################################################
 
@@ -72,6 +73,81 @@ def Internet_connection_available():
     except OSError:
         pass
     return False
+
+###########################################################################################
+
+def download_and_load_IOO_data(data_root_dir: str = None):
+
+    if data_root_dir is None:
+         raise ValueError("Error: data_root_dir cannot be None")
+    data_dir = data_root_dir / "ticker_data/IOO"
+    historical_dir = data_root_dir / "ticker_data/IOO/historical"
+
+    if not data_dir.exists():
+        try:
+            data_dir.mkdir(parents=True, exist_ok=True)
+        except:
+            raise IOError(f"cannot create data dir: {data_dir}")
+
+    if not historical_dir.exists():
+        try:
+            historical_dir.mkdir(parents=True, exist_ok=True)
+        except:
+            raise IOError(f"cannot create IOO historical dir: {historical_dir}")
+
+    global IOO_df
+
+    ETF_name = "IOO"
+
+    filename = data_dir / f"{ETF_name}.csv"
+
+    to_download = True
+
+    if filename.exists():
+        if timedata().now.datetime - timedata(time_stamp=filename.stat().st_ctime).datetime < timedelta(days=1): # creation time
+            to_download = False
+
+    if not Internet_connection_available():
+        to_download = False
+        if not filename.exists():
+            raise RuntimeError("Internet is unavailable but the system depends on certain ishares.com files to run")
+
+    if to_download:
+        print(f'Attempt to download [{ETF_name}] data from www.ishares.com ...', end='')
+        url = "https://www.ishares.com/us/products/239737/ishares-global-100-etf/1467271812596.ajax?fileType=csv&fileName=IOO_holdings&dataType=fund"
+        headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.192 Safari/537.36'} # https://stackoverflow.com/questions/57155387/workaround-for-blocked-get-requests-in-python
+        r = requests.get(url, headers=headers)
+        if r.status_code == 200:
+            with open(filename, 'wb') as outfile:
+                outfile.write(r.content)
+            filename_to = historical_dir / f"{ETF_name}-{timedata(time_stamp=filename.stat().st_ctime).datetime.astimezone().strftime('%Y%m%d')}.csv" # astimezone() -> local time zone
+            shutil.copy(filename, filename_to)
+            print(f' Successful [status code: {r.status_code}]')
+        else:
+            print(f' Failed [status code: {r.status_code}]')
+            
+    with open(filename, 'r') as f:
+        data = f.readlines()
+    header_n = 0
+    for idx, d in enumerate(data):
+        if 'Ticker,Name,Sector,' in d: # figure out how many header lines to skip
+            header_n = idx
+            break
+
+    footer_n = 0
+    for idx, d in enumerate(data):
+        if 'The content contained herein is owned or licensed by BlackRock' in d: # figure out how many footer lines to skip
+            footer_n = len(data) - idx - header_n
+            break
+    
+    df = pd.read_csv(filename, skiprows=header_n, skipfooter=footer_n, engine='python').replace({'Ticker': {'005930':'005930.KS','BP.':'BP','7203':'7203.T','6758':'6758.T','8306':'8306.T','NESN':'NESN.SW','ROG':'ROG.SW','NOVN':'NOVN.SW','MC':'MC.PA','ULVR':'ULVR.L'}})
+
+    #df['Eps.ttm'] = None # trailing twelve months
+    #df['Eps.fw'] = None
+
+    IOO_df = df[df['Asset Class'] == 'Equity'].copy()
+
+download_and_load_IOO_data(data_root_dir=global_data_root_dir)
 
 ###########################################################################################
 
@@ -283,16 +359,16 @@ ticker_group_dict = {'All': [],
                      'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','AAL','ZM','AZN','ARCT','QDEL','ABT','HOLX','DGX','PROG','GME','CHWY','AMC','CNK','PEJ','USO','JETS','TRIP','LVS','HLT','H','MAR','CAR','HTZGQ','ZIP','KIRK','ULTA','TLYS','DS','DS-PB','DS-PC'],
                      'Inflation': ['VTIP','LTPZ','IVOL','SPIP'],
                      'Cyber Security': ['SWI','CYBR','CHKP','PANW','ZS','CRWD','FEYE','SCWX','VMW','MSFT','FTNT','MIME','HACK','PFPT','QLYS','RPD','TENB','VRNS','CIBR','NET'],
-                     'Chinese stocks': ['YINN', 'YANG', 'CHA', 'CHL', 'CHU', '0728.HK', '0941.HK', '0762.HK'],
+                     'Chinese stocks': ['YINN', 'YANG', 'CHA', 'CHL', 'CHU', '0728.HK', '0941.HK', '0762.HK', 'ZH', 'IQ', 'BIDU', 'BABA', 'WB', 'SINA', 'FENG', 'YY'],
                      '5G': ['AAPL','TMUS','VZ','T','QCOM','QRVO','ERIC','TSM','NVDA','SWKS','ADI','MRVL','AVGO','XLNX'],
                      'ADR': ['TSM','BABA','PDD','TM','SNE','JD','AZN','BIDU','BILI','BP','NIO','UBS','NOK','TCOM','IQ','TTM','WB','YY'],
                      'Cloud': ['TWLO','AYX','SPLK'],
                      'ASD': ['BNGO','ZYNE',],
                      'High Implied Volatility': ['AMC', 'BBBY', 'BBIG', 'BTU', 'CLDX', 'CVM', 'EBON', 'FREQ', 'FUTU', 'GME', 'GNUS', 'GSX', 'HGEN', 'IDRA', 'ITP', 'MRKR', 'NXTD', 'OCGN', 'ODT', 'OEG', 'PRQR', 'RIOT', 'RLX', 'SNDL', 'SOS', 'STON', 'WPG', 'WVE', 'XNET', 'GUSH', 'SOXL', 'SOXS', 'SQQQ', 'SRTY', 'TNA', 'TQQQ', 'UVXY', 'VXX'],
-                     'SPACs': ['VGAC','CCIV','DKNG','QS','UWMC','OPEN','LAZR','SKLZ','SPCE','VRT','CHPT','NKLA'],
+                     'SPACs': ['SPAK','VGAC','CCIV','DKNG','QS','UWMC','OPEN','LAZR','SKLZ','SPCE','VRT','CHPT','NKLA'],
                      'Heavy drops': ['BIDU','TME','VIPS','FTCH','VIACA','VIAC','DISCA','DISCB','DISCK','LKNCY','GME','ARKK','ARKG','NIO','IQ','GSX','NMR','CS'],
                      'Cryptocurrencies': ['GBTC','RIOT','MARA','BTC-USD','COIN','DOGE-USD'],
-                     'Currencies': ['EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','DX-Y.NYB','HKD=X'],
+                     'Currencies': ['EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','DX-Y.NYB','HKD=X','CNYUSD=X','TWDUSD=X'],
                      'Commodities': ['GC=F','CL=F'],
                      'Boom': ['ROKU','AMD','SHOP','NIO','MRNA','NVDA','QS','TKAT','UPST','MOON','HOFV','EYES'],
                      'Space': ['SPCE','SRAC','MAXR','LMT','BA','NOC','UFO','HOL','SRAC','VGAC','NPA','MAXR'],
@@ -304,7 +380,8 @@ ticker_group_dict = {'All': [],
                      'Major Market Indexes': ['^DJI','^NDX','^GSPC','^IXIC','^RUT','^VIX','DIA','SPLG','IVV','VOO','SPY','QQQ','ONEQ','IWM','VTWO','VXX'],
                      'Non-US World Market Indexes': ['^FTSE','^HSI','^N225','^GDAXI','^FCHI','^TWII','^TWDOWD','000001.SS','399001.SZ','^STOXX50E','^CASE30','^NSEI'],
                      'The Stock Exchange of Hong Kong': ['9633.HK','0700.HK','9888.HK','9988.HK'],
-                     'Taiwan Stock Exchange': ['2330.TW','2303.TW','2317.TW','2454.TW','0050.TW'],
+                     'Taiwan Stock Exchange': ['2330.TW','2303.TW','2317.TW','2454.TW','0050.TW','6547.TWO','5530.TWO','3081.TWO'],
+                     'Korea Stock Exchange': ['005930.KS',],
                      'Tokyo Stock Exchange': ['8604.T',],
                      'Frankfurt Stock Exchange': ['3AI.F','IQ8.F'],
                      'Dusseldorf Stock Exchange': ['IQ8.DU',],
@@ -326,6 +403,7 @@ ticker_group_dict = {'All': [],
                      'Volatility': ['^VVIX','^VIX','VIXY','VXX','^VXN',],
                      'Treasury Bonds Yield': ['^TNX','^TYX','^FVX','^IRX','SHV','TIP', 'STIP', 'FLOT','VUT','BND','TMV','TLT','EDV','ZROZ','TBT'],
                      'OTC Market': ['JCPNQ','TGLO','HTZGQ','TCTZF','LVMUY','IDEXY','LRLCF','LRLCY','CSLLY'],
+                     'iShares Global 100 ETF': [x for x in IOO_df['Ticker'].dropna().str.strip().tolist()],
                      'ARK Investments': ['ARKK','ARKQ','ARKW','ARKG','ARKF','ARKX','IZRL','PRNT'],
                      'ARK Innovation ETF': [x for x in ARK_df_dict['ARKK']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
                      'ARK Autonomous Tech. & Robotics ETF': [x for x in ARK_df_dict['ARKQ']['ticker'].dropna().str.strip().tolist() if x.isalpha()],
@@ -553,7 +631,8 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Major Market Indexes': f"https://www.investing.com/indices/major-indices",
                    'Non-US World Market Indexes': f"<b>FTSE</b> (Financial Times Stock Exchange) 100 Index is a share index of the 100 companies listed on the <b>London Stock Exchange</b> with the highest market capitalisation.<br/><br/><b>HSI</b> is Hang Seng Index.<br/><br/><b>N225</b> is the Nikkei 225, the Nikkei Stock Average, is a stock market index for the Tokyo Stock Exchange.<br/><br/><b>GDAXI</b> is the DAX Performance Index, a blue chip stock market index consisting of the 30 major <b>German</b> companies trading on the Frankfurt Stock Exchange.<br/><br/><b>FCHI</b> is CAC 40, a benchmark <b>French stock market index</b>, representing a capitalization-weighted measure of the 40 most significant stocks among the 100 largest market caps on the Euronext Paris.<br/><br/><b>TWII</b> is the TSEC (Taiwan Stock Exchange Corporation) weighted index.<br/><br/><b>000001.SS</b> is the SSE (Shanghai Stock Exchange) Composite Index, currency in CNY.<br/><br/><b>399001.SZ</b> is the Shenzhen Component, currency in CNY.<br/><br/><b>^STOXX50E</b> is the EURO STOXX 50 index, dominated by France (36.4%) and Germany (35.2%) and providing a blue-chip representation of supersector leaders in the Eurozone.<br/><br/><b>^CASE30</b> is the stock market index for securities in Egypt.<br/><br/><b>^NSEI</b> (the NIFTY 50) is a benchmark Indian stock market index that represents the weighted average of 50 of the largest Indian companies listed on the National Stock Exchange (NSE). It is one of the two main stock indices used in India, the other being the BSE SENSEX.<br/><br/>",
                    'The Stock Exchange of Hong Kong': f"According to wikipedia, the Stock Exchange of Hong Kong is a stock exchange based in Hong Kong.<br/><br/>It is the world's largest bourse (a stock market in a non-English-speaking country) in terms of market capitalization, surpassing Chicago-based CME.<br/><br/>As of the end of 2020, it has 2,538 listed companies with a combined market capitalization of HK$47 trillion.",
-                   'Taiwan Stock Exchange': f"<a href='https://www.twse.com.tw/en/'>Taiwan Stock Exchange Corporation</a><br/><br/>2330.TW: Taiwan Semiconductor Manufacturing Company Limited.<br/><br/>2303.TW: United Microelectronics Corporation.<br/><br/>2317.TW: Hon Hai Precision Industry Co., Ltd.<br/><br/>2454.TW: MediaTek Inc.<br/><br/>0050.TW: Yuanta/P-shares Taiwan Top 50 ETF.<br/><br/>",
+                   'Taiwan Stock Exchange': f"<a href='https://www.twse.com.tw/en/'>Taiwan Stock Exchange Corporation</a><br/><br/>2330.TW: Taiwan Semiconductor Manufacturing Company Limited.<br/><br/>2303.TW: United Microelectronics Corporation.<br/><br/>2317.TW: Hon Hai Precision Industry Co., Ltd.<br/><br/>2454.TW: MediaTek Inc.<br/><br/>0050.TW: Yuanta/P-shares Taiwan Top 50 ETF.<br/><br/>5530.TWO: Lungyen Life Service Corporation.<br/><br/>6547.TWO: Medigen Vaccine Biologics Corporation.<br/><br/>3081.TWO: LandMark Optoelectronics Corporation.<br/><br/>",
+                   'Korea Stock Exchange': f"<a href='https://en.wikipedia.org/wiki/Korea_Exchange'>Korea Stock Exchange</a><br/><br/>005930.KS: Samsung Electronics Co., Ltd.",
                    'Tokyo Stock Exchange': f"<a href='https://en.wikipedia.org/wiki/Tokyo_Stock_Exchange'>Tokyo Stock Exchange</a>",
                    'Frankfurt Stock Exchange': f"<a href='https://en.wikipedia.org/wiki/Frankfurt_Stock_Exchange'>Frankfurt Stock Exchange</a>",
                    'Dusseldorf Stock Exchange': f"<a href='https://www.investopedia.com/terms/d/dusseldorf-stock-exchange-dus-.d.asp'>Dusseldorf Stock Exchange</a>",
@@ -579,6 +658,7 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Volatility': f"<a href='https://www.investopedia.com/articles/active-trading/070213/tracking-volatility-how-vix-calculated.asp'>https://www.investopedia.com/articles/active-trading/070213/tracking-volatility-how-vix-calculated.asp</a>",
                    'Treasury Bonds Yield': f"<a href='https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield'>https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield</a><br/><br/>^IRX: 13 Week Treasury Bill<br/>^FVX: Treasury Yield 5 Years<br/>^TNX: Treasury Yield 10 Years<br/>^TYX: Treasury Yield 30 Years<br/><br/><b>A sell-off in the US Government Bond could be considered a good thing</b>: investors sold safe US bonds to buy something more risky; in contrast, when there is great fear in stock markets, investors flee towards the US Treasuries, the safest asset class. When bond yield becomes higher, it means buyers are now less interested in the current yield level, so that the sellers need to increase its yield (lowering bond price) to attract buyers.<br/><br/>In general, <a href='https://www.investopedia.com/ask/answers/042215/what-are-risks-associated-investing-treasury-bond.asp'>the risks of buying US Treasury bonds (T-bonds)</a>:<br/><br/>1. <b>Inflation risk</b>: if the inflation rate is greater (e.g., > 2%) than T-bonds yield, investors lose money in buying power.<br/>2. <b>Yield risk</b>: when bond yield increases, investors who sell T-bonds before maturity date lose money.<br/>3. <b>Opportunity risk</b>: the return on investment could be higher in somewhere else other than buying T-bonds.",
                    'OTC Market': f"Over-the-counter Market<br/><br/><a href='https://www.otcmarkets.com/research/stock-screener'>https://www.otcmarkets.com/research/stock-screener</a>",
+                   'iShares Global 100 ETF': f"<a href='https://www.ishares.com/us/products/239737/ishares-global-100-etf'>https://www.ishares.com/us/products/239737/ishares-global-100-etf</a><br/><br/>Basket Holdings: <b>{len(IOO_df.index)}</b><br/>" + IOO_df[['Ticker','Name','Sector','Weight (%)','Location']].reset_index(drop=True).to_html(index=True,formatters={'__index__': lambda x: '{:,.0f}'.format(x+1)}),
                    'ARK Investments': "<a href='https://ark-funds.com/'>https://ark-funds.com/</a> and <a href='https://ark-invest.com/'>https://ark-invest.com/</a><br/><br/>see also: <a href='https://cathiesark.com/'>https://cathiesark.com/</a><br/><hr><b>ARK Actively Managed Innovation ETFs:</b><br/><br/>ARKK - ARK Innovation ETF (171% gain)<br/>ARKQ - Autonomous Technology & Robotics ETF (125% gain)<br/>ARKW - Next Generation Internet ETF (155% gain)<br/>ARKG - Genomic Revolution ETF (210% gain)<br/>ARKF - Fintech Innovation ETF (104% gain)<br/>ARKX - Space Exploration & Innovation ETF<br/><hr><b>ARK Indexed Innovation ETFs:</b><br/><br/>PRNT - The 3D Printing ETF (68% gain)<br/>IZRL - Israel Innovative Technology ETF (37% gain)",
                    'ARK Innovation ETF': f"Basket Holdings: <b>{len(ARK_df_dict['ARKK'].index)}</b><br/>" + ARK_df_dict['ARKK'][['ticker','company','shares','weight(%)']].reset_index(drop=True).to_html(index=True,formatters={'__index__': lambda x: '{:,.0f}'.format(x+1),'shares':'{:,.0f}'.format}),
                    'ARK Autonomous Tech. & Robotics ETF': f"Basket Holdings: <b>{len(ARK_df_dict['ARKQ'].index)}</b><br/>" + ARK_df_dict['ARKQ'][['ticker','company','shares','weight(%)']].reset_index(drop=True).to_html(index=True,formatters={'__index__': lambda x: '{:,.0f}'.format(x+1),'shares':'{:,.0f}'.format}),
@@ -721,6 +801,8 @@ class Ticker(object):
 
     @property
     def exchange(self):
+        if 'exchange' not in self.ticker_info.keys():
+            return None
         exchange_info = self.ticker_info['exchange']
         exchange_info_dict = {'PNK': 'OTC Markets (Pink Sheets) (e.g., GBTC, ROSGQ, HEMP, ACAN)',
                               'CCC': 'Concierge Coin - CoinMarketCap (e.g., $BTC-USD)',
@@ -743,6 +825,7 @@ class Ticker(object):
                               'PAR': 'Euronext Paris (e.g., ^FCHI)',
                               'GER': 'German Stock Exchange (e.g., ^GDAXI)',
                               'TAI': 'Taiwan Stock Exchange (e.g., ^TWII)',
+                              'TWO': 'Taipei Stock Exchange (e.g., 6547.TWO)',
                               'NYS': 'NYSE (e.g., ^W5000)',
                               'SHH': 'Shanghai (e.g., 000001.SS)',
                               'SHZ': 'Shenzhen (e.g., 399001.SZ)',
@@ -756,7 +839,11 @@ class Ticker(object):
                               'FRA': 'Frankfurt Stock Exchange (e.g., 3AI.F)',
                               'DUS': 'Dusseldorf Stock Exchange (e.g., IQ8.DU)',
                               'TLV': 'Tel Aviv Stock Exchange (e.g., NVMI.TA)',
-                              'ASX': 'Australian Securities Exchange (e.g., CSL.AX)'}
+                              'ASX': 'Australian Securities Exchange (e.g., CSL.AX)',
+                              'KSC': 'Korea Stock Exchange (e.g., 005930.KS)',
+                              'JPX': 'Japanese Stock Exchange (e.g., 7203.T)',
+                              'EBS': 'Swiss Electronic Bourse (e.g., NESN.SW)',
+                              'LSE': 'London Stock Exchange (e.g., ULVR.L)'}
         if exchange_info not in exchange_info_dict.keys():
             #print(f"exchange code [{exchange_info}] not defined")
             return f"{exchange_info} (???)"
@@ -1196,8 +1283,8 @@ class Ticker(object):
         lows_df = self.ticker_history[['Date', 'Low']]
         return lows_df.sort_values(by=['Low'], ascending=True).head(n=n)
 
-    def nearest_actual_date(self, target_date):
-        idx = self.ticker_history['Date'].searchsorted(target_date)
+    def nearest_actual_date(self, target_datetime):
+        idx = min( self.ticker_history['Date'].searchsorted(target_datetime), len(self.ticker_history) - 1 )
         return self.ticker_history['Date'].iloc[idx]
 
     def open_price_on_date(self, target_date):
@@ -1216,7 +1303,7 @@ class Ticker(object):
         return (self.high_price_on_date(target_date)[0] - self.low_price_on_date(target_date)[0])
 
     def price_on_date(self, data_type, target_date):
-        assert data_type in ['Close','High','Low','Open'], "must be either 'Close','High','Low', or 'Open'"
+        assert data_type in ['Close','High','Low','Open'], "must be either 'Close', 'High', 'Low', or 'Open'"
         max_idx = len(self.ticker_history) - 1
         idx = min( self.ticker_history['Date'].searchsorted(target_date), max_idx ) # if the date is beyond all available dates, idx could be max_idx+1
         #df = self.ticker_history[self.ticker_history['Date'] == target_date]

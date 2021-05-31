@@ -170,9 +170,9 @@ class SnappingCursor(Cursor):
             self.supporting_info = None
         else:
             self.use_supporting_info = True
-            self.supporting_info = supporting_info        
-        dy = (self.y.max() - self.y.min()) / self.y.size
+            self.supporting_info = supporting_info
         if self.y.size >= 3: # to calculate a numerical gradient, at least (edge_order + 1) elements are required.
+            dy = (self.y.max() - self.y.min()) / self.y.size
             self.y_grad = np.gradient(self.y, dy, edge_order=2)
         else:
             self.y_grad = None
@@ -1130,7 +1130,7 @@ class app_menu(object):
         equity_db_Act.triggered.connect(self.equity_db_dialog.exec)
         #
         fed_funds_rate_Act = QAction('&Federal funds rate', parent=self.app_window)
-        fed_funds_rate_Act.setShortcut('Ctrl+F')
+        #fed_funds_rate_Act.setShortcut('Ctrl+F')
         fed_funds_rate_Act.triggered.connect(self.fed_funds_rate_dialog.exec)
         #
         options_trading_Act = QAction('&Options trading', parent=self.app_window)
@@ -1325,7 +1325,7 @@ class UI_control(object):
             self._index_selected = self._UI.index_selection.itemText(index)
             if self._index_selected == 'PVI and NVI':
                 #self._UI.index_textinfo.setText(f"PVI (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd is optimistic (or turning pessimistic).\n\nNVI (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money') may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).")
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\"><b>PVI</b> (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd (the retail investors) is optimistic (or turning pessimistic).<br/><br/><b>NVI</b> (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money', namely, institutional investors) may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).</body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">PVI and NVI are <u>lagging</u> indicators and are used to <a href='https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/positive-volume-index'>identify bull and bear markets</a>.<br/><br/><b>PVI</b> (Positive Volume Index) reflects high-volume days and thus the crowd's feelings: When PVI_EMA9 is above (or below) PVI_EMA255, the crowd (the retail investors) is optimistic (or turning pessimistic).<br/><br/><b>NVI</b> (Negative Volume Index) reflects low-volume days and thus what the non-crowd (e.g., 'smart money', namely, institutional investors) may be doing: When NVI_EMA9 is above (or below) NVI_EMA255, the non-crowd (e.g., 'smart money') may be buying (or selling).</body>")
                 self._UI.index_canvas_options.addItem("PVI")
                 self._UI.index_canvas_options.addItem("NVI")
                 self.index_options_selection_index = 1
@@ -1359,7 +1359,7 @@ class UI_control(object):
                 self._UI.index_canvas_options.addItem("Money Flow 14")
                 self.index_options_selection_index = 1
             elif self._index_selected == 'Bollinger Band':
-                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Bollinger Band provides a visualization of the level of <b>volatility</b>.<br/><br/>Low (or high) volatility (called squeeze) is considered a potential sign of future increased (or decreased) volatility (that is, the phenomenon of regression toward the mean)<br/><br/>About 90% of price action occurs within the band.<br/><br/>However, Bollinger Band does <b>NOT</b> indicate when a change may take place or what direction price could move; it needs to be used with other indicators.<br/><br/>Note.: In an approx. normal data set, 68 - 95 - 99.7% fall within ±1σ, ±2σ, ±3σ, respectively.<br/><br/><a href='https://www.investopedia.com/terms/b/bollingerbands.asp'>https://www.investopedia.com/terms/b/bollingerbands.asp</a></body>")
+                self._UI.index_textinfo.setHtml(f"<body style=\"font-family:Courier New;\">Bollinger Band provides a <u>lagging</u> visualization of the level of <b>volatility</b>.<br/><br/>Low (or high) volatility (called squeeze) is considered a potential sign of future increased (or decreased) volatility (that is, the phenomenon of regression toward the mean)<br/><br/>About 90% of price action occurs within the band.<br/><br/>However, Bollinger Band does <b>NOT</b> indicate when a change may take place or what direction price could move; it needs to be used with other indicators.<br/><br/>Note.: In an approx. normal data set, 68 - 95 - 99.7% fall within ±1σ, ±2σ, ±3σ, respectively.<br/><br/><a href='https://www.investopedia.com/terms/b/bollingerbands.asp'>https://www.investopedia.com/terms/b/bollingerbands.asp</a></body>")
                 self._UI.index_canvas_options.addItem("Bollinger Band (Short term)")
                 self._UI.index_canvas_options.addItem("Bollinger Band (Medium term)")
                 self._UI.index_canvas_options.addItem("Bollinger Band (Long term)")

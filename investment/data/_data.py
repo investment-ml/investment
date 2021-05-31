@@ -806,10 +806,11 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
     years = [1,2,3,4,5,10,20,30]
     for year_n in years:
         max_diff_pct_yr_n = this_ticker.max_diff_pct_year_n(year_n=year_n)
-        if use_html:
-            risk_info += f" {year_n}yr_h/l(%): ({max_diff_pct_yr_n[0]:+,.0f}%, {max_diff_pct_yr_n[1]:+,.0f}%), ratio = {abs(max_diff_pct_yr_n[0]/max_diff_pct_yr_n[1] if max_diff_pct_yr_n[1] else 0):,.2f}<br/>"
-        else:
-            risk_info += f" {year_n}yr_h/l(%): ({max_diff_pct_yr_n[0]:+,.0f}%, {max_diff_pct_yr_n[1]:+,.0f}%), ratio = {abs(max_diff_pct_yr_n[0]/max_diff_pct_yr_n[1] if max_diff_pct_yr_n[1] else 0):,.2f}\n"
+        if (max_diff_pct_yr_n[0] is not None) and (max_diff_pct_yr_n[1] is not None):
+            if use_html:
+                risk_info += f" {year_n}yr_h/l(%): ({max_diff_pct_yr_n[0]:+,.0f}%, {max_diff_pct_yr_n[1]:+,.0f}%), ratio = {abs(max_diff_pct_yr_n[0]/max_diff_pct_yr_n[1] if max_diff_pct_yr_n[1] else 0):,.2f}<br/>"
+            else:
+                risk_info += f" {year_n}yr_h/l(%): ({max_diff_pct_yr_n[0]:+,.0f}%, {max_diff_pct_yr_n[1]:+,.0f}%), ratio = {abs(max_diff_pct_yr_n[0]/max_diff_pct_yr_n[1] if max_diff_pct_yr_n[1] else 0):,.2f}\n"
     # beta: covariance of stock with market
     if 'beta' in ticker_info_keys:
         beta = ticker_info['beta']
@@ -850,23 +851,24 @@ def get_formatted_ticker_data(ticker_data_dict, use_html: bool = False):
             options_info = f"<hr>Options expirations: {this_ticker.options}"
         else:
             options_info = f"\nOptions expirations: {this_ticker.options}"
-        df = this_ticker.option_chain(expiration_date = this_ticker.options[0])
-        if df is not None:
-            df.drop(columns=['contractSymbol', 'lastTradeDate', 'contractSize', 'currency', 'bid', 'ask', 'change', 'volume'], inplace=True)
-            calls = df[df['type'] == 'calls'].drop(columns=['type']).copy()
-            #calls.drop(columns=['type'], inplace=True)
-            puts = df[df['type'] == 'puts'].drop(columns=['type']).copy()
-            #puts.drop(columns=['type'], inplace=True)
-            for idx, row in calls.iterrows():
-                calls.loc[idx,'percentChange'] = f"{(calls.loc[idx,'percentChange']):.2f}%"
-                calls.loc[idx,'impliedVolatility'] = f"{(calls.loc[idx,'impliedVolatility']*100):+,.2f}%"
-            for idx, row in puts.iterrows():
-                puts.loc[idx,'percentChange'] = f"{(puts.loc[idx,'percentChange']):.2f}%"
-                puts.loc[idx,'impliedVolatility'] = f"{(puts.loc[idx,'impliedVolatility']*100):+,.2f}%"
-            if use_html:
-                options_info += f"<br/><br/>The most recent one (expiration: {this_ticker.options[0]}):<br/><br/>calls:{calls.to_html(index=False)}<br/><br/>puts:{puts.to_html(index=False)}"
-            else:
-                options_info += f"\n\nThe most recent one (expiration: {this_ticker.options[0]}):\n\ncalls:{calls.to_string(index=False)}\n\nputs:{puts.to_string(index=False)}"
+        if this_ticker.options != ():
+            df = this_ticker.option_chain(expiration_date = this_ticker.options[0])
+            if df is not None:
+                df.drop(columns=['contractSymbol', 'lastTradeDate', 'contractSize', 'currency', 'bid', 'ask', 'change', 'volume'], inplace=True)
+                calls = df[df['type'] == 'calls'].drop(columns=['type']).copy()
+                #calls.drop(columns=['type'], inplace=True)
+                puts = df[df['type'] == 'puts'].drop(columns=['type']).copy()
+                #puts.drop(columns=['type'], inplace=True)
+                for idx, row in calls.iterrows():
+                    calls.loc[idx,'percentChange'] = f"{(calls.loc[idx,'percentChange']):.2f}%"
+                    calls.loc[idx,'impliedVolatility'] = f"{(calls.loc[idx,'impliedVolatility']*100):+,.2f}%"
+                for idx, row in puts.iterrows():
+                    puts.loc[idx,'percentChange'] = f"{(puts.loc[idx,'percentChange']):.2f}%"
+                    puts.loc[idx,'impliedVolatility'] = f"{(puts.loc[idx,'impliedVolatility']*100):+,.2f}%"
+                if use_html:
+                    options_info += f"<br/><br/>The most recent one (expiration: {this_ticker.options[0]}):<br/><br/>calls:{calls.to_html(index=False)}<br/><br/>puts:{puts.to_html(index=False)}"
+                else:
+                    options_info += f"\n\nThe most recent one (expiration: {this_ticker.options[0]}):\n\ncalls:{calls.to_string(index=False)}\n\nputs:{puts.to_string(index=False)}"
 
     # recommendations
     if use_html:
