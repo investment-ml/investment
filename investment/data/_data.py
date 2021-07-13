@@ -29,6 +29,8 @@ try:
     risk_free_interest_rate = yf.Ticker('^TNX').history(period='1d').iloc[0]['Close'] # e.g., 1.64
 except:
     risk_free_interest_rate = 1.64
+# reference: London Inter-Bank Offered Rate (LIBOR)
+# https://www.theice.com/iba/usd-rates
 
 # Tresury Yield is different from the Federal funds rate
 # The Federal funds rate is the interest rate at which depository institutions lend reserve balances to other depository institutions overnight.
@@ -419,7 +421,7 @@ def get_ticker_data_dict(ticker: str = None,
     elif force_redownload or keep_up_to_date:
 
         curr_df = pd.read_csv(ticker_history_df_file, index_col=False)
-        curr_info_dict = pickle.load( open( ticker_info_dict_file, "rb" ) )
+        curr_info_dict = pd.read_pickle( ticker_info_dict_file )
 
         do_force_redownload = True
 
@@ -489,7 +491,7 @@ def get_ticker_data_dict(ticker: str = None,
         history_df = history_df[history_df['Date']<=last_date]
     #
     try:
-        info_dict = pickle.load( open( ticker_info_dict_file, "rb" ) )
+        info_dict = pd.read_pickle( ticker_info_dict_file )
     except:
         raise RuntimeError(f"ticker = {ticker}")
     if 'info' not in info_dict.keys():
