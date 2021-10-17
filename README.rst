@@ -2,7 +2,7 @@
 
 |BuildTest|_ |PyPi|_ |License|_ |Downloads|_ |PythonVersion|_
 
-.. |BuildTest| image:: https://travis-ci.com/github/investment-ml/investment.svg?branch=master
+.. |BuildTest| image:: https://travis-ci.com/investment-ml/investment.svg?branch=master
 .. _BuildTest: https://travis-ci.com/github/investment-ml/investment
 
 .. |PyPi| image:: https://img.shields.io/pypi/v/investment
