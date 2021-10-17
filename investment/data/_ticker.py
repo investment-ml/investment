@@ -23,6 +23,8 @@ import shutil
 
 import requests
 
+import re
+
 # NASDAQ Composite Components:
 # https://indexes.nasdaqomx.com/Index/Weighting/COMP -> Export
 # 2,892 components as of 12/11/2020
@@ -36,7 +38,7 @@ import requests
 
 ###########################################################################################
 
-tickers_with_no_volume = ['^W5000','^VVIX','^VIX','^TNX','^TYX','^FVX','^IRX','^VXN','CNYUSD=X','TWDUSD=X','EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','HKD=X','DX-Y.NYB','^TWII','^TWDOWD','^HSI','^N225','^GDAXI','^FCHI','000001.SS','399001.SZ','^STOXX50E','^CASE30','^NSEI','FXAIX','FNILX','SWPPX','VTSAX','FLCEX']
+tickers_with_no_volume = ['^XAL','^W5000','^VVIX','^VIX','^TNX','^TYX','^FVX','^IRX','^VXN','CNYUSD=X','TWDUSD=X','EUR=X','CNY=X','TWD=X','VES=X','AUD=X','CHF=X','JPY=X','NOK=X','SEK=X','SGD=X','GBP=X','CAD=X','HKD=X','DX-Y.NYB','^TWII','^TWDOWD','^HSI','^N225','^GDAXI','^FCHI','000001.SS','399001.SZ','^STOXX50E','^CASE30','^NSEI','FXAIX','FNILX','SWPPX','VTSAX','FLCEX']
 tickers_with_no_PT = ['^NDX','^GSPC','000001.SS','399001.SZ','NQ=F','YM=F','GC=F','ES=F','CL=F','LBS=F','DS-PB','^CASE30','ARKK','ARKQ','ARKW','ARKF','ARKG','ARKX','^NSEI','0050.TW']
 tickers_likely_delisted = ['AAC+','AAC=','AAQC=','ACIC+','ACII=','ALMDG','AKE','ADYEN','ACND+','ACND=','ACR-C','ADEX+','ADEX=','ADF=','ADRA=','AMTD','BEZQ','BATM','SERV','TCO','WPX','PLSN','PE','OERL','BIMCM','BSEN','CTL','NBL','MYL','EIDX','PIH','PRCP','DRAD','CXO',
                            'MLTM','EMCO','DNKN','LVGO','LOGM','FTAL','ETFC','GLIBA','HAML','LM','KSPI','HEXAB','HDS','IMMU','WMGI','VSLR','WRTC','SBBX','TERP','TRWH','RUBI','RTRX','RST','RESI','PUB','PTLA','PRSC','PRNB','RTIX','POL','PFNX','PDLI','AMAG','AKCA','AIMT',
@@ -49,7 +51,7 @@ tickers_problematic = ['ACEVW','ACKIW','ADERW','ADILW','ADNWW','ADOCR','ADOCW','
                        'VOSOW','ASLEW','ASAXW','ARVLW','ARTLW','AMHCW','VHAQ^','UKOMW','TZPSW','TWCTW','TLMDW','THWWW','THMAW','THCBW','THCAW','THBRW','TDACW','TBCPW','SYTAW','SWETW','BTRSW','BTAQW','BRPAW','BROGW','BRLIW','BRLIR','BREZW','BREZR','BNGOW','BLUWW','BLTSW',
                        'BIOTW','BHSEW','BFIIW','BEEMW','BCYPW','BCTXW','BCDAW','ANDAR','ANDAW','APOPW','APPHW','APXTW','ARBGW','ARKOW','AUUDW','AVCTW','BLNKW','BWACW','CAHCW','CAPAW','VMACW','VKTXW','VINCW','VIIAW','VIHAW','VIEWW','USWSW','TRITW','TMTSW','TMPMW','TMKRW',
                        'SVSVW','CHEKZ','CLRBZ','SHIPZ','DHCNL','SFB','PAVMZ','EVOJ','GIG','GECCL','GBLIL','MCADR','GRNVR','HYMCZ','APGB','XPDI','CVII','CCVI','CHAA','FOA','IACB','LGAC','MSAC','TSIB','CTOS','SCLE','SCOB','SLAC','TCAC','ABCL','AIN','RELV','OTTR','CHK',
-                       'AQB','ATMP','PYR','OTEL','WTS','NHLD','PICO','ECP','LCTD','LCTU','HTFB','TIOAU']
+                       'AQB','ATMP','PYR','OTEL','WTS','NHLD','PICO','ECP','LCTD','LCTU','HTFB','TIOAU','SLGCW']
 tradable_tickers = []
 
 ###########################################################################################
@@ -171,13 +173,13 @@ def download_and_load_ARK_data(data_root_dir: str = None):
             raise IOError(f"cannot create ARK historical dir: {ARK_historical_dir}")
     
     pairs = {'ARKK': 'ARK_INNOVATION_ETF_ARKK_HOLDINGS.csv',
-             'ARKQ': 'ARK_AUTONOMOUS_TECHNOLOGY_&_ROBOTICS_ETF_ARKQ_HOLDINGS.csv',
-             'ARKW': 'ARK_NEXT_GENERATION_INTERNET_ETF_ARKW_HOLDINGS.csv',
-             'ARKG': 'ARK_GENOMIC_REVOLUTION_MULTISECTOR_ETF_ARKG_HOLDINGS.csv',
-             'ARKF': 'ARK_FINTECH_INNOVATION_ETF_ARKF_HOLDINGS.csv',
-             'ARKX': 'ARK_SPACE_EXPLORATION_&_INNOVATION_ETF_ARKX_HOLDINGS.csv',
-             'PRNT': 'THE_3D_PRINTING_ETF_PRNT_HOLDINGS.csv',
-             'IZRL': 'ARK_ISRAEL_INNOVATIVE_TECHNOLOGY_ETF_IZRL_HOLDINGS.csv'}
+             'ARKQ': 'ARK_INNOVATION_ETF_ARKQ_HOLDINGS.csv',
+             'ARKW': 'ARK_INNOVATION_ETF_ARKW_HOLDINGS.csv',
+             'ARKG': 'ARK_INNOVATION_ETF_ARKG_HOLDINGS.csv',
+             'ARKF': 'ARK_INNOVATION_ETF_ARKF_HOLDINGS.csv',
+             'ARKX': 'ARK_INNOVATION_ETF_ARKX_HOLDINGS.csv',
+             'PRNT': 'ARK_INNOVATION_ETF_PRNT_HOLDINGS.csv',
+             'IZRL': 'ARK_INNOVATION_ETF_IZRL_HOLDINGS.csv'}
 
     global ARK_df_dict
 
@@ -197,7 +199,7 @@ def download_and_load_ARK_data(data_root_dir: str = None):
 
         if to_download:
             print(f'Attempt to download [{ETF_name}] data from ark-funds.com ...', end='')
-            url = "https://ark-funds.com/wp-content/fundsiteliterature/csv/" + pairs[ETF_name]
+            url = "https://ark-funds.com/wp-content/uploads/funds-etf-csv/" + pairs[ETF_name]
             headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.192 Safari/537.36'} # https://stackoverflow.com/questions/57155387/workaround-for-blocked-get-requests-in-python
             r = requests.get(url, headers=headers)
             if r.status_code == 200:
@@ -213,14 +215,16 @@ def download_and_load_ARK_data(data_root_dir: str = None):
             data = f.readlines()
         footer_n = 0
         for idx, d in enumerate(data):
-            if d[0] == ',': # figure out how many footer to skip
+            if d[0] in ['"',',']: # figure out how many footer to skip
                 footer_n = len(data) - idx
                 break
         
-        df = pd.read_csv(filename, skipfooter=footer_n, engine='python').replace({'ticker': {'TREE UW':'TREE','ARCT UQ':'ARCT','TCS LI': None, 'MDT UN': 'MDT', 'XRX UN': 'XRX'}})
+        df = pd.read_csv(filename, thousands=',', skipfooter=footer_n, engine='python').replace({'ticker': {'TREE UW':'TREE','ARCT UQ':'ARCT','TCS LI': None, 'MDT UN': 'MDT', 'XRX UN': 'XRX'}})
 
         df['Eps.ttm'] = None # trailing twelve months
         df['Eps.fw'] = None
+
+        df.rename(columns = {'weight (%)': 'weight(%)'}, inplace=True)
 
         ARK_df_dict[ETF_name] = df.copy()
 
@@ -357,9 +361,10 @@ ticker_group_dict = {'All': [],
                      'Warren Buffett stocks (Q4/2020)': ['VZ', 'CVX','MMC','SSP','ABBV','MRK','BMY','KR','RH','TMUS','AAPL','USB','GM','WFC','SU','LILAK','PNC','JPM','MTB','GOLD','PFE'],
                      'Marijuana': ['YOLO','CNBS','TLRY','TOKE','THCX','EVVLF','MJ','XXII','ATTBF','ABBV','AERO','MO','ERBB','ACAN','APH','ARNA','AXIM','BLPG','CBDS','CGRW','CNTTQ','CARA','CGRA','CLSH','CRBP','CRON','CVSI','DBCCF','DIGP','EDXC','ENRT','EVIO','GBLX','CANN','GRNH','GRWC','PHOT','GWPH','HEMP','IGC','IIPR','KAYS','KSHB','MSRT','BTZI','MJNA','SHWZ','VIVO','POTN','SWM','SMG','SRNA','TER','TRTC','TCNNF','TRST','TPB','TURV','UBQU','CNABQ','UVV','VPOR','VGR','ZYNE'],
                      'COVID-19': ['ALT','MRNA','INO','GILD','JNJ','PFE','RCL','CCL','NCLH','AAL','ZM','AZN','ARCT','QDEL','ABT','HOLX','DGX','PROG','GME','CHWY','AMC','CNK','PEJ','USO','JETS','TRIP','LVS','HLT','H','MAR','CAR','HTZGQ','ZIP','KIRK','ULTA','TLYS','DS','DS-PB','DS-PC','BNTX'],
+                     'Airline': ['^XAL', 'AAL', 'JETS','UAL','DAL'],
                      'Inflation': ['VTIP','LTPZ','IVOL','SPIP'],
                      'Cyber Security': ['SWI','CYBR','CHKP','PANW','ZS','CRWD','FEYE','SCWX','VMW','MSFT','FTNT','MIME','HACK','PFPT','QLYS','RPD','TENB','VRNS','CIBR','NET'],
-                     'Chinese stocks': ['YINN', 'YANG', 'CHA', 'CHL', 'CHU', '0728.HK', '0941.HK', '0762.HK', 'ZH', 'IQ', 'BIDU', 'BABA', 'WB', 'SINA', 'FENG', 'YY'],
+                     'China stocks': ['YINN', 'YANG', 'CHA', 'CHL', 'CHU', '0728.HK', '0941.HK', '0762.HK', 'ZH', 'IQ', 'BIDU', 'BABA', 'WB', 'SINA', 'FENG', 'YY', '^HSI', 'FXI', 'MCHI', 'CNYA', 'EMXC', 'ECNS'],
                      '5G': ['AAPL','TMUS','VZ','T','QCOM','QRVO','ERIC','TSM','NVDA','SWKS','ADI','MRVL','AVGO','XLNX'],
                      'ADR': ['BNTX','TSM','BABA','PDD','TM','SNE','JD','AZN','BIDU','BILI','BP','NIO','UBS','NOK','TCOM','IQ','TTM','WB','YY'],
                      'Cloud': ['TWLO','AYX','SPLK'],
@@ -608,9 +613,10 @@ group_desc_dict = {'All': f"All unique tickers/symbols included in this app",
                    'Warren Buffett stocks (Q4/2020)': f"https://www.fool.com/investing/2021/02/18/here-are-all-10-stocks-warren-buffett-has-been-buy/<br/><br/>-- During Q4 2020 --<br/><br/>1. 4 new stocks in Berkshire's portfolio: VZ, CVX, MMC, SSP<br/><br/>2. 6 stocks Berkshire bought more of: ABBV, MRK, BMY, KR, RH, TMUS<br/><br/>3. 6 stocks Berkshire reduced: AAPL, USB, GM, WFC, SU, LILAK<br/><br/>4. 5 stock positions Berkshire exited completely: PNC, JPM, MTB, GOLD, PFE",
                    'Marijuana': "Cannabis",
                    'COVID-19': f"Vaccines: 'ALT', 'MRNA', 'INO', 'GILD', 'JNJ', 'PFE', 'BNTX', 'AZN', 'ARCT'<br/><br/>COVID-19 testing: 'QDEL', 'ABT', 'HOLX', 'DGX', 'PROG', 'CVS'<br/><br/>Movie: 'AMC', 'CNK', 'PEJ'<br/><br/>Cruises: 'RCL', 'CCL', 'NCLH'<br/><br/>Pet food: 'CHWY'<br/><br/>Game: 'GME'<br/><br/>Energy: 'USO', 'XLE', 'XOM'<br/><br/>Travel: 'JETS', 'TRIP', 'LVS'<br/><br/>Hotel: 'HLT', 'H', 'MAR'<br/><br/>Car rental: 'CAR', 'HTZGQ', 'ZIP'<br/><br/>Mall: 'KIRK', 'ULTA', 'TLYS'<br/><br/>Sports & restaurant: 'DS', 'DS-PB', 'DS-PC'<br/><br/>",
+                   'Airline': f"Airline stocks",
                    'Inflation': f"- <a href='https://www.investopedia.com/articles/investing/092215/top-5-tips-etfs.asp'>TIPS</a> (U.S. Treasury Inflation-Protected Securities) ETF<br/><br/>- <a href='http://www.freddiemac.com/research/indices/house-price-index.page'>House Price Index</a><br/><br/>- <a href='https://seekingalpha.com/article/4405852-stock-market-faces-moment-of-truth-inflation-rises-over-horizon'>Inflation rises over the horizon</a><br/><br/>- <a href='https://www.bls.gov/data/inflation_calculator.htm'>Inflation calculator</a><br/><br/>- <a href='https://www.marketwatch.com/story/the-inflation-tantrum-scared-investors-here-are-eight-tech-stocks-to-buy-when-it-happens-again-soon-11614776551'>The inflation tantrum scared investors</a>",
                    'Cyber Security': f"One of the largest recent <a href='https://en.wikipedia.org/wiki/2020_United_States_federal_government_data_breach'>hacks</a>:<br/>On 12/14/2020, the news that SWI was used by Russia to back the U.S. governments went public.<br/>SWI tumbled and other cyber security firms soared because of the heightened need for years to come.<br/><br/>CRWD, CYBR, FEYE, PANW, ZS ... all jumped big within 2 weeks.",
-                   'Chinese stocks': f"NYSE-delisted 3 Chinese telecom stocks:<br/><br/>1. CHA: China Telecom Corporation Limited -> 0728.HK<br/>2. CHL: China Mobile Limited -> 0941.HK<br/>3. CHU: China Unicom (Hong Kong) Limited -> 0762.HK",
+                   'China stocks': f"NYSE-delisted 3 China telecom stocks:<br/><br/>1. CHA: China Telecom Corporation Limited -> 0728.HK<br/>2. CHL: China Mobile Limited -> 0941.HK<br/>3. CHU: China Unicom (Hong Kong) Limited -> 0762.HK<br/><br/>For a complete list of China concepts stock, see <a href='https://en.wikipedia.org/wiki/China_concepts_stock'>here</a>.<br/><br/>Major Indices:<br/>000001.SS: Shanghai<br/>?: DJ Shanghai<br/>399001.SZ: SZSE Component<br/>2823.HK: China A50<br/>?: China H-Shares<br/>3188.HK: CSI 300<br/>^HSI: Hang Seng Index<br/>",
                    '5G': f"5G wireless networks",
                    'ADR': f"<a href='https://www.investopedia.com/terms/a/adr.asp'><b>ADR</b></a> (American Depository Receipts)<br/><br/><a href='https://stockmarketmba.com/listofadrs.php'>List of ADR symbols</a><br/><br/><a href='https://www.fidelity.com/learning-center/investment-products/stocks/understanding-american-depositary-receipts'>Risk factors and expenses</a>:<br/>1. Exchange rate risk: e.g., when TWDUSD=X drops (depreciation of the TWD), the price of $TSM would drop too<br/>2. Political risk: the politics in that country might affect exchange rates or destabilize the company and its earnings.<br/>3. Inflation risk: inflation in that country will erode the value of that currency<br/><br/><a href='https://www.investing.com/equities/china-adrs'>China ADRs</a>",
                    'Cloud': f"Cloud",
